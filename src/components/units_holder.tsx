@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useTFT } from '../contexts/TFTContext';
 import { TIER_COLORS, type UnitContestData } from '../services/tftService';
 
@@ -8,7 +8,7 @@ export function UnitsHolder() {
     const [filteredUnits, setFilteredUnits] = useState<UnitContestData[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'contest' | 'name' | 'tier'>('contest');
-    const [showDescription, setShowDescription] = useState(false);
+    const [showDescription] = useState(false);
 
     // Function to convert tier border colors to background colors
     const getTierBackgroundColor = (tier: number): string => {
@@ -147,7 +147,7 @@ export function UnitsHolder() {
                 </div>
                 {/* Units Grid */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-                    {filteredUnits.map((unit, index) => {
+                    {filteredUnits.map((unit) => {
                         const contestIndicator = getContestIndicator(unit.contestRate);
                         const tierBorderColor = TIER_COLORS[unit.tier as keyof typeof TIER_COLORS] || 'border-gray-400';
                         const tierBackgroundColor = getTierBackgroundColor(unit.tier);

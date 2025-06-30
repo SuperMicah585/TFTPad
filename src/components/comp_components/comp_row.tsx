@@ -207,7 +207,6 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
             <UnitSelectorPopup
                 isOpen={isSelected}
                 onClose={handleClosePopup}
-                selectedChampions={selectedChampions}
                 onChampionToggle={handleChampionToggle}
                 position={popupPosition}
             />

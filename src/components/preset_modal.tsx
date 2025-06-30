@@ -12,9 +12,9 @@ interface PresetModalProps {
 }
 
 export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: PresetModalProps) {
+    const { comps, champions, traits, detailedTraitData, championImageMappings, version, loading, error } = useTFT();
     const [searchQuery, setSearchQuery] = useState("");
     const [hoveredTrait, setHoveredTrait] = useState<{ text: string; x: number; y: number } | null>(null);
-    const { comps, champions, traits, detailedTraitData, championImageMappings, version, loading, error, selectedUnits } = useTFT();
 
     // Debug logging to see what traits are in the comps
     useEffect(() => {
@@ -49,31 +49,6 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
         // Sort filtered results by playCount (popularity) in descending order
         return filtered.sort((a, b) => b.playCount - a.playCount);
     }, [searchQuery, comps]);
-
-    // Calculate contest rates for uncontested units
-    const getUnitContestRates = () => {
-        const unitCounts: { [unitName: string]: number } = {};
-        const totalPlayers = 8;
-        
-        // Count how many times each unit is selected across all players
-        Object.values(selectedUnits).forEach(playerUnits => {
-            if (playerUnits) {
-                playerUnits.forEach(unit => {
-                    if (unit) {
-                        unitCounts[unit.name] = (unitCounts[unit.name] || 0) + 1;
-                    }
-                });
-            }
-        });
-        
-        // Calculate contest rates as percentage of players using each unit
-        const contestRates: { [unitName: string]: number } = {};
-        Object.entries(unitCounts).forEach(([unitName, count]) => {
-            contestRates[unitName] = Math.round((count / totalPlayers) * 100 * 10) / 10;
-        });
-        
-        return contestRates;
-    };
 
     const getChampionIconUrl = (championName: string) => {
         // First, try to find the champion in our champions data

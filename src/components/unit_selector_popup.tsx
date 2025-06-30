@@ -7,7 +7,6 @@ import { X } from "lucide-react";
 interface UnitSelectorPopupProps {
     isOpen: boolean;
     onClose: () => void;
-    selectedChampions: Array<{name: string; imageUrl: string; tier: number} | null>;
     onChampionToggle: (champion: {name: string; imageUrl: string; tier: number}) => void;
     position: { x: number; y: number; shouldPositionAbove?: boolean };
 }
@@ -15,7 +14,6 @@ interface UnitSelectorPopupProps {
 export function UnitSelectorPopup({ 
     isOpen, 
     onClose, 
-    selectedChampions, 
     onChampionToggle,
     position 
 }: UnitSelectorPopupProps) {
@@ -46,15 +44,11 @@ export function UnitSelectorPopup({
         return tierColors[tier as keyof typeof tierColors] || 'border-gray-500';
     };
 
-    const isChampionSelected = (championName: string): boolean => {
-        return selectedChampions.some(champ => champ && champ.name === championName);
-    };
-
     // Filter champions based on search query
     const filteredChampions = useMemo(() => {
         const allChampions = Object.entries(champions)
-            .filter(([key, champion]) => champion.id.startsWith('TFT14_'))
-            .map(([key, champion]) => ({
+            .filter(([, champion]) => champion.id.startsWith('TFT14_'))
+            .map(([, champion]) => ({
                 name: champion.name,
                 imageUrl: getChampionIconUrl(champion.name),
                 tier: champion.tier
@@ -111,12 +105,12 @@ export function UnitSelectorPopup({
             </div>
             
             <div className="grid grid-cols-12 gap-2">
-                {filteredChampions.map((champion, index) => {
+                {filteredChampions.map((champion) => {
                     const tierColor = getTierBorderColor(champion.tier);
                     
                     return (
                         <div
-                            key={index}
+                            key={champion.name}
                             className={`w-16 h-16 bg-gray-200 p-1 hover:cursor-pointer hover:opacity-80 border-2 ${tierColor} relative`}
                             onClick={() => onChampionToggle(champion)}
                             title={`${champion.name} (${champion.tier}-cost)`}

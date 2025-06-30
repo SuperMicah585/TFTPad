@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { fetchTFTComps, fetchCurrentVersion, fetchChampionData, createChampionImageMappings, fetchCompsWithPlacementStats, fetchTraitData, type ChampionData, type TraitData, type DetailedTraitData } from '../services/tftService';
 import type { TFTComp } from '../services/tftService';
@@ -118,7 +118,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
             
             // Load detailed trait data
             const detailedTraitDataModule = await import('../components/comp_data.json');
-            const detailedTraitDataArray = (detailedTraitDataModule.default || detailedTraitDataModule) as DetailedTraitData[];
+            const detailedTraitDataArray = (detailedTraitDataModule.default || detailedTraitDataModule) as unknown as DetailedTraitData[];
             
             // Fetch champion data, trait data, and TFT comps in parallel
             const [championData, traitData, compsData] = await Promise.all([

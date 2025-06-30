@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTFT } from '../contexts/TFTContext';
 import { TIER_COLORS, getTraitBreakpointInfo, decodeHtmlEntities } from '../services/tftService';
-import TabBackground from './TabBackground';
 import { HelpCircle } from 'lucide-react';
 
 interface CompWithContest {
@@ -203,7 +202,6 @@ export function CompsHolder() {
         rankError
     } = useTFT();
     const [searchTerm, setSearchTerm] = useState('');
-    const [showDescription, setShowDescription] = useState(false);
     const [hoveredTrait, setHoveredTrait] = useState<{ text: string; x: number; y: number } | null>(null);
     const [hoveredStar, setHoveredStar] = useState<{ x: number; y: number } | null>(null);
     
@@ -293,10 +291,6 @@ export function CompsHolder() {
                 
                 // Debug: Log unit and contest rate
                 console.log(`Unit: ${unit}, Normalized: ${normalizedUnitName}, Contest Rate: ${contestRate}%`);
-                
-                // Check if this unit gets itemized in this comp
-                const unitBuild = comp.builds.find((build: any) => build.unit === unit);
-                const isItemized = unitBuild && unitBuild.num_items > 0;
                 
                 // Add to contest score (for display purposes)
                 totalContestScore += contestRate;
@@ -731,19 +725,6 @@ export function CompsHolder() {
                                                         const borderColor = getTierBorderColor(tier);
                                                         const isUncontested = compWithContest.comp.uncontestedUnits.includes(unit);
                                                         const unitBuild = compWithContest.comp.builds.find((build: any) => build.unit === unit);
-                                                        const isItemized = unitBuild && unitBuild.num_items > 0;
-                                                        
-                                                        // Get tier background color for star
-                                                        const getTierBackgroundColor = (tier: number): string => {
-                                                            const tierColors = {
-                                                                1: 'bg-gray-400',
-                                                                2: 'bg-green-400', 
-                                                                3: 'bg-blue-400',
-                                                                4: 'bg-purple-400',
-                                                                5: 'bg-yellow-400',
-                                                            };
-                                                            return tierColors[tier as keyof typeof tierColors] || 'bg-gray-400';
-                                                        };
                                                         
                                                         return (
                                                             <div key={index} className="flex flex-col items-center relative">
@@ -779,7 +760,7 @@ export function CompsHolder() {
                                                                             </svg>
                                                                         </div>
                                                                     )}
-                                                                    {isItemized && (
+                                                                    {unitBuild && unitBuild.num_items > 0 && (
                                                                         <div className="absolute left-0 bottom-0 w-16 flex flex-row justify-center items-end z-10 translate-y-1/2">
                                                                             {unitBuild.buildName.map((item: string, itemIndex: number) => {
                                                                                 const itemIconUrl = `https://ddragon.leagueoflegends.com/cdn/15.12.1/img/tft-item/${item}.png`;

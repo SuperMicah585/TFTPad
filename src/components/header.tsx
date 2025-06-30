@@ -1,5 +1,3 @@
-import { useState } from 'react'
-
 export function Header() {
    return(
        <div className="border-b border-gray-800 px-6 py-4 relative z-20" style={{ backgroundColor: '#964B00' }}>
