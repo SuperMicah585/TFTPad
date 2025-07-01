@@ -938,7 +938,7 @@ export function CompsHolder() {
                 >
                     <div className="whitespace-normal">
                         <div className="font-semibold mb-1">Contested Unit</div>
-                        <div>This unit has &gt;12.5% contest rate (more than 1 player using it).</div>
+                        <div>More than 3 copies will be contested.</div>
                     </div>
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>
