@@ -41,14 +41,6 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
         onPlayerSelect(player);
     };
 
-    const handleRowMouseEnter = () => {
-        setIsRowHovered(true);
-    };
-
-    const handleRowMouseLeave = () => {
-        setIsRowHovered(false);
-    };
-
     const handleHexagonContainerMouseEnter = () => {
         setIsRowHovered(true);
     };
