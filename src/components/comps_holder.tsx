@@ -257,14 +257,28 @@ export function CompsHolder() {
             if (playerUnits) {
                 const currentPlayerStars = playerStars[parseInt(playerId)] || [];
                 console.log(`Comps tab - Player ${playerId} stars:`, currentPlayerStars);
+                // Debug: Check if Nidalee is in the stars array
+                const nidaleeInStars = currentPlayerStars.find(star => star.toLowerCase().includes('nidalee'));
+                if (nidaleeInStars) {
+                    console.log(`DEBUG NIDALEE STARS: Found Nidalee in stars: "${nidaleeInStars}"`);
+                }
                 playerUnits.forEach(unit => {
                     if (unit) {
                         const isStarred = currentPlayerStars.includes(unit.name);
                         const weight = isStarred ? 3 : 1;
-                        // Normalize unit name to match Comps tab display (remove spaces and periods)
-                        const normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().replace(/[.\s]/g, '');
+                        // Normalize unit name to match Comps tab display (remove TFT14_ prefix and trim)
+                        let normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().trim();
+                        
+                        // Handle special case for Nidalee/NidaleeCougar mismatch
+                        if (normalizedUnitName === 'nidalee') {
+                            normalizedUnitName = 'nidaleecougar';
+                        }
                         unitCounts[normalizedUnitName] = (unitCounts[normalizedUnitName] || 0) + weight;
                         console.log(`Comps tab - Unit ${unit.name} (normalized: ${normalizedUnitName}) from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[normalizedUnitName]}`);
+                        // Debug: Log all unit names to see what's being stored
+                        if (unit.name.toLowerCase().includes('nidalee')) {
+                            console.log(`DEBUG NIDALEE: Original name: "${unit.name}", Normalized: "${normalizedUnitName}"`);
+                        }
                     }
                 });
             }
@@ -295,6 +309,10 @@ export function CompsHolder() {
                 
                 // Debug: Log unit and contest rate
                 console.log(`Unit: ${unit}, Normalized: ${normalizedUnitName}, Contest Rate: ${contestRate}%`);
+                // Debug: Log Nidalee specifically
+                if (unit.toLowerCase().includes('nidalee')) {
+                    console.log(`DEBUG NIDALEE COMP: Unit: "${unit}", Normalized: "${normalizedUnitName}", Contest Rate: ${contestRate}%`);
+                }
                 
                 // Add to contest score (for display purposes)
                 totalContestScore += contestRate;
@@ -556,22 +574,22 @@ export function CompsHolder() {
                                                 popup.style.transform = 'translateX(-50%)';
                                             }
                                             
-                                            // Adjust vertical positioning
-                                            if (spaceAbove >= popupHeight + 8) {
-                                                // Position above
-                                                popup.style.bottom = 'calc(100% + 8px)';
-                                                popup.style.top = 'auto';
-                                                popup.querySelector('.arrow')?.classList.remove('rotate-180');
-                                            } else if (spaceBelow >= popupHeight + 8) {
-                                                // Position below
+                                            // Adjust vertical positioning - prioritize below
+                                            if (spaceBelow >= popupHeight + 8) {
+                                                // Position below (preferred)
                                                 popup.style.top = 'calc(100% + 8px)';
                                                 popup.style.bottom = 'auto';
                                                 popup.querySelector('.arrow')?.classList.add('rotate-180');
-                                            } else {
-                                                // Not enough space, position above but allow scrolling
+                                            } else if (spaceAbove >= popupHeight + 8) {
+                                                // Position above if no space below
                                                 popup.style.bottom = 'calc(100% + 8px)';
                                                 popup.style.top = 'auto';
                                                 popup.querySelector('.arrow')?.classList.remove('rotate-180');
+                                            } else {
+                                                // Not enough space, position below but allow scrolling
+                                                popup.style.top = 'calc(100% + 8px)';
+                                                popup.style.bottom = 'auto';
+                                                popup.querySelector('.arrow')?.classList.add('rotate-180');
                                             }
                                         }
                                     }}
@@ -586,9 +604,20 @@ export function CompsHolder() {
                                     }}
                                 >
                                     <div>
-                                        <span className="text-blue-400 font-medium">Comps are ordered by best score</span> based on the weights you can adjust below. The score is a combination of contest rate (how many other players are using the same units) and average placement. You can adjust the weights to prioritize uncontested comps or higher placement.
+                                        <div className="font-semibold mb-2 text-left">Comp Ordering & Scoring:</div>
+                                        <div className="text-xs mb-2">
+                                            <span className="text-blue-400 font-medium">Comps are ordered by best score</span> based on the weights you can adjust below. The score combines contest rate and average placement. Lower scores = better comps.
+                                        </div>
+                                        <div className="font-semibold mb-2 text-left">Red Borders:</div>
+                                        <div className="text-xs mb-2">
+                                            Units with <span className="text-red-400 font-medium">red borders</span> are contested. This means more than 3 copies of this unit will be contested in your lobby. Hover over red-bordered units for details.
+                                        </div>
+                                        <div className="font-semibold mb-2 text-left">3-Star Units:</div>
+                                        <div className="text-xs">
+                                            Units with <span className="text-yellow-400 font-medium">3 gold stars</span> count 3x as much for contest calculations, making them more likely to be contested.
+                                        </div>
                                     </div>
-                                    <div className="arrow absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900 transition-transform duration-200"></div>
+                                    <div className="arrow absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 transition-transform duration-200"></div>
                                 </div>
                             </div>
                         </div>
