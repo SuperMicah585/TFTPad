@@ -1,5 +1,5 @@
 import { CompRow } from "./comp_components/comp_row"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef } from "react"
 import { HelpCircle } from "lucide-react"
 import { createPortal } from "react-dom"
 
