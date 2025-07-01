@@ -45,6 +45,8 @@ interface TFTContextType {
     // Unit selection tracking
     selectedUnits: { [playerId: number]: (Champion | null)[] };
     updatePlayerUnits: (playerId: number, units: (Champion | null)[]) => void;
+    playerStars: { [playerId: number]: string[] };
+    updatePlayerStars: (playerId: number, stars: string[]) => void;
     getUnitContestRates: () => { [unitName: string]: number };
     // Player names tracking
     playerNames: { [playerId: number]: string };
@@ -79,6 +81,9 @@ export function TFTProvider({ children }: TFTProviderProps) {
     // Unit selection tracking for all 8 players
     const [selectedUnits, setSelectedUnits] = useState<{ [playerId: number]: (Champion | null)[] }>({});
 
+    // Player stars tracking for all 8 players
+    const [playerStars, setPlayerStars] = useState<{ [playerId: number]: string[] }>({});
+
     // Player names tracking for all 8 players
     const [playerNames, setPlayerNames] = useState<{ [playerId: number]: string }>({});
 
@@ -86,6 +91,13 @@ export function TFTProvider({ children }: TFTProviderProps) {
         setSelectedUnits(prev => ({
             ...prev,
             [playerId]: units
+        }));
+    };
+
+    const updatePlayerStars = (playerId: number, stars: string[]) => {
+        setPlayerStars(prev => ({
+            ...prev,
+            [playerId]: stars
         }));
     };
 
@@ -99,24 +111,25 @@ export function TFTProvider({ children }: TFTProviderProps) {
     const getUnitContestRates = () => {
         const unitCounts: { [unitName: string]: number } = {};
         const totalPlayers = 8;
-        
-        // Count how many times each unit is selected across all players
-        Object.values(selectedUnits).forEach(playerUnits => {
+        // 3-star units count as 3 players, regular units count as 1 player
+        Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
+                const currentPlayerStars = playerStars[parseInt(playerId)] || [];
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        unitCounts[unit.name] = (unitCounts[unit.name] || 0) + 1;
+                        const isStarred = currentPlayerStars.includes(unit.name);
+                        const weight = isStarred ? 3 : 1;
+                        unitCounts[unit.name] = (unitCounts[unit.name] || 0) + weight;
+                        console.log(`Unit ${unit.name} from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[unit.name]}`);
                     }
                 });
             }
         });
-        
-        // Calculate contest rates as percentage of players using each unit
         const contestRates: { [unitName: string]: number } = {};
         Object.entries(unitCounts).forEach(([unitName, count]) => {
-            contestRates[unitName] = Math.round((count / totalPlayers) * 100 * 10) / 10; // Round to 1 decimal place
+            contestRates[unitName] = Math.round((count / totalPlayers) * 100 * 10) / 10;
+            console.log(`Final contest rate for ${unitName}: ${count}/${totalPlayers} = ${contestRates[unitName]}%`);
         });
-        
         return contestRates;
     };
 
@@ -216,6 +229,8 @@ export function TFTProvider({ children }: TFTProviderProps) {
         rankError,
         selectedUnits,
         updatePlayerUnits,
+        playerStars,
+        updatePlayerStars,
         getUnitContestRates,
         playerNames,
         updatePlayerName

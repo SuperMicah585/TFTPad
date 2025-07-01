@@ -79,10 +79,17 @@ export function CompHolder() {
                             <span className="text-green-300 font-medium">Player:</span> Click player square to edit name
                         </div>
                         <div className="font-medium mb-1 text-left">Adding Units to Selected Row:</div>
-                        <div className="text-xs text-left pl-2">
+                        <div className="text-xs text-left pl-2 mb-2">
                             • Click unit squares to add manually<br/>
                             <span className="text-gray-300 font-medium">OR</span><br/>
                             • Click "presets" button for pre-built comps
+                        </div>
+                        <div className="font-medium mb-1 text-left">Modifying Specific Units:</div>
+                        <div className="text-xs text-left pl-2">
+                            • <span className="text-yellow-300 font-medium">Click a unit</span> to open the unit menu<br/>
+                            • <span className="text-red-300 font-medium">Remove unit:</span> Removes the unit from the row<br/>
+                            • <span className="text-yellow-400 font-medium">3 star:</span> Make the unit 3-star (shows 3 gold stars)<br/>
+                            • <span className="text-gray-200 font-medium">Remove stars:</span> Remove 3-star status from the unit
                         </div>
                     </div>
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>

@@ -8,7 +8,7 @@ interface PresetModalProps {
     isOpen: boolean;
     onClose: () => void;
     playerNumber: number;
-    onCompSelect?: (champions: { name: string; imageUrl: string; tier: number }[]) => void;
+    onCompSelect?: (champions: { name: string; imageUrl: string; tier: number }[], stars: string[]) => void;
 }
 
 export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: PresetModalProps) {
@@ -206,8 +206,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                     imageUrl: getChampionIconUrl(unit),
                     tier: getChampionTier(unit)
                 }));
-            
-            onCompSelect(validChampions);
+            onCompSelect(validChampions, comp.stars || []);
         }
     };
 
@@ -302,6 +301,16 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                                                                     target.parentNode?.appendChild(fallback);
                                                                 }}
                                                             />
+                                                            {/* Star overlay for starred units */}
+                                                            {comp.stars && comp.stars.includes(unit) && (
+                                                                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-row gap-0.5">
+                                                                    {[1, 2, 3].map((starIndex) => (
+                                                                        <svg key={starIndex} className="w-4 h-4 text-yellow-400 fill-current stroke-black stroke-1" viewBox="0 0 24 24">
+                                                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                                                        </svg>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                             {isItemized && (
                                                                 <div className="absolute left-0 bottom-0 w-16 flex flex-row justify-center items-end z-10 translate-y-1/2">
                                                                     {unitBuild.buildName.map((item: string, itemIndex: number) => {

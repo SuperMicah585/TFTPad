@@ -199,7 +199,8 @@ export function CompsHolder() {
         selectedRank,
         setSelectedRank,
         rankLoading,
-        rankError
+        rankError,
+        playerStars
     } = useTFT();
     const [searchTerm, setSearchTerm] = useState('');
     const [hoveredTrait, setHoveredTrait] = useState<{ text: string; x: number; y: number } | null>(null);
@@ -246,33 +247,36 @@ export function CompsHolder() {
 
     // Calculate contest rates based on units selected in Game tab
     const unitContestRates = useMemo(() => {
+        console.log('Comps tab - Recalculating unitContestRates');
+        console.log('Comps tab - selectedUnits:', selectedUnits);
+        console.log('Comps tab - playerStars:', playerStars);
+        
         const unitCounts: { [unitName: string]: number } = {};
         const totalPlayers = 8;
-        
-        // Count how many times each unit is selected across all players
-        Object.values(selectedUnits).forEach(playerUnits => {
+        Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
+                const currentPlayerStars = playerStars[parseInt(playerId)] || [];
+                console.log(`Comps tab - Player ${playerId} stars:`, currentPlayerStars);
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        // Normalize unit name for consistent matching
-                        const normalizedName = unit.name.toLowerCase().trim();
-                        unitCounts[normalizedName] = (unitCounts[normalizedName] || 0) + 1;
+                        const isStarred = currentPlayerStars.includes(unit.name);
+                        const weight = isStarred ? 3 : 1;
+                        // Normalize unit name to match Comps tab display (remove spaces and periods)
+                        const normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().replace(/[.\s]/g, '');
+                        unitCounts[normalizedUnitName] = (unitCounts[normalizedUnitName] || 0) + weight;
+                        console.log(`Comps tab - Unit ${unit.name} (normalized: ${normalizedUnitName}) from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[normalizedUnitName]}`);
                     }
                 });
             }
         });
-        
-        // Calculate contest rates as percentage of players using each unit
         const contestRates: { [unitName: string]: number } = {};
         Object.entries(unitCounts).forEach(([unitName, count]) => {
             contestRates[unitName] = Math.round((count / totalPlayers) * 100 * 10) / 10;
+            console.log(`Comps tab - Final contest rate for ${unitName}: ${count}/${totalPlayers} = ${contestRates[unitName]}%`);
         });
-        
-        // Debug: Log all contest rates
-        console.log('All contest rates:', contestRates);
-        
+        console.log('Comps tab - Final unitContestRates:', contestRates);
         return contestRates;
-    }, [selectedUnits]);
+    }, [selectedUnits, playerStars]);
 
     // Calculate comps with contest scores and apply search filter
     const filteredComps = useMemo(() => {
@@ -723,9 +727,21 @@ export function CompsHolder() {
                                                     .sort((a: string, b: string) => getChampionTier(a) - getChampionTier(b))
                                                     .map((unit: string, index: number) => {
                                                         const tier = getChampionTier(unit);
-                                                        const borderColor = getTierBorderColor(tier);
-                                                        const isUncontested = compWithContest.comp.uncontestedUnits.includes(unit);
+                                                        const baseBorderColor = getTierBorderColor(tier);
                                                         const unitBuild = compWithContest.comp.builds.find((build: any) => build.unit === unit);
+                                                        // Check if this unit is in the stars array (with TFT14_ prefix)
+                                                        const isStarred = compWithContest.comp.stars.includes(`TFT14_${unit}`);
+                                                        
+                                                        // Determine border color based on contest status
+                                                        let borderColor = baseBorderColor;
+                                                        // Check if unit is contested (has contest rate > 12.5%)
+                                                        const normalizedUnitName = unit.replace(/^TFT14_/, '').toLowerCase().trim();
+                                                        console.log(`Comps tab - Original unit name: "${unit}", Normalized: "${normalizedUnitName}"`);
+                                                        const contestRate = unitContestRates[normalizedUnitName] || 0;
+                                                        console.log(`Comps tab - Unit: ${unit}, Normalized: ${normalizedUnitName}, Contest Rate: ${contestRate}%, Should be red: ${contestRate > 12.5}`);
+                                                        if (contestRate > 12.5) {
+                                                            borderColor = 'border-red-500 border-4 shadow-lg';
+                                                        }
                                                         
                                                         return (
                                                             <div key={index} className="flex flex-col items-center relative">
@@ -734,6 +750,20 @@ export function CompsHolder() {
                                                                         src={getChampionIconUrl(unit)}
                                                                         alt={unit}
                                                                         className={`w-16 h-16 rounded-lg border-2 ${borderColor}`}
+                                                                        onMouseEnter={(e) => {
+                                                                            if (borderColor.includes('border-red-500')) {
+                                                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                                                setHoveredStar({
+                                                                                    x: rect.left + rect.width / 2,
+                                                                                    y: rect.top - 10
+                                                                                });
+                                                                            }
+                                                                        }}
+                                                                        onMouseLeave={() => {
+                                                                            if (borderColor.includes('border-red-500')) {
+                                                                                setHoveredStar(null);
+                                                                            }
+                                                                        }}
                                                                         onError={(e) => {
                                                                             // Fallback to text if image fails to load
                                                                             const target = e.target as HTMLImageElement;
@@ -744,19 +774,15 @@ export function CompsHolder() {
                                                                             target.parentNode?.appendChild(fallback);
                                                                         }}
                                                                     />
-                                                                    {isUncontested && (
-                                                                        <div 
-                                                                            className="absolute -top-1 -right-1 w-5 h-5 bg-black rounded-full flex items-center justify-center cursor-help"
-                                                                            onMouseEnter={(e) => {
-                                                                                const rect = e.currentTarget.getBoundingClientRect();
-                                                                                setHoveredStar({
-                                                                                    x: rect.left + rect.width / 2,
-                                                                                    y: rect.top - 10
-                                                                                });
-                                                                            }}
-                                                                            onMouseLeave={() => setHoveredStar(null)}
-                                                                        >
-                                                                            <svg className="w-3 h-3 text-white fill-current" viewBox="0 0 24 24">
+                                                                    {isStarred && (
+                                                                        <div className="absolute -top-2 left-1/2 transform -translate-x-1/2 flex flex-row gap-0.5">
+                                                                            <svg className="w-4 h-4 text-yellow-400 fill-current stroke-black stroke-1" viewBox="0 0 24 24">
+                                                                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                                                            </svg>
+                                                                            <svg className="w-4 h-4 text-yellow-400 fill-current stroke-black stroke-1" viewBox="0 0 24 24">
+                                                                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                                                            </svg>
+                                                                            <svg className="w-4 h-4 text-yellow-400 fill-current stroke-black stroke-1" viewBox="0 0 24 24">
                                                                                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                                                                             </svg>
                                                                         </div>
@@ -911,8 +937,8 @@ export function CompsHolder() {
                     }}
                 >
                     <div className="whitespace-normal">
-                        <div className="font-semibold mb-1">Uncontested Unit</div>
-                        <div>This unit has 12.5% or less contest rate (1 player or less using it).</div>
+                        <div className="font-semibold mb-1">Contested Unit</div>
+                        <div>This unit has &gt;12.5% contest rate (more than 1 player using it).</div>
                     </div>
                     <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
                 </div>

@@ -7,6 +7,7 @@ export interface TFTComp {
     playCount: number;
     difficulty: string;
     levelling: string;
+    stars: string[]; // Array of starred units (e.g., ["TFT14_Seraphine", "TFT14_Shaco"])
     topUnits: Array<{
         name: string;
         type: 'unit' | 'trait';
@@ -270,6 +271,7 @@ export async function fetchTFTComps(): Promise<TFTComp[]> {
                 playCount: cluster.overall.count,
                 difficulty: (cluster as any).difficulty || 'Medium',
                 levelling: (cluster as any).levelling || 'Standard',
+                stars: (cluster.stars || []).map(star => star.replace('TFT14_', '')), // Add stars array from API data and remove TFT14_ prefix
                 topUnits: cluster.name
                     .filter(item => item.name.startsWith('TFT14_')) // Only include TFT14_ units in topUnits
                     .map(item => ({
@@ -311,6 +313,7 @@ function getFallbackComps(): TFTComp[] {
             playCount: 1000,
             difficulty: "Medium",
             levelling: "Fast 8",
+            stars: [], // Empty stars array for fallback data
             topUnits: [
                 { name: "Katarina", type: "unit", score: 4.5 },
                 { name: "Akali", type: "unit", score: 4.2 }
@@ -329,6 +332,7 @@ function getFallbackComps(): TFTComp[] {
             playCount: 1200,
             difficulty: "Easy",
             levelling: "Standard",
+            stars: [], // Empty stars array for fallback data
             topUnits: [
                 { name: "Ahri", type: "unit", score: 4.3 },
                 { name: "Lux", type: "unit", score: 4.0 }
@@ -347,6 +351,7 @@ function getFallbackComps(): TFTComp[] {
             playCount: 800,
             difficulty: "Hard",
             levelling: "Slow 9",
+            stars: [], // Empty stars array for fallback data
             topUnits: [
                 { name: "Braum", type: "unit", score: 4.1 },
                 { name: "Sejuani", type: "unit", score: 4.0 }
@@ -604,6 +609,7 @@ export function mergePlacementStatsWithComps(
             playCount: cluster.overall.count,
             difficulty: (cluster as any).difficulty || 'Medium',
             levelling: (cluster as any).levelling || 'Standard',
+            stars: cluster.stars || [], // Add stars array from API data
             topUnits: cluster.name
                 .filter(item => item.name.startsWith('TFT14_'))
                 .map(item => ({

@@ -18,13 +18,16 @@ interface Champion {
 }
 
 export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
-    const { selectedUnits, updatePlayerUnits, playerNames, updatePlayerName } = useTFT();
+    const { selectedUnits, updatePlayerUnits, playerNames, updatePlayerName, playerStars, updatePlayerStars } = useTFT();
     const [isHovered, setIsHovered] = useState(false);
     const [isRowHovered, setIsRowHovered] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0, shouldPositionAbove: false });
     const [isEditingPlayer, setIsEditingPlayer] = useState(false);
     const rowRef = useRef<HTMLDivElement>(null);
+    const starredUnits = playerStars[player] || [];
+    const [popupIndex, setPopupIndex] = useState<number | null>(null);
+    const popupRef = useRef<HTMLDivElement | null>(null);
 
     // Get current player's selected champions from context
     const selectedChampions = selectedUnits[player] || Array(10).fill(null);
@@ -79,13 +82,14 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
         setIsModalOpen(false);
     };
 
-    const handleCompSelect = (champions: Champion[]) => {
+    const handleCompSelect = (champions: Champion[], stars: string[]) => {
         // Fill the array with champions and pad with nulls to maintain 10 slots
         const newChampions: (Champion | null)[] = [...champions];
         while (newChampions.length < 10) {
             newChampions.push(null);
         }
         updatePlayerUnits(player, newChampions.slice(0, 10));
+        updatePlayerStars(player, stars);
         setIsModalOpen(false);
     };
 
@@ -117,15 +121,51 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
         onPlayerSelect(-1); // Deselect the row
     };
 
-    const handleHexagonClick = (index: number, e: React.MouseEvent) => {
-        // Only remove unit if row is selected and there's a champion in that slot
-        if (isSelected && selectedChampions[index]) {
-            e.stopPropagation(); // Prevent event from bubbling up to row only when removing champion
-            const newChampions = [...selectedChampions];
-            newChampions[index] = null;
-            updatePlayerUnits(player, newChampions);
+    // Close popup when clicking outside
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+                setPopupIndex(null);
+            }
         }
-        // If no champion to remove, let the click bubble up to the row
+        if (popupIndex !== null) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [popupIndex]);
+
+    // New handler for hex click
+    const handleHexagonClick = (index: number) => {
+        if (isSelected && selectedChampions[index]) {
+            // Don't stop propagation - let the row stay selected
+            setPopupIndex(index);
+        }
+    };
+
+    // Remove unit
+    const handleRemoveUnit = (index: number) => {
+        const newChampions = [...selectedChampions];
+        newChampions[index] = null;
+        updatePlayerUnits(player, newChampions);
+        setPopupIndex(null);
+        // Don't deselect the row
+    };
+
+    // Toggle stars
+    const handleToggleStars = (index: number) => {
+        const unit = selectedChampions[index];
+        if (!unit) return;
+        let newStars: string[];
+        if (starredUnits.includes(unit.name)) {
+            newStars = starredUnits.filter(name => name !== unit.name);
+        } else {
+            newStars = [...starredUnits, unit.name];
+        }
+        updatePlayerStars(player, newStars);
+        setPopupIndex(null);
+        // Don't deselect the row
     };
 
     // Update popup position when row is selected or on scroll
@@ -231,12 +271,30 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
                         </div>
                     )}
                     {Array.from({ length: 10 }).map((_, index) => (
-                        <div className="flex flex-col mt-2" key={index}> 
+                        <div className="flex flex-col mt-2 relative" key={index}>
                             <CompHexagon 
                                 champion={selectedChampions[index] || undefined} 
-                                onClick={(e) => handleHexagonClick(index, e)}
+                                onClick={() => handleHexagonClick(index)}
                                 isSelected={isSelected}
+                                starred={!!selectedChampions[index] && starredUnits.includes(selectedChampions[index].name)}
                             />
+                            {/* Popup menu for actions */}
+                            {popupIndex === index && selectedChampions[index] && (
+                                <div ref={popupRef} className="absolute z-50 top-1/2 left-full ml-2 -translate-y-1/2 bg-white border border-gray-300 rounded shadow-lg flex flex-col min-w-[120px]">
+                                    <button
+                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-200 last:border-b-0"
+                                        onClick={() => handleRemoveUnit(index)}
+                                    >
+                                        Remove unit
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                                        onClick={() => handleToggleStars(index)}
+                                    >
+                                        {starredUnits.includes(selectedChampions[index].name) ? 'Remove stars' : '3 star'}
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
