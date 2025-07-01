@@ -18,17 +18,58 @@ interface Champion {
 }
 
 export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
-    const { selectedUnits, updatePlayerUnits } = useTFT();
+    const { selectedUnits, updatePlayerUnits, playerNames, updatePlayerName } = useTFT();
     const [isHovered, setIsHovered] = useState(false);
+    const [isRowHovered, setIsRowHovered] = useState(false);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0, shouldPositionAbove: false });
+    const [isEditingPlayer, setIsEditingPlayer] = useState(false);
     const rowRef = useRef<HTMLDivElement>(null);
 
     // Get current player's selected champions from context
     const selectedChampions = selectedUnits[player] || Array(10).fill(null);
+    
+    // Get current player's name from context or use default
+    const playerName = playerNames[player] !== undefined ? playerNames[player] : `Player ${player + 1}`;
 
-    const handlePlayerClick = () => {
+    const handlePlayerClick = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent row selection when clicking player box
+        setIsEditingPlayer(true);
+    };
+
+    const handleRowClick = () => {
         onPlayerSelect(player);
+    };
+
+    const handleRowMouseEnter = () => {
+        setIsRowHovered(true);
+    };
+
+    const handleRowMouseLeave = () => {
+        setIsRowHovered(false);
+    };
+
+    const handleHexagonContainerMouseEnter = () => {
+        setIsRowHovered(true);
+    };
+
+    const handleHexagonContainerMouseLeave = () => {
+        setIsRowHovered(false);
+    };
+
+    const handlePlayerNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newName = e.target.value;
+        updatePlayerName(player, newName);
+    };
+
+    const handlePlayerNameBlur = () => {
+        setIsEditingPlayer(false);
+    };
+
+    const handlePlayerNameKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+        if (e.key === 'Enter') {
+            setIsEditingPlayer(false);
+        }
     };
 
     const handlePresetClick = (e: React.MouseEvent) => {
@@ -148,18 +189,55 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
 
     return (
         <>
-            <div className="flex flex-row gap-2 items-center justify-center relative cursor-pointer" ref={rowRef} onClick={handlePlayerClick} onMouseEnter={() => setIsHovered(true)} onMouseLeave={() => setIsHovered(false)}>
+            <div 
+                className="flex flex-row gap-2 items-center justify-center relative cursor-pointer" 
+                ref={rowRef} 
+                onClick={handleRowClick}
+            >
                 <div 
-                    className={`relative w-20 h-20 bg-gray-100 text-gray-700 flex items-center justify-center font-bold border-2 ${(isSelected || isHovered) ? 'border-yellow-300' : 'border-gray-300'}`}
+                    className={`relative w-20 h-20 bg-gray-100 text-gray-700 flex items-center justify-center font-bold border-2 cursor-pointer ${(isSelected || isHovered) ? 'border-yellow-300' : 'border-gray-300'}`}
+                    onClick={handlePlayerClick}
+                    onMouseEnter={(e) => {
+                        e.stopPropagation();
+                        setIsHovered(true);
+                    }}
+                    onMouseLeave={(e) => {
+                        e.stopPropagation();
+                        setIsHovered(false);
+                    }}
                 >
-                    <div>{'Player' + ' ' + (player+1).toString()}</div>
-                    {isHovered && (
+                    {isEditingPlayer ? (
+                        <input
+                            type="text"
+                            value={playerName}
+                            onChange={handlePlayerNameChange}
+                            onBlur={handlePlayerNameBlur}
+                            onKeyDown={handlePlayerNameKeyDown}
+                            className="w-full h-full text-center bg-transparent border-none outline-none text-gray-700 font-bold text-xs"
+                            autoFocus
+                        />
+                    ) : (
+                        <div className="w-full h-full text-center text-xs overflow-hidden text-ellipsis whitespace-nowrap px-1 leading-[80px]" title={playerName}>
+                            {playerName}
+                        </div>
+                    )}
+                    {isHovered && !isEditingPlayer && (
                         <div className="absolute -right-2 -top-2 bg-yellow-300 rounded-full p-1">
                             <Pencil size={12} className="text-white" />
                         </div>
                     )}
                 </div>
-                <div className={`flex flex-row gap-2 border-2 p-5 rounded-xl ${(isSelected || isHovered) ? 'border-yellow-300' : 'border-gray-300'} hover:border-yellow-300 bg-white`}>
+                <div 
+                    className={`flex flex-row gap-2 border-2 p-5 rounded-xl relative ${isSelected ? 'border-yellow-300' : isRowHovered ? 'border-yellow-300' : 'border-gray-300'} bg-white`}
+                    onMouseEnter={handleHexagonContainerMouseEnter}
+                    onMouseLeave={handleHexagonContainerMouseLeave}
+                >
+                    {/* Row hover pencil icon */}
+                    {isRowHovered && !isSelected && (
+                        <div className="absolute -left-2 -top-2 bg-yellow-300 rounded-full p-1">
+                            <Pencil size={12} className="text-white" />
+                        </div>
+                    )}
                     {Array.from({ length: 10 }).map((_, index) => (
                         <div className="flex flex-col mt-2" key={index}> 
                             <CompHexagon 

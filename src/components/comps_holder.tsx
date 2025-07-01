@@ -214,7 +214,7 @@ export function CompsHolder() {
         return {
             contestRate: savedContestRate ? parseInt(savedContestRate) : 60,
             placement: savedPlacement ? parseInt(savedPlacement) : 40,
-            itemizedWeight: savedItemizedWeight ? parseInt(savedItemizedWeight) : 50
+            itemizedWeight: savedItemizedWeight ? parseInt(savedItemizedWeight) : 150
         };
     });
 
@@ -311,6 +311,7 @@ export function CompsHolder() {
                 const isItemized = unitBuild && unitBuild.num_items > 0;
                 
                 if (isItemized) {
+                    // New formula: 100% = base penalty, 150% = 50% extra penalty, 200% = double penalty
                     itemizedPenalty += contestRate * (weights.itemizedWeight / 100);
                 }
             });
@@ -654,8 +655,8 @@ export function CompsHolder() {
                             </label>
                             <input
                                 type="range"
-                                min="0"
-                                max="100"
+                                min="100"
+                                max="200"
                                 value={weights.itemizedWeight}
                                 onChange={(e) => setWeights({
                                     ...weights,
@@ -664,7 +665,7 @@ export function CompsHolder() {
                                 className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer slider"
                             />
                             <p className="text-gray-500 text-xs mt-1">
-                                Higher values = itemized units are penalized more when contested
+                                100% = base penalty, 150% = 50% extra penalty, 200% = double penalty
                             </p>
                         </div>
                         <p className="text-gray-500 text-xs mt-2">

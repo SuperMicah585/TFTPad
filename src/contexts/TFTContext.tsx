@@ -46,6 +46,9 @@ interface TFTContextType {
     selectedUnits: { [playerId: number]: (Champion | null)[] };
     updatePlayerUnits: (playerId: number, units: (Champion | null)[]) => void;
     getUnitContestRates: () => { [unitName: string]: number };
+    // Player names tracking
+    playerNames: { [playerId: number]: string };
+    updatePlayerName: (playerId: number, name: string) => void;
 }
 
 const TFTContext = createContext<TFTContextType | undefined>(undefined);
@@ -76,10 +79,20 @@ export function TFTProvider({ children }: TFTProviderProps) {
     // Unit selection tracking for all 8 players
     const [selectedUnits, setSelectedUnits] = useState<{ [playerId: number]: (Champion | null)[] }>({});
 
+    // Player names tracking for all 8 players
+    const [playerNames, setPlayerNames] = useState<{ [playerId: number]: string }>({});
+
     const updatePlayerUnits = (playerId: number, units: (Champion | null)[]) => {
         setSelectedUnits(prev => ({
             ...prev,
             [playerId]: units
+        }));
+    };
+
+    const updatePlayerName = (playerId: number, name: string) => {
+        setPlayerNames(prev => ({
+            ...prev,
+            [playerId]: name
         }));
     };
 
@@ -203,7 +216,9 @@ export function TFTProvider({ children }: TFTProviderProps) {
         rankError,
         selectedUnits,
         updatePlayerUnits,
-        getUnitContestRates
+        getUnitContestRates,
+        playerNames,
+        updatePlayerName
     };
 
     return (
