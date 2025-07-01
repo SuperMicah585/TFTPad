@@ -187,7 +187,7 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
                 onClick={handleRowClick}
             >
                 <div 
-                    className={`relative w-20 h-20 bg-gray-100 text-gray-700 flex items-center justify-center font-bold border-2 cursor-pointer ${(isSelected || isHovered) ? 'border-yellow-300' : 'border-gray-300'}`}
+                    className={`relative w-20 h-20 bg-gray-100 text-gray-700 flex items-center justify-center font-bold border-2 cursor-pointer ${isHovered ? 'border-yellow-300' : 'border-gray-300'}`}
                     onClick={handlePlayerClick}
                     onMouseEnter={(e) => {
                         e.stopPropagation();
