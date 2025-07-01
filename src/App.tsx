@@ -5,14 +5,24 @@ import { CompsHolder } from './components/comps_holder'
 import { Header } from './components/header'
 import { TFTProvider } from './contexts/TFTContext'
 import { HelpCircle } from 'lucide-react'
+import { GoogleAnalytics, trackEvent } from './components/GoogleAnalytics'
 import './App.css'
 
 function App() {
   const [activeTab, setActiveTab] = useState<'game' | 'units' | 'comps'>('game')
 
+  const handleTabChange = (tab: 'game' | 'units' | 'comps') => {
+    setActiveTab(tab);
+    // Track tab changes as events
+    trackEvent('tab_click', 'navigation', tab);
+  };
+
   return (
     <TFTProvider>
       <div className="min-h-screen bg-white text-gray-800 relative">
+        {/* Google Analytics - Configure with VITE_GA_MEASUREMENT_ID in .env file */}
+        <GoogleAnalytics />
+        
         {/* Notebook Lines Background - Full Viewport */}
         <div className="absolute inset-0 bg-white dark:bg-gray-950 overflow-hidden">
           <div className="absolute inset-0 opacity-15 dark:opacity-20">
@@ -39,7 +49,7 @@ function App() {
           <div className="flex space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
             <div className="flex-1 relative group">
               <button
-                onClick={() => setActiveTab('game')}
+                onClick={() => handleTabChange('game')}
                 className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
                   activeTab === 'game'
                     ? 'bg-white text-gray-800 shadow-sm'
@@ -60,7 +70,7 @@ function App() {
             
             <div className="flex-1 relative group">
               <button
-                onClick={() => setActiveTab('comps')}
+                onClick={() => handleTabChange('comps')}
                 className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
                   activeTab === 'comps'
                     ? 'bg-white text-gray-800 shadow-sm'
@@ -81,7 +91,7 @@ function App() {
             
             <div className="flex-1 relative group">
               <button
-                onClick={() => setActiveTab('units')}
+                onClick={() => handleTabChange('units')}
                 className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
                   activeTab === 'units'
                     ? 'bg-white text-gray-800 shadow-sm'
