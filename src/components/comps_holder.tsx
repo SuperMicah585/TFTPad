@@ -612,10 +612,7 @@ export function CompsHolder() {
                                         <div className="text-xs mb-2">
                                             Units with <span className="text-red-400 font-medium">red borders</span> are contested. This means more than 3 copies of this unit will be contested in your lobby. Hover over red-bordered units for details.
                                         </div>
-                                        <div className="font-semibold mb-2 text-left">3-Star Units:</div>
-                                        <div className="text-xs">
-                                            Units with <span className="text-yellow-400 font-medium">3 gold stars</span> count 3x as much for contest calculations, making them more likely to be contested.
-                                        </div>
+
                                     </div>
                                     <div className="arrow absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 transition-transform duration-200"></div>
                                 </div>
