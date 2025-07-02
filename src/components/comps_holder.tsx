@@ -210,12 +210,10 @@ export function CompsHolder() {
     const [weights, setWeights] = useState(() => {
         const savedContestRate = localStorage.getItem('tft-contest-weight');
         const savedPlacement = localStorage.getItem('tft-placement-weight');
-        const savedItemizedWeight = localStorage.getItem('tft-itemized-weight');
         
         return {
             contestRate: savedContestRate ? parseInt(savedContestRate) : 60,
-            placement: savedPlacement ? parseInt(savedPlacement) : 40,
-            itemizedWeight: savedItemizedWeight ? parseInt(savedItemizedWeight) : 150
+            placement: savedPlacement ? parseInt(savedPlacement) : 40
         };
     });
 
@@ -228,9 +226,7 @@ export function CompsHolder() {
         localStorage.setItem('tft-placement-weight', weights.placement.toString());
     }, [weights.placement]);
 
-    useEffect(() => {
-        localStorage.setItem('tft-itemized-weight', weights.itemizedWeight.toString());
-    }, [weights.itemizedWeight]);
+
 
     const rankOptions = [
         'iron+', 'bronze+', 'silver+', 'gold+', 'platinum+', 'emerald+', 'diamond+', 'master+', 'grandmaster+', 'challenger'
@@ -264,20 +260,29 @@ export function CompsHolder() {
                 }
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        const isStarred = currentPlayerStars.includes(unit.name);
-                        const weight = isStarred ? 3 : 1;
-                        // Normalize unit name to match Comps tab display (remove TFT14_ prefix and trim)
-                        let normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().trim();
+                        // Check if this unit is itemized in any comp
+                        const isItemized = displayComps.some(comp => {
+                            const unitBuild = comp.builds.find((build: any) => build.unit === unit.name.replace(/^TFT14_/, ''));
+                            return unitBuild && unitBuild.num_items > 0;
+                        });
                         
-                        // Handle special case for Nidalee/NidaleeCougar mismatch
-                        if (normalizedUnitName === 'nidalee') {
-                            normalizedUnitName = 'nidaleecougar';
-                        }
-                        unitCounts[normalizedUnitName] = (unitCounts[normalizedUnitName] || 0) + weight;
-                        console.log(`Comps tab - Unit ${unit.name} (normalized: ${normalizedUnitName}) from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[normalizedUnitName]}`);
-                        // Debug: Log all unit names to see what's being stored
-                        if (unit.name.toLowerCase().includes('nidalee')) {
-                            console.log(`DEBUG NIDALEE: Original name: "${unit.name}", Normalized: "${normalizedUnitName}"`);
+                        // Only count itemized units
+                        if (isItemized) {
+                            const isStarred = currentPlayerStars.includes(unit.name);
+                            const weight = isStarred ? 3 : 1;
+                            // Normalize unit name to match Comps tab display (remove TFT14_ prefix and trim)
+                            let normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().trim();
+                            
+                            // Handle special case for Nidalee/NidaleeCougar mismatch
+                            if (normalizedUnitName === 'nidalee') {
+                                normalizedUnitName = 'nidaleecougar';
+                            }
+                            unitCounts[normalizedUnitName] = (unitCounts[normalizedUnitName] || 0) + weight;
+                            console.log(`Comps tab - Unit ${unit.name} (normalized: ${normalizedUnitName}) from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[normalizedUnitName]}`);
+                            // Debug: Log all unit names to see what's being stored
+                            if (unit.name.toLowerCase().includes('nidalee')) {
+                                console.log(`DEBUG NIDALEE: Original name: "${unit.name}", Normalized: "${normalizedUnitName}"`);
+                            }
                         }
                     }
                 });
@@ -325,18 +330,7 @@ export function CompsHolder() {
             
             const averageContestScore = unitCount > 0 ? totalContestScore / unitCount : 0;
             
-            // Calculate itemized penalty separately
-            let itemizedPenalty = 0;
-            comp.units.forEach((unit: string) => {
-                const contestRate = unitContestRates[unit.replace(/^TFT14_/, '').toLowerCase().trim()] || 0;
-                const unitBuild = comp.builds.find((build: any) => build.unit === unit);
-                const isItemized = unitBuild && unitBuild.num_items > 0;
-                
-                if (isItemized) {
-                    // New formula: 100% = base penalty, 150% = 50% extra penalty, 200% = double penalty
-                    itemizedPenalty += contestRate * (weights.itemizedWeight / 100);
-                }
-            });
+
             
             // Use placement stats if available, otherwise fall back to comp's default placement
             const placementScore = comp.placementStats?.avgPlacement || comp.avgPlacement;
@@ -345,8 +339,8 @@ export function CompsHolder() {
             const normalizedContestScore = averageContestScore; // Already 0-100
             const normalizedPlacementScore = (placementScore - 1) * 14.29;
             
-            // Combined score: use user-defined weights and add itemized penalty
-            const combinedScore = (normalizedContestScore * (weights.contestRate / 100)) + (normalizedPlacementScore * (weights.placement / 100)) + itemizedPenalty;
+            // Combined score: use user-defined weights
+            const combinedScore = (normalizedContestScore * (weights.contestRate / 100)) + (normalizedPlacementScore * (weights.placement / 100));
             
             return {
                 comp: {
@@ -372,7 +366,7 @@ export function CompsHolder() {
         }
 
         return compsWithContest;
-    }, [displayComps, unitContestRates, weights.contestRate, weights.placement, weights.itemizedWeight, searchTerm]);
+    }, [displayComps, unitContestRates, weights.contestRate, weights.placement, searchTerm]);
 
     const getChampionIconUrl = (championName: string) => {
         // First, try to find the champion in our champions data
@@ -610,7 +604,7 @@ export function CompsHolder() {
                                         </div>
                                         <div className="font-semibold mb-2 text-left">Red Borders:</div>
                                         <div className="text-xs mb-2">
-                                            Units with <span className="text-red-400 font-medium">red borders</span> are contested. This means more than 3 copies of this unit will be contested in your lobby. Hover over red-bordered units for details.
+                                            Units with <span className="text-red-400 font-medium">red borders</span> are contested. This means more than 3 copies of this unit will be contested in your lobby. <span className="text-gray-300 font-medium">Only itemized units are considered for contest calculations.</span> Hover over red-bordered units for details.
                                         </div>
 
                                     </div>
@@ -679,25 +673,7 @@ export function CompsHolder() {
                                 />
                             </div>
                         </div>
-                        <div className="mt-4">
-                            <label className="block text-gray-600 text-sm mb-2">
-                                Itemized Unit Weight: {weights.itemizedWeight}%
-                            </label>
-                            <input
-                                type="range"
-                                min="100"
-                                max="200"
-                                value={weights.itemizedWeight}
-                                onChange={(e) => setWeights({
-                                    ...weights,
-                                    itemizedWeight: parseInt(e.target.value)
-                                })}
-                                className="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer slider"
-                            />
-                            <p className="text-gray-500 text-xs mt-1">
-                                100% = base penalty, 150% = 50% extra penalty, 200% = double penalty
-                            </p>
-                        </div>
+
                         <p className="text-gray-500 text-xs mt-2">
                             Adjust how much contest rate vs placement affects comp rankings
                         </p>
