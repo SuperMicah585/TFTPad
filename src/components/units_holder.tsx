@@ -171,15 +171,18 @@ export function UnitsHolder() {
                                 const pool = TIER_POOLS[tier as keyof typeof TIER_POOLS];
                                 const percentage = pool ? Math.round((usage / pool.total) * 100) : 0;
                                 const tierColor = getTierBackgroundColor(tier);
+                                const tierBorderColor = TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'border-gray-400';
                                 
                                 return (
                                     <div key={tier} className="text-center">
-                                        <div className={`inline-block w-8 h-8 rounded-full ${tierColor} flex items-center justify-center text-white font-bold text-sm mb-2`}>
-                                            {tier}
-                                        </div>
-                                        <div className="text-sm text-gray-600">
-                                            <div className="font-semibold">{usage} / {pool.total}</div>
-                                            <div className="text-xs">{percentage}% used</div>
+                                        <div className={`text-sm text-gray-600 p-3 rounded-lg border-2 ${tierBorderColor} bg-white relative`}>
+                                            <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 w-6 h-6 rounded-full ${tierColor} flex items-center justify-center text-white font-bold text-xs`}>
+                                                {tier}
+                                            </div>
+                                            <div className="mt-2">
+                                                <div className="font-semibold">{usage} / {pool.total}</div>
+                                                <div className="text-xs">{percentage}% used</div>
+                                            </div>
                                         </div>
                                     </div>
                                 );
