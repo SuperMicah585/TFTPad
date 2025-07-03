@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTFT } from '../contexts/TFTContext';
-import { TIER_COLORS, getTraitBreakpointInfo, decodeHtmlEntities } from '../services/tftService';
-import { HelpCircle } from 'lucide-react';
+import { TIER_COLORS, getTraitBreakpointInfo, decodeHtmlEntities, generateTeamPlannerCode } from '../services/tftService';
+import { HelpCircle, Copy } from 'lucide-react';
 
 interface CompWithContest {
     comp: any; // Using any to match the actual TFTComp type
@@ -205,6 +205,7 @@ export function CompsHolder() {
     const [searchTerm, setSearchTerm] = useState('');
     const [hoveredTrait, setHoveredTrait] = useState<{ text: string; x: number; y: number } | null>(null);
     const [hoveredStar, setHoveredStar] = useState<{ x: number; y: number } | null>(null);
+    const [copiedCode, setCopiedCode] = useState<string | null>(null);
     
     // Load weights from localStorage or use defaults
     const [weights, setWeights] = useState(() => {
@@ -540,6 +541,17 @@ export function CompsHolder() {
         return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'border-gray-400';
     };
 
+    const handleCopyTeamCode = async (champions: string[]) => {
+        const teamCode = generateTeamPlannerCode(champions);
+        try {
+            await navigator.clipboard.writeText(teamCode);
+            setCopiedCode(teamCode);
+            setTimeout(() => setCopiedCode(null), 2000); // Clear after 2 seconds
+        } catch (err) {
+            console.error('Failed to copy team code:', err);
+        }
+    };
+
     const isValidTFT14Champion = (championName: string): boolean => {
         // Exclude special units that are not playable champions
         const excludedUnits = [
@@ -749,7 +761,7 @@ export function CompsHolder() {
                                 key={compWithContest.comp.id}
                                 className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
                             >
-                                <div className="flex justify-end items-start mb-3">
+                                <div className="flex justify-between items-start mb-3">
                                     <div className="flex gap-2 text-sm">
                                         <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
                                             {compWithContest.score.toFixed(1)} score
@@ -764,6 +776,21 @@ export function CompsHolder() {
                                             {compWithContest.placementStats?.totalGames?.toLocaleString() || compWithContest.comp.playCount.toLocaleString()} games
                                         </span>
                                     </div>
+                                    <button
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleCopyTeamCode(compWithContest.comp.units);
+                                        }}
+                                        className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                                            copiedCode === generateTeamPlannerCode(compWithContest.comp.units)
+                                                ? 'bg-green-100 text-green-800'
+                                                : 'bg-purple-100 text-purple-800 hover:bg-purple-200'
+                                        }`}
+                                        title="Copy team planner code"
+                                    >
+                                        <Copy size={12} />
+                                        <span className="hidden sm:inline">Team Code</span>
+                                    </button>
                                 </div>
                                 
                                 <div className="flex gap-6">

@@ -875,4 +875,163 @@ export function decodeHtmlEntities(text: string): string {
         .replace(/<[^>]*>/g, '') // Remove HTML tags
         .replace(/\s+/g, ' ') // Normalize whitespace
         .trim();
+}
+
+// Team planner codes for TFT Set 14 champions (from official data)
+const TEAM_PLANNER_CODES = {
+    'TFTSet14': {
+        'Alistar': { traits: [ 'Bruiser', 'Golden Ox' ], championTier: 1, teamPlannerCode: '312' },
+        'Annie': { traits: [ 'A.M.P', 'Golden Ox' ], championTier: 4, teamPlannerCode: '316' },
+        'Aphelios': { traits: [ 'Golden Ox', 'Marksman' ], championTier: 4, teamPlannerCode: '71a' },
+        'Aurora': { traits: [ 'Anima Squad', 'Dynamo' ], championTier: 5, teamPlannerCode: '30d' },
+        'Brand': { traits: [ 'Street Demon', 'Techie' ], championTier: 4, teamPlannerCode: '2e1' },
+        'Braum': { traits: [ 'Syndicate', 'Vanguard' ], championTier: 3, teamPlannerCode: '2f8' },
+        'Cho\'Gath': { traits: [ 'BoomBot', 'Bruiser' ], championTier: 4, teamPlannerCode: '30a' },
+        'Darius': { traits: [ 'Bruiser', 'Syndicate' ], championTier: 2, teamPlannerCode: '2e2' },
+        'Dr. Mundo': { traits: [ 'Bruiser', 'Slayer', 'Street Demon' ], championTier: 1, teamPlannerCode: '2e3' },
+        'Draven': { traits: [ 'Cypher', 'Rapidfire' ], championTier: 3, teamPlannerCode: '31c' },
+        'Ekko': { traits: [ 'Strategist', 'Street Demon' ], championTier: 2, teamPlannerCode: '31f' },
+        'Elise': { traits: [ 'Dynamo', 'Nitro' ], championTier: 3, teamPlannerCode: '2e4' },
+        'Fiddlesticks': { traits: [ 'BoomBot', 'Techie' ], championTier: 3, teamPlannerCode: '2e5' },
+        'Galio': { traits: [ 'Bastion', 'Cypher' ], championTier: 3, teamPlannerCode: '2e6' },
+        'Gragas': { traits: [ 'Bruiser', 'Divinicorp' ], championTier: 3, teamPlannerCode: '302' },
+        'Graves': { traits: [ 'Executioner', 'Golden Ox' ], championTier: 2, teamPlannerCode: '315' },
+        'Illaoi': { traits: [ 'Anima Squad', 'Bastion' ], championTier: 2, teamPlannerCode: '2fd' },
+        'Jarvan IV': { traits: [ 'Golden Ox', 'Slayer', 'Vanguard' ], championTier: 3, teamPlannerCode: '314' },
+        'Jax': { traits: [ 'Bastion', 'Exotech' ], championTier: 1, teamPlannerCode: '305' },
+        'Jhin': { traits: [ 'Dynamo', 'Exotech', 'Marksman' ], championTier: 2, teamPlannerCode: '300' },
+        'Jinx': { traits: [ 'Marksman', 'Street Demon' ], championTier: 3, teamPlannerCode: '31e' },
+        'Kindred': { traits: [ 'Marksman', 'Nitro', 'Rapidfire' ], championTier: 1, teamPlannerCode: '2fb' },
+        'Kobuko': { traits: [ 'Bruiser', 'Cyberboss' ], championTier: 5, teamPlannerCode: '306' },
+        'Kog\'Maw': { traits: [ 'BoomBot', 'Rapidfire' ], championTier: 1, teamPlannerCode: '303' },
+        'LeBlanc': { traits: [ 'Cypher', 'Strategist' ], championTier: 2, teamPlannerCode: '2e8' },
+        'Leona': { traits: [ 'Anima Squad', 'Vanguard' ], championTier: 4, teamPlannerCode: '30f' },
+        'Miss Fortune': { traits: [ 'Dynamo', 'Syndicate' ], championTier: 4, teamPlannerCode: '2e9' },
+        'Mordekaiser': { traits: [ 'Bruiser', 'Exotech', 'Techie' ], championTier: 3, teamPlannerCode: '311' },
+        'Morgana': { traits: [ 'Divinicorp', 'Dynamo' ], championTier: 1, teamPlannerCode: '2ea' },
+        'Naafiri': { traits: [ 'A.M.P', 'Exotech' ], championTier: 2, teamPlannerCode: '301' },
+        'Neeko': { traits: [ 'Strategist', 'Street Demon' ], championTier: 4, teamPlannerCode: '2eb' },
+        'Nidalee': { traits: [ 'A.M.P', 'Nitro' ], championTier: 1, teamPlannerCode: '2f9' },
+        'Poppy': { traits: [ 'Bastion', 'Cyberboss' ], championTier: 1, teamPlannerCode: '308' },
+        'Renekton': { traits: [ 'Bastion', 'Divinicorp', 'Overlord' ], championTier: 5, teamPlannerCode: '2ec' },
+        'Rengar': { traits: [ 'Executioner', 'Street Demon' ], championTier: 3, teamPlannerCode: '2ed' },
+        'Rhaast': { traits: [ 'Divinicorp', 'Vanguard' ], championTier: 2, teamPlannerCode: '317' },
+        'Samira': { traits: [ 'A.M.P', 'Street Demon' ], championTier: 5, teamPlannerCode: '2ee' },
+        'Sejuani': { traits: [ 'Bastion', 'Exotech' ], championTier: 4, teamPlannerCode: '307' },
+        'Senna': { traits: [ 'Divinicorp', 'Slayer' ], championTier: 3, teamPlannerCode: '2ef' },
+        'Seraphine': { traits: [ 'Anima Squad', 'Techie' ], championTier: 1, teamPlannerCode: '2fe' },
+        'Shaco': { traits: [ 'Slayer', 'Syndicate' ], championTier: 1, teamPlannerCode: '2f0' },
+        'Shyvana': { traits: [ 'Bastion', 'Nitro', 'Techie' ], championTier: 2, teamPlannerCode: '2fa' },
+        'Skarner': { traits: [ 'BoomBot', 'Vanguard' ], championTier: 2, teamPlannerCode: '304' },
+        'Sylas': { traits: [ 'Anima Squad', 'Vanguard' ], championTier: 1, teamPlannerCode: '30c' },
+        'Twisted Fate': { traits: [ 'Rapidfire', 'Syndicate' ], championTier: 2, teamPlannerCode: '2f1' },
+        'Urgot': { traits: [ 'BoomBot', 'Executioner' ], championTier: 5, teamPlannerCode: '30b' },
+        'Varus': { traits: [ 'Executioner', 'Exotech' ], championTier: 3, teamPlannerCode: '2f2' },
+        'Vayne': { traits: [ 'Anima Squad', 'Slayer' ], championTier: 2, teamPlannerCode: '30e' },
+        'Veigar': { traits: [ 'Cyberboss', 'Techie' ], championTier: 2, teamPlannerCode: '2f3' },
+        'Vex': { traits: [ 'Divinicorp', 'Executioner' ], championTier: 4, teamPlannerCode: '2f4' },
+        'Vi': { traits: [ 'Cypher', 'Vanguard' ], championTier: 1, teamPlannerCode: '310' },
+        'Viego': { traits: [ 'Golden Ox', 'Soul Killer', 'Techie' ], championTier: 5, teamPlannerCode: '313' },
+        'Xayah': { traits: [ 'Anima Squad', 'Marksman' ], championTier: 4, teamPlannerCode: '2ff' },
+        'Yuumi': { traits: [ 'A.M.P', 'Anima Squad', 'Strategist' ], championTier: 3, teamPlannerCode: '2fc' },
+        'Zed': { traits: [ 'Cypher', 'Slayer' ], championTier: 4, teamPlannerCode: '2f5' },
+        'Zeri': { traits: [ 'Exotech', 'Rapidfire' ], championTier: 4, teamPlannerCode: '2f6' },
+        'Ziggs': { traits: [ 'Cyberboss', 'Strategist' ], championTier: 4, teamPlannerCode: '309' },
+        'Zyra': { traits: [ 'Street Demon', 'Techie' ], championTier: 1, teamPlannerCode: '2f7' }
+    }
+};
+
+// TFTSet14 configuration
+const TFTSET14_CONFIG = {
+    targetSlots: 10,
+    teamPlannerCodePrefix: '02'
+};
+
+/**
+ * Generate a team planner code string from a list of champions
+ * @param champions Array of champion names
+ * @returns Team planner code string ending with TFTSet14
+ */
+// Helper function to normalize champion names from comp data to team planner format
+function normalizeChampionName(name: string): string {
+    // Remove TFT14_ prefix if present
+    let cleanName = name.replace(/^TFT14_/, '');
+    
+    // Handle specific cases where comp data uses different naming than team planner codes
+    const nameMappings: { [key: string]: string } = {
+        'MissFortune': 'Miss Fortune',
+        'TwistedFate': 'Twisted Fate',
+        'DrMundo': 'Dr. Mundo',
+        'KogMaw': 'Kog\'Maw', // TFT14_KogMaw -> Kog'Maw (no apostrophe in comp data)
+        'Jarvan': 'Jarvan IV', // TFT14_Jarvan -> Jarvan IV
+        'JarvanIV': 'Jarvan IV',
+        'Chogath': 'Cho\'Gath', // TFT14_Chogath -> Cho'Gath (no apostrophe in comp data)
+        'ChoGath': 'Cho\'Gath', // Alternative spelling
+        'Cho\'Gath': 'Cho\'Gath', // Already correct
+        'LeBlanc': 'LeBlanc', // Already correct
+        'Nidalee': 'Nidalee', // Already correct
+        'Kobuko': 'Kobuko', // Already correct
+        'Renekton': 'Renekton', // Already correct
+        'Samira': 'Samira', // Already correct
+        'Urgot': 'Urgot', // Already correct
+        'Viego': 'Viego', // Already correct
+        'Ziggs': 'Ziggs' // Already correct
+    };
+    
+    return nameMappings[cleanName] || cleanName;
+}
+
+export function generateTeamPlannerCode(champions: string[]): string {
+    console.log('DEBUG: Original champions:', champions);
+    
+    // Sort champions by tier and name for consistent team codes
+    const sortedChampions = champions
+        .filter(championName => championName)
+        .map(championName => {
+            const normalized = normalizeChampionName(championName);
+            console.log(`DEBUG: ${championName} -> ${normalized}`);
+            return normalized;
+        })
+        .sort((a, b) => {
+            const championA = TEAM_PLANNER_CODES.TFTSet14[a as keyof typeof TEAM_PLANNER_CODES.TFTSet14];
+            const championB = TEAM_PLANNER_CODES.TFTSet14[b as keyof typeof TEAM_PLANNER_CODES.TFTSet14];
+            
+            if (!championA && !championB) return a.localeCompare(b);
+            if (!championA) return 1;
+            if (!championB) return -1;
+            
+            // First sort by tier
+            if (championA.championTier !== championB.championTier) {
+                return championA.championTier - championB.championTier;
+            }
+            
+            // Then sort alphabetically within the same tier
+            return a.localeCompare(b);
+        });
+    
+    console.log('DEBUG: Sorted champions:', sortedChampions);
+    
+    const codes: string[] = [];
+    
+    // Process sorted champions
+    for (const championName of sortedChampions) {
+        const championData = TEAM_PLANNER_CODES.TFTSet14[championName as keyof typeof TEAM_PLANNER_CODES.TFTSet14];
+        console.log(`DEBUG: Looking up ${championName} -> Found: ${!!championData}, Code: ${championData?.teamPlannerCode || '000'}`);
+        if (championData) {
+            codes.push(championData.teamPlannerCode);
+        } else {
+            codes.push('000'); // Unknown champion
+        }
+    }
+    
+    // Pad with '000' to reach exactly 10 slots
+    while (codes.length < 10) {
+        codes.push('000');
+    }
+    
+    const result = TFTSET14_CONFIG.teamPlannerCodePrefix + codes.join('') + 'TFTSet14';
+    console.log('DEBUG: Final code:', result);
+    
+    // Combine prefix + champion codes + set identifier
+    return result;
 } 
