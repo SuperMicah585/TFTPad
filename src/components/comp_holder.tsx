@@ -38,8 +38,8 @@ export function CompHolder() {
         <div className="relative w-full p-4">
             {/* Tab content */}
             <div className="relative z-20">
-                <div className="flex items-center gap-2 text-gray-600 text-lg font-medium mb-4">
-                    <span>Click Row or Player to Edit</span>
+                                <div className="flex items-center gap-2 mb-4">
+                    <h2 className="text-2xl font-bold text-gray-800">Game</h2>
                     <div className="relative" ref={iconRef}>
                         <HelpCircle 
                             size={20} 

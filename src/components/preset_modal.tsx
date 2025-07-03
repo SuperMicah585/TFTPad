@@ -412,9 +412,13 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                                         <span>Difficulty: {comp.difficulty}</span>
                                         <span>Levelling: {comp.levelling}</span>
                                     </div>
-                                    <div className="flex gap-4">
-                                        <span>Avg Place: {comp.avgPlacement ? comp.avgPlacement.toFixed(2) : 'N/A'}</span>
-                                        <span>Games: {comp.playCount ? comp.playCount.toLocaleString() : 'N/A'}</span>
+                                    <div className="flex gap-2 text-sm">
+                                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                                            {comp.avgPlacement ? comp.avgPlacement.toFixed(2) : 'N/A'} avg
+                                        </span>
+                                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
+                                            {comp.playCount ? comp.playCount.toLocaleString() : 'N/A'} games
+                                        </span>
                                     </div>
                                 </div>
                             </div>
