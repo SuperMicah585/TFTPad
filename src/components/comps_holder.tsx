@@ -226,7 +226,106 @@ export function CompsHolder() {
         localStorage.setItem('tft-placement-weight', weights.placement.toString());
     }, [weights.placement]);
 
+    // Define helper functions first, before useMemo
+    const getTraitDisplayInfo = (traitName: string) => {
+        // Clean the trait name - remove any suffixes like _1, _2, etc.
+        const cleanTraitName = traitName.replace(/_\d+$/, '');
+        const breakpoint = traitName.match(/_(\d+)$/)?.[1] || '';
+        
+        // Get breakpoint information from detailed trait data
+        const breakpointInfo = getTraitBreakpointInfo(cleanTraitName, breakpoint, detailedTraitData || []);
+        
+        // Manual mapping for common trait names
+        const traitMapping: { [key: string]: string } = {
+            'Armorclad': 'TFT14_Armorclad',
+            'Strong': 'TFT14_Strong', 
+            'Cutter': 'TFT14_Cutter',
+            'Marksman': 'TFT14_Marksman',
+            'Techie': 'TFT14_Techie',
+            'Controller': 'TFT14_Controller',
+            'Supercharge': 'TFT14_Supercharge',
+            'Immortal': 'TFT14_Immortal',
+            'Assassin': 'TFTTutorial_Assassin',
+            'Mage': 'TFTTutorial_Sorcerer',
+            'Vanguard': 'TFTTutorial_Brawler'
+        };
+        
+        // Try manual mapping first
+        const mappedTraitKey = traitMapping[cleanTraitName];
+        if (mappedTraitKey && traits[mappedTraitKey]) {
+            const traitData = traits[mappedTraitKey];
+            const iconUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-trait/${traitData.image.full}`;
+            const displayName = breakpointInfo.levelName || `${traitData.name} ${breakpoint}`;
+            return { 
+                iconUrl, 
+                displayName,
+                unitsRequired: breakpointInfo.unitsRequired,
+                description: breakpointInfo.description
+            };
+        }
+        
+        // Try multiple matching strategies
+        let traitKey = null;
+        
+        // Strategy 1: Direct name match
+        traitKey = Object.keys(traits).find(key => 
+            traits[key].name.toLowerCase() === cleanTraitName.toLowerCase()
+        );
+        
+        // Strategy 2: Key contains the trait name
+        if (!traitKey) {
+            traitKey = Object.keys(traits).find(key => 
+                key.toLowerCase().includes(cleanTraitName.toLowerCase())
+            );
+        }
+        
+        // Strategy 3: Name contains the trait name
+        if (!traitKey) {
+            traitKey = Object.keys(traits).find(key => 
+                traits[key].name.toLowerCase().includes(cleanTraitName.toLowerCase())
+            );
+        }
+        
+        if (traitKey) {
+            const traitData = traits[traitKey];
+            const iconUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-trait/${traitData.image.full}`;
+            const displayName = breakpointInfo.levelName || `${traitData.name} ${breakpoint}`;
+            return { 
+                iconUrl, 
+                displayName,
+                unitsRequired: breakpointInfo.unitsRequired,
+                description: breakpointInfo.description
+            };
+        }
+        
+        // Fallback to original name with breakpoint
+        const fallbackIconUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-trait/Trait_Icon_Assassin.png`;
+        const fallbackDisplayName = breakpointInfo.levelName || `${cleanTraitName} ${breakpoint}`;
+        return { 
+            iconUrl: fallbackIconUrl, 
+            displayName: fallbackDisplayName,
+            unitsRequired: breakpointInfo.unitsRequired,
+            description: breakpointInfo.description
+        };
+    };
 
+    // Helper function to get display names for traits
+    const getTraitDisplayNames = (traits: string[]): string[] => {
+        if (!traits || !Array.isArray(traits)) {
+            return [];
+        }
+        return traits.map(trait => {
+            try {
+                const traitInfo = getTraitDisplayInfo(trait);
+                const displayName = traitInfo.displayName.toLowerCase();
+                console.log(`Trait conversion: "${trait}" -> "${displayName}"`);
+                return displayName;
+            } catch (error) {
+                console.warn('Error getting trait display name for:', trait, error);
+                return trait.toLowerCase(); // fallback to original trait name
+            }
+        });
+    };
 
     const rankOptions = [
         'iron+', 'bronze+', 'silver+', 'gold+', 'platinum+', 'emerald+', 'diamond+', 'master+', 'grandmaster+', 'challenger'
@@ -359,10 +458,42 @@ export function CompsHolder() {
         // Apply search filter if search term exists
         if (searchTerm.trim()) {
             const query = searchTerm.toLowerCase();
-            return compsWithContest.filter(compWithContest => 
-                compWithContest.comp.name.toLowerCase().includes(query) ||
-                compWithContest.comp.units.some((unit: string) => unit.toLowerCase().includes(query))
-            );
+            
+            // Debug: Log search query and sample trait data
+            if (compsWithContest.length > 0) {
+                console.log('Search query:', query);
+                console.log('Sample comp traits:', compsWithContest.slice(0, 2).map(comp => ({
+                    name: comp.comp.name,
+                    originalTraits: comp.comp.traits,
+                    displayTraits: getTraitDisplayNames(comp.comp.traits || [])
+                })));
+            }
+            
+            return compsWithContest.filter(compWithContest => {
+                try {
+                    // Get display names for traits
+                    const traitDisplayNames = getTraitDisplayNames(compWithContest.comp.traits || []);
+                    
+                    const nameMatch = compWithContest.comp.name.toLowerCase().includes(query);
+                    const unitMatch = compWithContest.comp.units && compWithContest.comp.units.some((unit: string) => unit.toLowerCase().includes(query));
+                    const traitMatch = traitDisplayNames.some((displayName: string) => displayName.includes(query));
+                    
+                    // Debug: Log matches for first few comps
+                    if (compsWithContest.indexOf(compWithContest) < 3) {
+                        console.log(`Comp "${compWithContest.comp.name}":`, {
+                            nameMatch,
+                            unitMatch,
+                            traitMatch,
+                            displayTraits: traitDisplayNames
+                        });
+                    }
+                    
+                    return nameMatch || unitMatch || traitMatch;
+                } catch (error) {
+                    console.warn('Error filtering comp:', compWithContest.comp.name, error);
+                    return false; // exclude problematic comps from search results
+                }
+            });
         }
 
         return compsWithContest;
@@ -431,88 +562,6 @@ export function CompsHolder() {
         // Double-check that it's actually a TFT14_ champion
         const championData = champions[tftChampionKey];
         return championData.id.startsWith('TFT14_');
-    };
-
-    const getTraitDisplayInfo = (traitName: string) => {
-        // Clean the trait name - remove any suffixes like _1, _2, etc.
-        const cleanTraitName = traitName.replace(/_\d+$/, '');
-        const breakpoint = traitName.match(/_(\d+)$/)?.[1] || '';
-        
-        // Get breakpoint information from detailed trait data
-        const breakpointInfo = getTraitBreakpointInfo(cleanTraitName, breakpoint, detailedTraitData);
-        
-        // Manual mapping for common trait names
-        const traitMapping: { [key: string]: string } = {
-            'Armorclad': 'TFT14_Armorclad',
-            'Strong': 'TFT14_Strong', 
-            'Cutter': 'TFT14_Cutter',
-            'Marksman': 'TFT14_Marksman',
-            'Techie': 'TFT14_Techie',
-            'Controller': 'TFT14_Controller',
-            'Supercharge': 'TFT14_Supercharge',
-            'Immortal': 'TFT14_Immortal',
-            'Assassin': 'TFTTutorial_Assassin',
-            'Mage': 'TFTTutorial_Sorcerer',
-            'Vanguard': 'TFTTutorial_Brawler'
-        };
-        
-        // Try manual mapping first
-        const mappedTraitKey = traitMapping[cleanTraitName];
-        if (mappedTraitKey && traits[mappedTraitKey]) {
-            const traitData = traits[mappedTraitKey];
-            const iconUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-trait/${traitData.image.full}`;
-            const displayName = breakpointInfo.levelName || `${traitData.name} ${breakpoint}`;
-            return { 
-                iconUrl, 
-                displayName,
-                unitsRequired: breakpointInfo.unitsRequired,
-                description: breakpointInfo.description
-            };
-        }
-        
-        // Try multiple matching strategies
-        let traitKey = null;
-        
-        // Strategy 1: Direct name match
-        traitKey = Object.keys(traits).find(key => 
-            traits[key].name.toLowerCase() === cleanTraitName.toLowerCase()
-        );
-        
-        // Strategy 2: Key contains the trait name
-        if (!traitKey) {
-            traitKey = Object.keys(traits).find(key => 
-                key.toLowerCase().includes(cleanTraitName.toLowerCase())
-            );
-        }
-        
-        // Strategy 3: Name contains the trait name
-        if (!traitKey) {
-            traitKey = Object.keys(traits).find(key => 
-                traits[key].name.toLowerCase().includes(cleanTraitName.toLowerCase())
-            );
-        }
-        
-        if (traitKey) {
-            const traitData = traits[traitKey];
-            const iconUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-trait/${traitData.image.full}`;
-            const displayName = breakpointInfo.levelName || `${traitData.name} ${breakpoint}`;
-            return { 
-                iconUrl, 
-                displayName,
-                unitsRequired: breakpointInfo.unitsRequired,
-                description: breakpointInfo.description
-            };
-        }
-        
-        // Fallback to original name with breakpoint
-        const fallbackIconUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-trait/Trait_Icon_Assassin.png`;
-        const fallbackDisplayName = breakpointInfo.levelName || `${cleanTraitName} ${breakpoint}`;
-        return { 
-            iconUrl: fallbackIconUrl, 
-            displayName: fallbackDisplayName,
-            unitsRequired: breakpointInfo.unitsRequired,
-            description: breakpointInfo.description
-        };
     };
 
     if (loading) {
@@ -685,7 +734,7 @@ export function CompsHolder() {
                     <h3 className="text-gray-800 font-medium mb-2">Search Comps</h3>
                     <input
                         type="text"
-                        placeholder="Search comps or units..."
+                        placeholder="Search comps, units, or traits..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-blue-500"
@@ -700,8 +749,7 @@ export function CompsHolder() {
                                 key={compWithContest.comp.id}
                                 className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm"
                             >
-                                <div className="flex justify-between items-start mb-3">
-                                    <h3 className="text-gray-800 font-semibold text-lg">{compWithContest.comp.name}</h3>
+                                <div className="flex justify-end items-start mb-3">
                                     <div className="flex gap-2 text-sm">
                                         <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
                                             {compWithContest.score.toFixed(1)} score

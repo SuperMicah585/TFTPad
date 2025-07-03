@@ -16,112 +16,14 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
     const [searchQuery, setSearchQuery] = useState("");
     const [hoveredTrait, setHoveredTrait] = useState<{ text: string; x: number; y: number } | null>(null);
 
-    // Debug logging to see what traits are in the comps
-    useEffect(() => {
-        if (comps.length > 0) {
-            console.log('Sample comp traits:', comps.slice(0, 3).map(comp => ({
-                name: comp.name,
-                traits: comp.traits
-            })));
-        }
-    }, [comps]);
-
-    // Debug logging to see what traits are available from the API
-    useEffect(() => {
-        if (Object.keys(traits).length > 0) {
-            console.log('Available traits from API:', Object.keys(traits).slice(0, 10));
-            console.log('Sample trait data:', Object.entries(traits).slice(0, 3));
-        }
-    }, [traits]);
-
-    const filteredComps = useMemo(() => {
-        if (!searchQuery.trim()) {
-            // Sort by playCount (popularity) in descending order
-            return [...comps].sort((a, b) => b.playCount - a.playCount);
-        }
-        
-        const query = searchQuery.toLowerCase();
-        const filtered = comps.filter(comp => 
-            comp.name.toLowerCase().includes(query) ||
-            comp.units.some(unit => unit.toLowerCase().includes(query))
-        );
-        
-        // Sort filtered results by playCount (popularity) in descending order
-        return filtered.sort((a, b) => b.playCount - a.playCount);
-    }, [searchQuery, comps]);
-
-    const getChampionIconUrl = (championName: string) => {
-        // First, try to find the champion in our champions data
-        const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
-            champions[key].name.toLowerCase() === championName.toLowerCase()
-        );
-        
-        if (tftChampionKey) {
-            const championData = champions[tftChampionKey];
-            return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${championData.image.full}`;
-        }
-        
-        // Fallback to the mappings if champion not found
-        const mappedFilename = championImageMappings[championName];
-        if (mappedFilename) {
-            return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${mappedFilename}`;
-        }
-        
-        // Final fallback to the original logic if no mapping found
-        const tftChampionName = `TFT14_${championName}`;
-        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set14.png`;
-    };
-
-    const isValidTFT14Champion = (championName: string): boolean => {
-        // Exclude special units that are not playable champions
-        const excludedUnits = [
-            'SummonLevel2',
-            'SummonLevel4',
-        ];
-        
-        if (excludedUnits.includes(championName)) {
-            return false;
-        }
-        
-        // Check if the champion exists in our TFT14_ data
-        const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
-            champions[key].name.toLowerCase() === championName.toLowerCase()
-        );
-        
-        if (!tftChampionKey) return false;
-        
-        // Double-check that it's actually a TFT14_ champion
-        const championData = champions[tftChampionKey];
-        return championData.id.startsWith('TFT14_');
-    };
-
-    const getChampionTier = (championName: string): number => {
-        // Look for the champion in the champions data with TFT14_ prefix
-        const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
-            champions[key].name.toLowerCase() === championName.toLowerCase()
-        );
-        
-        if (tftChampionKey) {
-            return champions[tftChampionKey].tier;
-        }
-        
-        return 1; // Default to 1-cost if not found
-    };
-
-    const getTierBorderColor = (tier: number): string => {
-        return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'border-gray-400';
-    };
-
+    // Define helper functions first, before useMemo
     const getTraitDisplayInfo = (traitName: string) => {
         // Clean the trait name - remove any suffixes like _1, _2, etc.
         const cleanTraitName = traitName.replace(/_\d+$/, '');
         const breakpoint = traitName.match(/_(\d+)$/)?.[1] || '';
         
         // Get breakpoint information from detailed trait data
-        const breakpointInfo = getTraitBreakpointInfo(cleanTraitName, breakpoint, detailedTraitData);
+        const breakpointInfo = getTraitBreakpointInfo(cleanTraitName, breakpoint, detailedTraitData || []);
         
         // Manual mapping for common trait names
         const traitMapping: { [key: string]: string } = {
@@ -197,6 +99,131 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
         };
     };
 
+    // Helper function to get display names for traits
+    const getTraitDisplayNames = (traits: string[]): string[] => {
+        if (!traits || !Array.isArray(traits)) {
+            return [];
+        }
+        return traits.map(trait => {
+            try {
+                const traitInfo = getTraitDisplayInfo(trait);
+                const displayName = traitInfo.displayName.toLowerCase();
+                return displayName;
+            } catch (error) {
+                console.warn('Error getting trait display name for:', trait, error);
+                return trait.toLowerCase(); // fallback to original trait name
+            }
+        });
+    };
+
+    // Debug logging to see what traits are in the comps
+    useEffect(() => {
+        if (comps.length > 0) {
+            console.log('Sample comp traits:', comps.slice(0, 3).map(comp => ({
+                name: comp.name,
+                traits: comp.traits
+            })));
+        }
+    }, [comps]);
+
+    // Debug logging to see what traits are available from the API
+    useEffect(() => {
+        if (Object.keys(traits).length > 0) {
+            console.log('Available traits from API:', Object.keys(traits).slice(0, 10));
+            console.log('Sample trait data:', Object.entries(traits).slice(0, 3));
+        }
+    }, [traits]);
+
+    const filteredComps = useMemo(() => {
+        if (!searchQuery.trim()) {
+            // Sort by playCount (popularity) in descending order
+            return [...comps].sort((a, b) => b.playCount - a.playCount);
+        }
+        
+        const query = searchQuery.toLowerCase();
+        const filtered = comps.filter(comp => {
+            try {
+                // Get display names for traits
+                const traitDisplayNames = getTraitDisplayNames(comp.traits || []);
+                
+                return comp.name.toLowerCase().includes(query) ||
+                    (comp.units && comp.units.some(unit => unit.toLowerCase().includes(query))) ||
+                    traitDisplayNames.some((displayName: string) => displayName.includes(query));
+            } catch (error) {
+                console.warn('Error filtering comp:', comp.name, error);
+                return false; // exclude problematic comps from search results
+            }
+        });
+        
+        // Sort filtered results by playCount (popularity) in descending order
+        return filtered.sort((a, b) => b.playCount - a.playCount);
+    }, [searchQuery, comps]);
+
+    const getChampionIconUrl = (championName: string) => {
+        // First, try to find the champion in our champions data
+        const tftChampionKey = Object.keys(champions).find(key => 
+            key.includes(`TFT14_${championName}`) || 
+            champions[key].name.toLowerCase() === championName.toLowerCase()
+        );
+        
+        if (tftChampionKey) {
+            const championData = champions[tftChampionKey];
+            return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${championData.image.full}`;
+        }
+        
+        // Fallback to the mappings if champion not found
+        const mappedFilename = championImageMappings[championName];
+        if (mappedFilename) {
+            return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${mappedFilename}`;
+        }
+        
+        // Final fallback to the original logic if no mapping found
+        const tftChampionName = `TFT14_${championName}`;
+        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set14.png`;
+    };
+
+    const isValidTFT14Champion = (championName: string): boolean => {
+        // Exclude special units that are not playable champions
+        const excludedUnits = [
+            'SummonLevel2',
+            'SummonLevel4',
+        ];
+        
+        if (excludedUnits.includes(championName)) {
+            return false;
+        }
+        
+        // Check if the champion exists in our TFT14_ data
+        const tftChampionKey = Object.keys(champions).find(key => 
+            key.includes(`TFT14_${championName}`) || 
+            champions[key].name.toLowerCase() === championName.toLowerCase()
+        );
+        
+        if (!tftChampionKey) return false;
+        
+        // Double-check that it's actually a TFT14_ champion
+        const championData = champions[tftChampionKey];
+        return championData.id.startsWith('TFT14_');
+    };
+
+    const getChampionTier = (championName: string): number => {
+        // Look for the champion in the champions data with TFT14_ prefix
+        const tftChampionKey = Object.keys(champions).find(key => 
+            key.includes(`TFT14_${championName}`) || 
+            champions[key].name.toLowerCase() === championName.toLowerCase()
+        );
+        
+        if (tftChampionKey) {
+            return champions[tftChampionKey].tier;
+        }
+        
+        return 1; // Default to 1-cost if not found
+    };
+
+    const getTierBorderColor = (tier: number): string => {
+        return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'border-gray-400';
+    };
+
     const handleCompClick = (comp: any) => {
         if (onCompSelect) {
             const validChampions = comp.units
@@ -258,7 +285,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                     <SearchBar
                         value={searchQuery}
                         onChange={setSearchQuery}
-                        placeholder="Search comps or units..."
+                        placeholder="Search comps, units, or traits..."
                     />
                 </div>
                 
@@ -270,9 +297,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                                 className="bg-gray-50 p-4 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors border border-gray-200"
                                 onClick={() => handleCompClick(comp)}
                             >
-                                <div className="flex justify-between items-start mb-3">
-                                    <h3 className="text-gray-800 font-semibold text-lg">{comp.name}</h3>
-                                </div>
+
                                 <div className="mb-3">
                                     <div className="flex flex-wrap gap-2">
                                         {comp.units
@@ -383,8 +408,14 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                                     </div>
                                 )}
                                 <div className="flex justify-between items-center text-xs text-gray-500">
-                                    <span>Difficulty: {comp.difficulty}</span>
-                                    <span>Levelling: {comp.levelling}</span>
+                                    <div className="flex gap-4">
+                                        <span>Difficulty: {comp.difficulty}</span>
+                                        <span>Levelling: {comp.levelling}</span>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <span>Avg Place: {comp.avgPlacement ? comp.avgPlacement.toFixed(2) : 'N/A'}</span>
+                                        <span>Games: {comp.playCount ? comp.playCount.toLocaleString() : 'N/A'}</span>
+                                    </div>
                                 </div>
                             </div>
                         ))
