@@ -110,25 +110,35 @@ export function TFTProvider({ children }: TFTProviderProps) {
 
     const getUnitContestRates = () => {
         const unitCounts: { [unitName: string]: number } = {};
-        const totalPlayers = 8;
-        // 3-star units count as 3 players, regular units count as 1 player
+        // Pool sizes by tier
+        const TIER_POOLS = { 1: 30, 2: 25, 3: 18, 4: 10, 5: 9 };
         Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
                 const currentPlayerStars = playerStars[parseInt(playerId)] || [];
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        const isStarred = currentPlayerStars.includes(unit.name);
-                        const weight = isStarred ? 3 : 1;
+                        // Only 3-star units are tracked via playerStars, all others are 1-star or 2-star
+                        const isThreeStar = currentPlayerStars.includes(unit.name);
+                        const weight = isThreeStar ? 9 : 3; // 3-star units count as 9, all others as 3
                         unitCounts[unit.name] = (unitCounts[unit.name] || 0) + weight;
-                        console.log(`Unit ${unit.name} from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[unit.name]}`);
                     }
                 });
             }
         });
         const contestRates: { [unitName: string]: number } = {};
         Object.entries(unitCounts).forEach(([unitName, count]) => {
-            contestRates[unitName] = Math.round((count / totalPlayers) * 100 * 10) / 10;
-            console.log(`Final contest rate for ${unitName}: ${count}/${totalPlayers} = ${contestRates[unitName]}%`);
+            // Find the tier for this unit
+            let tier = 1;
+            if (champions[unitName]) {
+                tier = champions[unitName].tier;
+            } else {
+                // Try to find by .name property
+                const champ = Object.values(champions).find(c => c.name === unitName);
+                if (champ) tier = champ.tier;
+            }
+            const poolSize = TIER_POOLS[tier as keyof typeof TIER_POOLS] || 1;
+            console.log(`ContestRate Debug: unitName='${unitName}', tier=${tier}, poolSize=${poolSize}, count=${count}`);
+            contestRates[unitName] = Math.round((count / poolSize) * 1000) / 10; // e.g. 23.3%
         });
         return contestRates;
     };

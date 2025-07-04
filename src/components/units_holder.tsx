@@ -29,8 +29,9 @@ export function UnitsHolder() {
                 const currentPlayerStars = playerStars[parseInt(playerId)] || [];
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        const isStarred = currentPlayerStars.includes(unit.name);
-                        const weight = isStarred ? 27 : 9; // 3-star units count as 27 copies, regular units count as 9
+                        // Only 3-star units are tracked via playerStars, all others are 1-star or 2-star
+                        const isThreeStar = currentPlayerStars.includes(unit.name);
+                        const weight = isThreeStar ? 9 : 3; // 3-star units count as 9, all others as 3
                         tierUsage[unit.tier] = (tierUsage[unit.tier] || 0) + weight;
                     }
                 });
@@ -189,7 +190,7 @@ export function UnitsHolder() {
                             })}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">
-                            * 3-star units count as 27 copies, regular units count as 9 copies
+                            * 3-star units count as 9 copies, all other units count as 3 copies
                         </div>
                     </div>
                     

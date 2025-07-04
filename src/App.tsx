@@ -218,7 +218,7 @@ function App() {
             </nav>
 
             <SectionHeader id="how-much-reduction">How much do Resistances Reduce Incoming Damage?</SectionHeader>
-            <p className="mb-4 pl-4 text-left">The table below shows how damage is reduced as armor on a unit increases. From this we can derive the formula <code>100/(100 + Armor)</code> to calculate the damage reduction percentage. This formula applies to both magic resistance and armor.</p>
+            <p className="mb-4 pl-4 text-left">The table below shows how damage is reduced as armor on a unit increases. From this we can derive the formula <code>100/(100 + Armor)</code> to calculate the damage taken percentage. This formula applies to both magic resistance and armor.</p>
             <img src="/armor-damage-reduction.png" alt="Armor vs Damage Taken and Reduction" className="my-4 border rounded" />
 
             <SectionHeader id="diminishing-returns">Do Armor and Magic Resistance Have Diminishing Returns?</SectionHeader>
