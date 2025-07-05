@@ -25,7 +25,7 @@ export function Header() {
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
-                       Notepad
+                       Home
                    </Link>
                    <Link 
                        to="/blog" 
