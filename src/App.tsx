@@ -316,7 +316,160 @@ function App() {
         <Route path="/blog/starring-units" element={<BlogPost title="Impact of Starring Units Up" content="Base stats, abilities, and power increase from starring units" />} />
         <Route path="/blog/patch-notes" element={<BlogPost title="Understanding Patch Notes" content="How Riot's balance levers impact the meta and gameplay" />} />
         <Route path="/blog/understanding-dmg" element={<BlogPost title="Understanding DMG" content="Comprehensive guide to damage mechanics in TFT" />} />
-        <Route path="/blog/base-stats-comparison" element={<BlogPost title="Comparing Base Stats of Units in Different Tiers" content="Analysis of how base stats scale across different unit tiers and costs" />} />
+        <Route path="/blog/base-stats-comparison" element={
+          <BlogPost title="Comparing Units Base Stats" content={
+            <>
+              {/* Table of Contents - static, left-aligned at top */}
+              <nav className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                <h2 className="text-lg font-semibold mb-2 text-gray-800">On this page</h2>
+                <ul className="space-y-1 list-disc list-inside text-blue-700">
+                  <li><a href="#base-stats-difference" className="hover:underline">What is the difference between base stats of units between tiers?</a></li>
+                  <li><a href="#ad-growth" className="hover:underline">Comparing AD growth of Units</a></li>
+                  <li><a href="#health-growth" className="hover:underline">Comparing Health Growth of Units</a></li>
+                  <li><a href="#prioritizing-units" className="hover:underline">Thinking about base stats when prioritizing units</a></li>
+                  <li><a href="#survivability" className="hover:underline">How much does starring a unit up increase its survivability</a></li>
+                  <li><a href="#tier-comparison" className="hover:underline">Are 2* units at lower tiers tankier than 1* units at higher tiers?</a></li>
+                </ul>
+              </nav>
+
+              <SectionHeader id="base-stats-difference">What is the difference between base stats of units between tiers?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                The stats that change as units star-up are ability base dmg, attack damage, and health. In general these stats multiply by about 1.8x per star level. 3★ 4 and 5 costs grow at an even higher rate.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                This means that starring up your frontline carries (i.e., Zed, Graves, etc.) is extra important because they benefit from all three stats (AD, health, and ability damage), unlike frontline tanks who mainly care about health or backline carries who mainly care about AD and ability damage.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                I will note that ability damage also goes up per star level, but this varies on every unit so I am not going to go over it in this article.
+              </p>
+
+              <SectionHeader id="ad-growth">Comparing AD growth of Units</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                Below we will compare two champions (Senna and Annie) so that we can compare this growth rate with base AD.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Senna in set 14 has a base AD of 85/153/306 at each star level which I believe is the highest in the set. Going from 2★ to 3★ Senna is the equivalent of almost three Deathblades worth of AD! This is why Senna benefits so much from attack speed and crit. Her autos hurt!
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Let's switch gears and now take a look at a unit who focuses more on ability damage. Set 14 Annie has AD of 30/54/108 at each star level. From this, we can see that her AD still pretty much doubles at each star level, but a 3★ Annie pretty much has the same AD as a 1★ Senna.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                In general, the stat websites figure out itemization for you, but it is good to note for some interactions (i.e., eating Senna as Renekton) and in my opinion interesting to know how much base stats translate into actual items worth of AD.
+              </p>
+
+              <SectionHeader id="health-growth">Comparing Health Growth of Units</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                Below we are going to compare two units from different classes: Sejuani (tank) and Zeri (AD carry).
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Sejuani has the base health of 1000/1800/3240 per star level. Warmogs gives 600 (+12% HP) health so we can think of going from a 1★ Sejuani → 2★ Sejuani as almost a Warmogs worth of health.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Now let's compare this to Zeri who has a base health of 800/1440/2592 per star level.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Based on this, we can assume that Zeri has a base health that is 80% of Sejuani simply due to the difference in their class (range AD carry vs tank).
+              </p>
+
+              <SectionHeader id="prioritizing-units">Thinking about base stats when prioritizing units</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                An interesting thing to note is that Zed (1050/1890/3780), who is an assassin, has base health that is actually greater than Sejuani. This shows how important it is for his survivability to star up as he gets more than a Warmogs worth of health. This is especially true because you do not usually itemize him with tank stats so this almost doubles his survivability. Zed also benefits from the AD scaling (50/90/180) and ability damage from making him star up. I believe this is why AD frontline-bruiser units feel so binary - they're either weak at 1★ or strong at 2★ - and why it feels like such a big power level spike when they are starred-up.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                If we compare this to the tank class (i.e., Sejuani, Leona, etc.) they don't really care about the AD or ability damage from going 2★. Sure the Warmogs worth of health is missed, but we are already stacking tank items on them. One unit that I might argue does really appreciate the 2★ is Cho'Gath (1100/1980/3960). He pretty much scales directly with health and the more casts he can get off, the more useful he becomes.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                If we take a look at the backline class, the mages (i.e., Annie) only really miss the ability damage growth and health. The AD growth doesn't really apply to them.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                AD backliners benefit from all of the stats when increasing their star level. The only stat they might care less about is health, but even that is appreciated on units that don't have defensive stats from their traits (Aphelios/Urgot).
+              </p>
+
+              <SectionHeader id="survivability">How much does starring a unit up increase its survivability</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                If you haven't, take a look at <a href="https://tftpad.com/blog/defensive-stats" className="text-blue-700 underline hover:text-blue-900">https://tftpad.com/blog/defensive-stats</a> for the discussion on effective health.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                I am going to use Leona here as an example of how much more tanky 2★ are when compared to 1★.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                To start this comparison Leona has the following base stats:
+              </p>
+              <ul className="list-disc pl-8 mb-4 text-left">
+                <li>1100/1980 health</li>
+                <li>60 armor</li>
+                <li>60 magic resist</li>
+              </ul>
+              <p className="mb-4 pl-4 text-left">
+                We can use this formula (Damage Reduction % = Armor / (100 + Armor)) to calculate the damage reduction percentage from the armor/magic resist. From this we can get that Leona reduces incoming damage from both of these sources by 37.5%. Since this doesn't grow when the unit gets starred up, this reduction will not change.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Therefore, the only thing that changes in terms of survivability is going to be the health growth which is positively influenced by the base resistances. See table below:
+              </p>
+              <img src="/base-stats-ad-comparison-table.png" alt="Table: Leona Star Level vs Health, Reduction, and Effective Health" className="my-4 border rounded mx-auto" />
+              <p className="mb-4 pl-4 text-left">
+                Based on this, we can assume that starring a unit increases their 'tankiness' by a factor of 1.8 because resistances remain constant.
+              </p>
+
+              <SectionHeader id="tier-comparison">Are 2★ units at lower tiers tankier than 1★ units at higher tiers?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                First, I am not going to consider abilities in this, just the base stats. In this example, I want to compare two TFT units where this decision has to be made often: Set 14 Ekko and Set 14 Neeko.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Neeko 1★ has the following stats:
+              </p>
+              <ul className="list-disc pl-8 mb-4 text-left">
+                <li>Base Health: 1000</li>
+                <li>Armor: 60</li>
+                <li>Magic Resist: 60</li>
+              </ul>
+              <p className="mb-4 pl-4 text-left">
+                Ekko 2★ has the following stats:
+              </p>
+              <ul className="list-disc pl-8 mb-4 text-left">
+                <li>Base Health: 1440</li>
+                <li>Armor: 45</li>
+                <li>Magic Resist: 45</li>
+              </ul>
+              <p className="mb-4 pl-4 text-left">
+                From this information we can make the following comparison in the table below:
+              </p>
+              <img src="/base-stats-health-comparison-table.png" alt="Table: Neeko vs Ekko Star Level, Health, Reduction, and Effective Health Comparison" className="my-4 border rounded mx-auto" />
+              <p className="mb-4 pl-4 text-left">
+                We can see that Ekko from a base stat perspective is tankier.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Now let's do the same for a tier 1 unit (Vi) and a tier 3 unit (Jarvan IV):
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Jarvan IV 1★ has the following stats:
+              </p>
+              <ul className="list-disc pl-8 mb-4 text-left">
+                <li>Base Health: 850</li>
+                <li>Armor: 50</li>
+                <li>Magic Resist: 50</li>
+              </ul>
+              <p className="mb-4 pl-4 text-left">
+                Vi 2★ has the following stats:
+              </p>
+              <ul className="list-disc pl-8 mb-4 text-left">
+                <li>Base Health: 1170</li>
+                <li>Armor: 40</li>
+                <li>Magic Resist: 40</li>
+              </ul>
+              <p className="mb-4 pl-4 text-left">
+                From this information we can make the following comparison in the table below:
+              </p>
+              <img src="/base-stats-leona-survivability-table.png" alt="Table: Jarvan IV vs Vi Star Level, Health, Reduction, and Effective Health Comparison" className="my-4 border rounded mx-auto" />
+              <p className="mb-4 pl-4 text-left">
+                We can see that Vi from a base stat perspective is tankier.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Obviously there are more factors going on in terms of a unit's value, but these are just some interesting things to take a look at when deciding which unit to play.
+              </p>
+            </>
+          } />
+        } />
       </Routes>
     </TFTProvider>
   )

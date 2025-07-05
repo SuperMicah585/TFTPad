@@ -18,6 +18,13 @@ export function BlogPage() {
       comingSoon: false
     },
     {
+      title: "Comparing Units Base Stats",
+      description: "Analysis of how base stats scale across different unit tiers and costs",
+      path: "/blog/base-stats-comparison",
+      color: "from-teal-500 to-teal-600",
+      comingSoon: false
+    },
+    {
       title: "Econ",
       description: "Economic management and gold optimization strategies",
       path: "/blog/econ",
@@ -57,13 +64,6 @@ export function BlogPage() {
       description: "Comprehensive guide to damage mechanics in TFT",
       path: "/blog/understanding-dmg",
       color: "from-orange-500 to-orange-600",
-      comingSoon: true
-    },
-    {
-      title: "Comparing Base Stats of Units in Different Tiers",
-      description: "Analysis of how base stats scale across different unit tiers and costs",
-      path: "/blog/base-stats-comparison",
-      color: "from-teal-500 to-teal-600",
       comingSoon: true
     }
   ];
