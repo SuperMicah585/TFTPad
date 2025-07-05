@@ -50,6 +50,12 @@ export function BlogPage() {
       description: "Comprehensive guide to damage mechanics in TFT",
       path: "/blog/understanding-dmg",
       color: "from-orange-500 to-orange-600"
+    },
+    {
+      title: "Comparing Base Stats of Units in Different Tiers",
+      description: "Analysis of how base stats scale across different unit tiers and costs",
+      path: "/blog/base-stats-comparison",
+      color: "from-teal-500 to-teal-600"
     }
   ];
 

@@ -5,11 +5,11 @@ import { HelpCircle } from 'lucide-react';
 
 // Tier pool data
 const TIER_POOLS = {
-    1: { copies: 30, champions: 12, total: 360 },
-    2: { copies: 25, champions: 12, total: 300 },
-    3: { copies: 18, champions: 12, total: 216 },
-    4: { copies: 10, champions: 9, total: 90 },
-    5: { copies: 9, champions: 6, total: 54 }
+    1: { copies: 30, champions: 13, total: 390 },
+    2: { copies: 25, champions: 13, total: 325 },
+    3: { copies: 18, champions: 13, total: 234 },
+    4: { copies: 10, champions: 13, total: 130 },
+    5: { copies: 9, champions: 8, total: 72 }
 };
 
 export function UnitsHolder() {
