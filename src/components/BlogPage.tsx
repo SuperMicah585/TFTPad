@@ -101,22 +101,35 @@ export function BlogPage() {
                   <div 
                     className="rounded-xl p-4 md:p-6 h-full transition-all duration-300 opacity-60 relative overflow-hidden"
                     style={{
-                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(${topic.backgroundImage})`,
+                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8)), url(${topic.backgroundImage})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
                   >
-                    <h3 className="text-lg md:text-xl font-semibold text-white mb-3">
-                      {topic.title}
-                    </h3>
-                    <p className="text-white/90 text-sm leading-relaxed">
-                      {topic.description}
-                    </p>
-                    <div className="mt-4 flex items-center text-white/80 font-medium text-sm">
-                      Coming Soon
-                      <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                    {/* Blog indicator badge */}
+                    <div className="absolute top-3 right-3 bg-gray-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
+                      BLOG
+                    </div>
+                    
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1">
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-3">
+                          {topic.title}
+                        </h3>
+                        <p className="text-white/95 text-sm md:text-base leading-relaxed">
+                          {topic.description}
+                        </p>
+                      </div>
+                      
+                      {/* Coming Soon indicator */}
+                      <div className="mt-6 pt-4 border-t border-white/20">
+                        <div className="bg-gray-500 text-white font-semibold py-3 px-4 rounded-lg flex items-center justify-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Coming Soon</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -127,24 +140,37 @@ export function BlogPage() {
                   className="group block"
                 >
                   <div 
-                    className="rounded-xl p-4 md:p-6 h-full transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden"
+                    className="rounded-xl p-4 md:p-6 h-full transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden group"
                     style={{
-                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(${topic.backgroundImage})`,
+                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8)), url(${topic.backgroundImage})`,
                       backgroundSize: 'cover',
                       backgroundPosition: 'center'
                     }}
                   >
-                    <h3 className="text-lg md:text-xl font-semibold text-white mb-3 group-hover:text-white/90 transition-colors">
-                      {topic.title}
-                    </h3>
-                    <p className="text-white/90 text-sm leading-relaxed">
-                      {topic.description}
-                    </p>
-                    <div className="mt-4 flex items-center text-orange-300 font-medium text-sm group-hover:text-orange-200 transition-colors">
-                      Read More
-                      <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                    {/* Blog indicator badge */}
+                    <div className="absolute top-3 right-3 bg-orange-300 text-gray-800 px-2 py-1 rounded-full text-xs font-semibold">
+                      BLOG
+                    </div>
+                    
+                    <div className="flex flex-col h-full">
+                      <div className="flex-1">
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-3 group-hover:text-orange-300 transition-colors">
+                          {topic.title}
+                        </h3>
+                        <p className="text-white/95 text-sm md:text-base leading-relaxed">
+                          {topic.description}
+                        </p>
+                      </div>
+                      
+                      {/* Prominent CTA button */}
+                      <div className="mt-6 pt-4 border-t border-white/20">
+                        <div className="bg-orange-300 hover:bg-orange-400 text-gray-800 font-semibold py-3 px-4 rounded-lg transition-all duration-300 group-hover:scale-105 flex items-center justify-center">
+                          <span className="mr-2">Read Article</span>
+                          <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </Link>
