@@ -27,7 +27,7 @@ export function Header() {
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
-                       Home
+                       Tracker
                    </Link>
                    <Link 
                        to="/blog" 
@@ -100,7 +100,7 @@ export function Header() {
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
-                           Home
+                           Tracker
                        </Link>
                        <Link 
                            to="/blog" 
