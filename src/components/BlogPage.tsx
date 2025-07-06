@@ -29,34 +29,20 @@ export function BlogPage() {
       description: "Economic management and gold optimization strategies",
       path: "/blog/econ",
       color: "from-yellow-500 to-yellow-600",
+      comingSoon: false
+    },
+    {
+      title: "Positioning Units",
+      description: "Strategic unit placement and positioning fundamentals",
+      path: "/blog/positioning-units",
+      color: "from-purple-500 to-purple-600",
       comingSoon: true
     },
     {
       title: "Item Pool",
       description: "Understanding item pools and optimal itemization",
       path: "/blog/item-pool",
-      color: "from-purple-500 to-purple-600",
-      comingSoon: true
-    },
-    {
-      title: "Dmg Scaling (Magic Damage/Attack Damage)",
-      description: "How damage scaling works and affects unit effectiveness",
-      path: "/blog/dmg-scaling",
       color: "from-red-500 to-red-600",
-      comingSoon: true
-    },
-    {
-      title: "Impact of Starring Units Up",
-      description: "Base stats, abilities, and power increase from starring units",
-      path: "/blog/starring-units",
-      color: "from-indigo-500 to-indigo-600",
-      comingSoon: true
-    },
-    {
-      title: "Understanding Patch Notes",
-      description: "How Riot's balance levers impact the meta and gameplay",
-      path: "/blog/patch-notes",
-      color: "from-pink-500 to-pink-600",
       comingSoon: true
     },
     {
@@ -92,21 +78,21 @@ export function BlogPage() {
       
       <Header />
       
-      <div className="flex-1 container mx-auto px-4 py-6 relative z-10" style={{ width: '1152px' }}>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">TFTPad Blog</h1>
+      <div className="flex-1 container mx-auto px-4 py-6 relative z-10 max-w-6xl">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full p-4 md:p-8">
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">TFTPad Blog</h1>
           
-          <p className="text-lg text-gray-600 mb-8">
+          <p className="text-base md:text-lg text-gray-600 mb-8">
             Welcome to the TFTPad blog! Here you'll find insights, strategies, and deep dives into Teamfight Tactics mechanics.
           </p>
           
           {/* Topic Tiles Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {blogTopics.map((topic, index) => (
               topic.comingSoon ? (
                 <div key={index} className="group block">
-                  <div className="bg-gradient-to-br bg-white border-2 border-gray-200 rounded-xl p-6 h-full transition-all duration-300 opacity-60">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-3">
+                  <div className="bg-gradient-to-br bg-white border-2 border-gray-200 rounded-xl p-4 md:p-6 h-full transition-all duration-300 opacity-60">
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-3">
                       {topic.title}
                     </h3>
                     <p className="text-gray-600 text-sm leading-relaxed">
@@ -126,8 +112,8 @@ export function BlogPage() {
                   to={topic.path}
                   className="group block"
                 >
-                  <div className="bg-gradient-to-br bg-white border-2 border-gray-200 rounded-xl p-6 h-full transition-all duration-300 hover:shadow-lg hover:border-gray-300 hover:scale-105">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-3 group-hover:text-gray-600 transition-colors">
+                  <div className="bg-gradient-to-br bg-white border-2 border-gray-200 rounded-xl p-4 md:p-6 h-full transition-all duration-300 hover:shadow-lg hover:border-gray-300 hover:scale-105">
+                    <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-3 group-hover:text-gray-600 transition-colors">
                       {topic.title}
                     </h3>
                     <p className="text-gray-600 text-sm leading-relaxed">
@@ -149,7 +135,7 @@ export function BlogPage() {
       
       {/* Footer */}
       <footer className="py-6 bg-gray-50 border-t border-gray-200 relative z-10">
-        <div className="container mx-auto px-4 text-center text-gray-600 text-sm" style={{ width: '1152px' }}>
+        <div className="container mx-auto px-4 text-center text-gray-600 text-sm max-w-6xl">
           <p>2025-2025 TFTPad. TFTPad isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
         </div>
       </footer>

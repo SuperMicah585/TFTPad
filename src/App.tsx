@@ -156,8 +156,8 @@ function BlogPost({ title, content }: { title: string; content: React.ReactNode 
       
       <Header />
       
-      <div className="flex-1 container mx-auto px-4 py-6 relative z-10" style={{ width: '1152px' }}>
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full p-8">
+      <div className="flex-1 container mx-auto px-4 py-6 relative z-10 max-w-6xl">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full p-4 md:p-8">
           <div className="mb-6">
             <Link to="/blog" className="text-orange-500 hover:text-orange-600 font-medium mb-4 inline-flex items-center">
               <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,7 +167,7 @@ function BlogPost({ title, content }: { title: string; content: React.ReactNode 
             </Link>
           </div>
           
-          <h1 className="text-3xl font-bold text-gray-800 mb-6">{title}</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">{title}</h1>
           
           <div className="prose max-w-none">
             {content}
@@ -177,7 +177,7 @@ function BlogPost({ title, content }: { title: string; content: React.ReactNode 
       
       {/* Footer */}
       <footer className="py-6 bg-gray-50 border-t border-gray-200 relative z-10">
-        <div className="container mx-auto px-4 text-center text-gray-600 text-sm" style={{ width: '1152px' }}>
+        <div className="container mx-auto px-4 text-center text-gray-600 text-sm max-w-6xl">
           <p>2025-2025 TFTPad. TFTPad isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
         </div>
       </footer>
@@ -187,7 +187,7 @@ function BlogPost({ title, content }: { title: string; content: React.ReactNode 
 
 function SectionHeader({ id, children }: { id: string, children: React.ReactNode }) {
   return (
-    <h2 id={id} className="group scroll-mt-24 text-2xl font-bold mt-12 mb-4 flex items-center text-left">
+    <h2 id={id} className="group scroll-mt-24 text-xl md:text-2xl font-bold mt-8 md:mt-12 mb-4 flex items-center text-left">
       <a href={`#${id}`} className="opacity-0 group-hover:opacity-100 transition-opacity mr-2 text-blue-500" aria-label="Link to section">
         <LinkIcon size={18} />
       </a>
@@ -206,9 +206,9 @@ function App() {
           title="Defensive Stats" 
           content={<>
             {/* Table of Contents - static, left-aligned at top */}
-            <nav className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
-              <h2 className="text-lg font-semibold mb-2 text-gray-800">On this page</h2>
-              <ul className="space-y-1 list-disc list-inside text-blue-700">
+            <nav className="mb-8 p-3 md:p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+              <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-800">On this page</h2>
+              <ul className="space-y-1 list-disc list-inside text-blue-700 text-sm md:text-base">
                 <li><a href="#how-much-reduction" className="hover:underline">How much do Resistances Reduce Incoming Damage?</a></li>
                 <li><a href="#diminishing-returns" className="hover:underline">Do Armor and Magic Resistance Have Diminishing Returns?</a></li>
                 <li><a href="#effective-health" className="hover:underline">Interpreting Resistances in Terms of Effective Health</a></li>
@@ -253,9 +253,9 @@ function App() {
           <BlogPost title="Champion Pool" content={
             <>
               {/* Table of Contents - static, left-aligned at top */}
-              <nav className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
-                <h2 className="text-lg font-semibold mb-2 text-gray-800">On this page</h2>
-                <ul className="space-y-1 list-disc list-inside text-blue-700">
+              <nav className="mb-8 p-3 md:p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-800">On this page</h2>
+                <ul className="space-y-1 list-disc list-inside text-blue-700 text-sm md:text-base">
                   <li><a href="#units-per-tier" className="hover:underline">How Many Units are Within Each Tier?</a></li>
                   <li><a href="#pool-sizes" className="hover:underline">What are the Pool Sizes for each Tier?</a></li>
                   <li><a href="#shop-odds" className="hover:underline">Shop Odds and How to Think About Them When Rolling</a></li>
@@ -303,26 +303,102 @@ function App() {
                 While this is focusing on specifics, I hope it highlights the importance of understanding what units your comp needs and what level you should be to maximize your chance of hitting them.
               </p>
 
-              <div className="flex gap-4 my-4 justify-center">
-                <img src="/champion-pool-unit-odds-graph.png" alt="Graph: Unit Odds by Level and Tier" className="border rounded" style={{ maxWidth: '480px', width: '100%', height: 'auto' }} />
-                <img src="/champion-pool-unit-odds-table.png" alt="Table: Shop Odds by Level and Tier" className="border rounded" style={{ maxWidth: '480px', width: '100%', height: 'auto' }} />
+              <div className="flex flex-col md:flex-row gap-4 my-4 justify-center">
+                <img src="/champion-pool-unit-odds-graph.png" alt="Graph: Unit Odds by Level and Tier" className="border rounded w-full md:w-auto" style={{ maxWidth: '480px', height: 'auto' }} />
+                <img src="/champion-pool-unit-odds-table.png" alt="Table: Shop Odds by Level and Tier" className="border rounded w-full md:w-auto" style={{ maxWidth: '480px', height: 'auto' }} />
               </div>
             </>
           } />
         } />
-        <Route path="/blog/econ" element={<BlogPost title="Econ" content="Economic management and gold optimization strategies" />} />
+        <Route path="/blog/econ" element={
+          <BlogPost title="Econ" content={
+            <>
+              {/* Table of Contents - static, left-aligned at top */}
+              <nav className="mb-8 p-3 md:p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-800">On this page</h2>
+                <ul className="space-y-1 list-disc list-inside text-blue-700 text-sm md:text-base">
+                  <li><a href="#gold-per-round" className="hover:underline">How Much Gold Do You Get Per Round?</a></li>
+                  <li><a href="#interest" className="hover:underline">What is Interest in TFT?</a></li>
+                  <li><a href="#streaking" className="hover:underline">What is Streaking in TFT?</a></li>
+                  <li><a href="#maximizing-gold" className="hover:underline">Why is it Important to Maximize your gold through streaking and interest?</a></li>
+                </ul>
+              </nav>
+
+              <SectionHeader id="gold-per-round">How Much Gold Do You Get Per Round?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                You get a minimum of 5 gold per round, but this can be increased through interest (0-5), streaking (0-4), and winning the round (+1). In total, you can get up to 10 extra gold per round if you're able to maximize all your resources.
+              </p>
+
+              <SectionHeader id="interest">What is Interest in TFT?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                Interest in TFT is extra gold you get each round for every 10 gold you have, up to 50 gold. So, at 10 gold you get 1 extra gold from interest, and at 50 gold you get the max of 5 extra gold. In general, it's important to get to 50 gold as soon as possible to maximize your interest every round. Here are some important breakpoints to help you hit those intervals:
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                <strong>13-14g:</strong> This gets you to 19/20g, which starts you on the path to hitting the higher breakpoints.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                <strong>19-20g:</strong> Obviously, you want to be at 20g if possible (extra gold!), but 19g always gets you to 33g in two turns, 41g in three, and 50g in four.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                <strong>25-26g:</strong> Here, you're targeting 33g the next round. Win or lose, you're guaranteed to hit 41g in two rounds and 50g in three.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                <strong>32-33g:</strong> 33g is straightforward - win or lose, you'll reach at least 41g next round. At 32g, if you win, you hit 33g (which we know gets you to 41g). If you lose, you hit 40g with 1 loss banked. This is a common interval to roll down to when you need to dig a little harder for units, since you'll only lose 3 gold worth of interest to get back to 50.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                <strong>41g:</strong> At 41g, you're guaranteed to hit 50g next turn (41g + 4g from interest + 5g from passive gold).
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Streaking can change these breakpoints since it gives you more gold. Also, don't forget that winning gives you an extra gold, so the breakpoints above can be reduced by one if that happens. Below is a table showing the breakpoints and the amount of interest you'll get at each:
+              </p>
+
+              <img src="/econ-interest-breakpoints-table.png" alt="Table: Current Gold, Interest, Base Gold, Ending Gold" className="my-4 border rounded mx-auto" />
+              
+              <p className="mb-4 pl-4 text-left text-sm text-gray-600">
+                Source: <a href="https://www.reddit.com/r/CompetitiveTFT/comments/trzxoc/quick_guide_to_the_hidden_econ_intervals_or_how/" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">Quick guide to the hidden econ intervals (Reddit)</a>
+              </p>
+
+              <SectionHeader id="streaking">What is Streaking in TFT?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                In TFT, streaking means either winning several games in a row or losing several in a row. The breakpoints for each are shown in the table below:
+              </p>
+              <img src="/econ-streak-breakpoints-table.png" alt="Table: Gold Streak Breakpoints" className="my-4 border rounded mx-auto" />
+              <p className="mb-4 pl-4 text-left">
+                If you're win streaking, you get 3 gold plus one extra gold per win, for a total of 4 extra gold per round - which is the same as having 40 gold in interest. Lose streaking maxes out at 3 extra gold per round, since you don't get any bonus gold for a loss.
+              </p>
+
+              <SectionHeader id="maximizing-gold">Why is it Important to Maximize your gold through streaking and interest?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">
+                First, it's important to note that there are 5 player combats per stage that impact streaking. At the end of each stage, there's one non-player combat round that doesn't affect streaks, but you still get gold from your current streak.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                Let's compare three players: one who win streaks from 2-1 to 4-1, one who alternates wins and losses until 4-1, and one who lose streaks until 4-1.
+              </p>
+              <p className="mb-4 pl-4 text-left">
+                The tables below show the gold each player gets at each stage and their total gold.
+              </p>
+              <h3 className="text-base md:text-lg font-semibold text-gray-800 mt-6 md:mt-8 mb-2">Win Streak Gold Breakdown</h3>
+              <img src="/econ-win-streak-table.png" alt="Table: Win Streak Gold Breakdown" className="my-4 border rounded mx-auto" />
+              <h3 className="text-base md:text-lg font-semibold text-gray-800 mt-6 md:mt-8 mb-2">Lose Streak Gold Breakdown</h3>
+              <img src="/econ-lose-streak-table.png" alt="Table: Lose Streak Gold Breakdown" className="my-4 border rounded mx-auto" />
+              <h3 className="text-base md:text-lg font-semibold text-gray-800 mt-6 md:mt-8 mb-2">Win/Loss Alternating Gold Breakdown</h3>
+              <img src="/econ-win-loss-table.png" alt="Table: Win/Loss Alternating Gold Breakdown" className="my-4 border rounded mx-auto" />
+              <p className="mb-4 pl-4 text-left">
+                Note: These tables don't account for the health you'd lose while lose streaking, or the gold you'd need to spend to play the strongest board and maintain a win streak. That said, the win streak player can expect about 30 more gold than the win/loss player by 4-1, and the lose streaker can expect about 20 more. This is important to keep in mind when deciding which comp to play.
+              </p>
+            </>
+          } />
+        } />
+        <Route path="/blog/positioning-units" element={<BlogPost title="Positioning Units" content="Strategic unit placement and positioning fundamentals" />} />
         <Route path="/blog/item-pool" element={<BlogPost title="Item Pool" content="Understanding item pools and optimal itemization" />} />
-        <Route path="/blog/dmg-scaling" element={<BlogPost title="Dmg Scaling (Magic Damage/Attack Damage)" content="How damage scaling works and affects unit effectiveness" />} />
-        <Route path="/blog/starring-units" element={<BlogPost title="Impact of Starring Units Up" content="Base stats, abilities, and power increase from starring units" />} />
-        <Route path="/blog/patch-notes" element={<BlogPost title="Understanding Patch Notes" content="How Riot's balance levers impact the meta and gameplay" />} />
         <Route path="/blog/understanding-dmg" element={<BlogPost title="Understanding DMG" content="Comprehensive guide to damage mechanics in TFT" />} />
         <Route path="/blog/base-stats-comparison" element={
           <BlogPost title="Comparing Units Base Stats" content={
             <>
               {/* Table of Contents - static, left-aligned at top */}
-              <nav className="mb-8 p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
-                <h2 className="text-lg font-semibold mb-2 text-gray-800">On this page</h2>
-                <ul className="space-y-1 list-disc list-inside text-blue-700">
+              <nav className="mb-8 p-3 md:p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-800">On this page</h2>
+                <ul className="space-y-1 list-disc list-inside text-blue-700 text-sm md:text-base">
                   <li><a href="#base-stats-difference" className="hover:underline">What is the difference between base stats of units between tiers?</a></li>
                   <li><a href="#ad-growth" className="hover:underline">Comparing AD growth of Units</a></li>
                   <li><a href="#health-growth" className="hover:underline">Comparing Health Growth of Units</a></li>
