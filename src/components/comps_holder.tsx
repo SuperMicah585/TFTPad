@@ -541,6 +541,23 @@ export function CompsHolder() {
         return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'border-gray-400';
     };
 
+    // Calculate total cost of a comp
+    const calculateCompCost = (comp: any): number => {
+        let totalCost = 0;
+        comp.units.forEach((unit: string) => {
+            if (isValidTFT14Champion(unit)) {
+                const tier = getChampionTier(unit);
+                const isStarred = comp.stars.includes(`TFT14_${unit}`);
+                if (isStarred) {
+                    totalCost += tier * 9; // 3* units cost tier * 9
+                } else {
+                    totalCost += tier * 3; // 1* and 2* units cost tier * 3
+                }
+            }
+        });
+        return totalCost;
+    };
+
     const handleCopyTeamCode = async (champions: string[]) => {
         const teamCode = generateTeamPlannerCode(champions);
         try {
@@ -661,13 +678,19 @@ export function CompsHolder() {
                                     <div>
                                         <div className="font-semibold mb-2 text-left">Comp Ordering & Scoring:</div>
                                         <div className="text-xs mb-2">
-                                            <span className="text-blue-400 font-medium">Comps are ordered by best score</span> based on the weights you can adjust below. The score combines contest rate and average placement. Lower scores = better comps.
+                                            <span className="text-blue-400 font-medium">Comps are ordered by best score</span> based on the weights you can adjust below. The score combines contest rate and average placement.
                                         </div>
                                         <div className="font-semibold mb-2 text-left">Red Borders:</div>
                                         <div className="text-xs mb-2">
                                             Units with <span className="text-red-400 font-medium">red borders</span> are contested. This means more than 3 copies of this unit will be contested in your lobby. <span className="text-gray-300 font-medium">Only itemized units are considered for contest calculations.</span> Hover over red-bordered units for details.
                                         </div>
-
+                                        <div className="font-semibold mb-2 text-left mt-3">Stat Badges:</div>
+                                        <ul className="text-xs list-disc pl-5 space-y-1 text-left">
+                                            <li><span className="text-red-300 font-semibold">Score</span>: Weighted score based on contest rate and average placement.</li>
+                                            <li><span className="text-blue-300 font-semibold">Avg</span>: Average placement for this comp.</li>
+                                            <li><span className="text-green-300 font-semibold">Games</span>: Number of games the comp was played based on the division filter.</li>
+                                            <li><span className="text-yellow-300 font-semibold">Cost</span>: Total gold required to build the comp (3★ units count as tier × 9, others as tier × 3).</li>
+                                        </ul>
                                     </div>
                                     <div className="arrow absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 transition-transform duration-200"></div>
                                 </div>
@@ -763,17 +786,22 @@ export function CompsHolder() {
                             >
                                 <div className="flex justify-between items-start mb-3">
                                     <div className="flex gap-2 text-sm">
-                                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                                            {compWithContest.score.toFixed(1)} score
-                                        </span>
                                         <span className="bg-red-100 text-red-800 px-2 py-1 rounded">
-                                            {compWithContest.contestRate.toFixed(1)}% contested
+                                            {compWithContest.score.toFixed(1)} score
                                         </span>
                                         <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded">
                                             {compWithContest.placementStats?.avgPlacement?.toFixed(2) || compWithContest.comp.avgPlacement.toFixed(1)} avg
                                         </span>
                                         <span className="bg-green-100 text-green-800 px-2 py-1 rounded">
                                             {compWithContest.placementStats?.totalGames?.toLocaleString() || compWithContest.comp.playCount.toLocaleString()} games
+                                        </span>
+                                        <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded flex items-center gap-1">
+                                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="2" fill="#FDE68A" />
+                                                <ellipse cx="10" cy="14" rx="5" ry="2" fill="#F59E42" />
+                                                <ellipse cx="10" cy="8" rx="6" ry="3" fill="#FDE68A" />
+                                            </svg>
+                                            {calculateCompCost(compWithContest.comp)}
                                         </span>
                                     </div>
                                     <button
