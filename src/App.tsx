@@ -5,6 +5,7 @@ import { UnitsHolder } from './components/units_holder'
 import { CompsHolder } from './components/comps_holder'
 import { Header } from './components/header'
 import { BlogPage } from './components/BlogPage'
+import { ContactPage } from './components/ContactPage'
 import { TFTProvider } from './contexts/TFTContext'
 import { HelpCircle } from 'lucide-react'
 import { GoogleAnalytics, trackEvent } from './components/GoogleAnalytics'
@@ -202,6 +203,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route path="/blog" element={<BlogPage />} />
+        <Route path="/contact" element={<ContactPage />} />
         <Route path="/blog/defensive-stats" element={<BlogPost 
           title="Defensive Stats" 
           content={<>
