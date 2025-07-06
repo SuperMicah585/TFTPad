@@ -8,49 +8,56 @@ export function BlogPage() {
       description: "Understanding armor, magic resist, and defensive mechanics in TFT",
       path: "/blog/defensive-stats",
       color: "from-blue-500 to-blue-600",
-      comingSoon: false
+      comingSoon: false,
+      backgroundImage: "/blog-tile-1.png"
     },
     {
       title: "Champion Pool",
       description: "How champion pools work and affect your drafting strategy",
       path: "/blog/champion-pool",
       color: "from-green-500 to-green-600",
-      comingSoon: false
+      comingSoon: false,
+      backgroundImage: "/blog-tile-2.png"
     },
     {
       title: "Comparing Units Base Stats",
       description: "Analysis of how base stats scale across different unit tiers and costs",
       path: "/blog/base-stats-comparison",
       color: "from-teal-500 to-teal-600",
-      comingSoon: false
+      comingSoon: false,
+      backgroundImage: "/blog-tile-3.png"
     },
     {
       title: "Econ",
       description: "Economic management and gold optimization strategies",
       path: "/blog/econ",
       color: "from-yellow-500 to-yellow-600",
-      comingSoon: false
+      comingSoon: false,
+      backgroundImage: "/blog-tile-4.png"
     },
     {
       title: "Positioning Units",
       description: "Strategic unit placement and positioning fundamentals",
       path: "/blog/positioning-units",
       color: "from-purple-500 to-purple-600",
-      comingSoon: true
+      comingSoon: true,
+      backgroundImage: "/blog-tile-5.png"
     },
     {
-      title: "Item Pool",
+      title: "Items",
       description: "Understanding item pools and optimal itemization",
       path: "/blog/item-pool",
       color: "from-red-500 to-red-600",
-      comingSoon: true
+      comingSoon: true,
+      backgroundImage: "/blog-tile-6.png"
     },
     {
       title: "Understanding DMG",
       description: "Comprehensive guide to damage mechanics in TFT",
       path: "/blog/understanding-dmg",
       color: "from-orange-500 to-orange-600",
-      comingSoon: true
+      comingSoon: true,
+      backgroundImage: "/blog-tile-7.png"
     }
   ];
 
@@ -91,14 +98,21 @@ export function BlogPage() {
             {blogTopics.map((topic, index) => (
               topic.comingSoon ? (
                 <div key={index} className="group block">
-                  <div className="bg-gradient-to-br bg-white border-2 border-gray-200 rounded-xl p-4 md:p-6 h-full transition-all duration-300 opacity-60">
-                    <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-3">
+                  <div 
+                    className="rounded-xl p-4 md:p-6 h-full transition-all duration-300 opacity-60 relative overflow-hidden"
+                    style={{
+                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(${topic.backgroundImage})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  >
+                    <h3 className="text-lg md:text-xl font-semibold text-white mb-3">
                       {topic.title}
                     </h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
+                    <p className="text-white/90 text-sm leading-relaxed">
                       {topic.description}
                     </p>
-                    <div className="mt-4 flex items-center text-gray-400 font-medium text-sm">
+                    <div className="mt-4 flex items-center text-white/80 font-medium text-sm">
                       Coming Soon
                       <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -112,14 +126,21 @@ export function BlogPage() {
                   to={topic.path}
                   className="group block"
                 >
-                  <div className="bg-gradient-to-br bg-white border-2 border-gray-200 rounded-xl p-4 md:p-6 h-full transition-all duration-300 hover:shadow-lg hover:border-gray-300 hover:scale-105">
-                    <h3 className="text-lg md:text-xl font-semibold text-gray-800 mb-3 group-hover:text-gray-600 transition-colors">
+                  <div 
+                    className="rounded-xl p-4 md:p-6 h-full transition-all duration-300 hover:shadow-lg hover:scale-105 relative overflow-hidden"
+                    style={{
+                      backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(${topic.backgroundImage})`,
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center'
+                    }}
+                  >
+                    <h3 className="text-lg md:text-xl font-semibold text-white mb-3 group-hover:text-white/90 transition-colors">
                       {topic.title}
                     </h3>
-                    <p className="text-gray-600 text-sm leading-relaxed">
+                    <p className="text-white/90 text-sm leading-relaxed">
                       {topic.description}
                     </p>
-                    <div className="mt-4 flex items-center text-orange-500 font-medium text-sm group-hover:text-orange-600 transition-colors">
+                    <div className="mt-4 flex items-center text-orange-300 font-medium text-sm group-hover:text-orange-200 transition-colors">
                       Read More
                       <svg className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
