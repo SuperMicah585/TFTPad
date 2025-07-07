@@ -413,16 +413,16 @@ function App() {
 
               <SectionHeader id="backline-carries">Positioning Your Backline Carries</SectionHeader>
               <p className="mb-4 pl-4 text-left">
-                The image below shows an example TFT round. Let's assume that on the far board Vayne is the carry and on the close board Kog'Maw is the carry. The objective for both players is to keep their backline carry safe as long as possible. If we take a look at the Kog'Maw player, we can see that the positioning is perfect. The Vayne (and other units) have to kill the frontline, and then will target the Kindred since it is closer than the Kog'Maw. This means that in this match, the Kog'Maw is living as long as possible which is the objective for this comp.
+                The image below shows an example TFT round. Let's assume that on the far board Vayne is the carry and on the close board Kog'Maw is the carry. The objective for both players is to keep their backline carry alive as long as possible. If we take a look at the Kog'Maw player, we can see that the positioning is perfect. The Vayne (and other units) have to kill the frontline, and then will target the Kindred since it is closer than the Kog'Maw. This means that in this match, the Kog'Maw survives as long as possible, which is the objective for this comp.
               </p>
               <p className="mb-4 pl-4 text-left">
-                On the flip side, the Vayne board is not positioned correctly. Ideally, the Vayne would be positioned on the other side with its frontline protecting it. This would be better because it would allow Vayne to target the Kog'Maw before the Kindred.
+                On the other hand, the Vayne board is not positioned correctly. Ideally, the Vayne would be positioned on the other side with its frontline protecting it. This would be better because it would allow Vayne to target the Kog'Maw first, then the Kindred.
               </p>
               <img src="/positioning-backline-example.png" alt="Example of Good vs Bad Backline Positioning" className="my-4 border rounded" />
 
               <SectionHeader id="focusing-units">Focusing the Correct Units</SectionHeader>
               <p className="mb-4 pl-4 text-left">
-                Another thing to take into consideration is having your units target and kill units in the correct sequence. Units gain mana from taking damage and auto attacking (see <a href="/blog/mana" className="text-blue-700 underline hover:text-blue-900">blog on mana</a>). Therefore, especially early-mid game, when there is less damage, make sure your backline units don't get stuck on the enemy's itemized tank(s) and kill the squishier units as soon as possible. This will make sure that 1) you kill as many units as possible and 2) you don't allow enemy units to get extra casts.
+                Another thing to take into consideration is having your units target and kill units in the correct sequence. Units gain mana from taking damage and auto-attacking (see our <a href="/blog/mana" className="text-blue-700 underline hover:text-blue-900">blog on mana</a>). Therefore, especially in early-mid game when there is less damage, make sure your backline units don't get stuck attacking the enemy's itemized tank(s) and instead kill the squishier units as soon as possible. This ensures that 1) you kill as many units as possible and 2) you don't allow enemy units to get extra ability casts.
               </p>
               <p className="mb-4 pl-4 text-left">
                 To see an example of why both of these are important, let's take a look at this clip from the streamer Dishsoap.
@@ -449,15 +449,15 @@ function App() {
                 Third, the itemless Illaoi is able to cast three times, which is the equivalent of 1050 health-absurd considering she has less than 1000 health. If he had his backline switched, the Illaoi would have been targeted first and possibly died before casting once.
               </p>
               <p className="mb-4 pl-4 text-left">
-                At the end of the clip, you can see that Dishsoap acknowledges his positioning mistake, and who knows-if he had positioned correctly, it's possible he could have continued his streak.
+                At the end of the clip, you can see that Dishsoap acknowledges his positioning mistake. Who knows-if he had positioned correctly, he might have been able to continue his win streak.
               </p>
 
               <SectionHeader id="frontline-carries">How to Position Frontline Carries</SectionHeader>
               <p className="mb-4 pl-4 text-left">
-                Wrapping is based on the fact that your units will target the closest unit, and this can change while the unit is pathing towards the unit as long as it hasn't started attacking. Once your unit kills a unit, a new target is chosen based on proximity.
+                Wrapping is based on the fact that your units will target the closest enemy unit, and this target can change while the unit is moving toward it, as long as it hasn't started attacking. Once your unit kills an enemy unit, a new target is chosen based on proximity.
               </p>
               <p className="mb-4 pl-4 text-left">
-                Early game, there are fewer units so you might only have to deal with a few frontline tanks. Therefore, try to position the carry you want to wrap in a line with your units on the opposite side of the enemy tank(s). This will allow your melee carry to get staggered by your units and wrap to the enemy's backline. See an example in the clip below:
+                Early game, there are fewer units so you might only have to deal with a few frontline tanks. Therefore, try to position the carry you want to wrap in a line with your other units on the opposite side of the enemy tank(s). This will allow your melee carry to get blocked by your own units and wrap around to the enemy's backline. See an example in the clip below:
               </p>
               <div className="my-4 flex justify-center">
                 <iframe 
@@ -471,7 +471,7 @@ function App() {
                 />
               </div>
               <p className="mb-4 pl-4 text-left">
-                Late game positioning is a little harder as boards will have more units and therefore usually more frontliners. You are going to want to position melee carries on the opposite side of your opponent's main tank. The hope here is that once your carry gets through one of the squishier frontliners, it will then choose to make its way to the backline and start working through the backliners. The clip below helps to show this idea:
+                Late game positioning is a little harder because boards will have more units and therefore usually more frontline tanks. You are going to want to position melee carries on the opposite side of your opponent's main tank. The hope here is that once your carry gets through one of the squishier frontline units, it will then choose to move toward the backline and start attacking the backline units. The clip below helps to show this idea:
               </p>
               <div className="my-4 flex justify-center">
                 <iframe 
