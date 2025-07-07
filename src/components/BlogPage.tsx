@@ -40,7 +40,7 @@ export function BlogPage() {
       description: "Strategic unit placement and positioning fundamentals",
       path: "/blog/positioning-units",
       color: "from-purple-500 to-purple-600",
-      comingSoon: true,
+      comingSoon: false,
       backgroundImage: "/blog-tile-5.png"
     },
     {
@@ -58,6 +58,14 @@ export function BlogPage() {
       color: "from-orange-500 to-orange-600",
       comingSoon: true,
       backgroundImage: "/blog-tile-7.png"
+    },
+    {
+      title: "Mana",
+      description: "Understanding mana generation for units in TFT",
+      path: "/blog/mana",
+      color: "from-indigo-500 to-indigo-600",
+      comingSoon: true,
+      backgroundImage: "/blog-tile-8.png"
     }
   ];
 
