@@ -7,7 +7,7 @@ export function Header() {
    
    return(
        <div className="border-b border-gray-800 px-6 py-4 relative z-20" style={{ backgroundColor: '#964B00' }}>
-           <div className="max-w-6xl mx-auto flex items-center justify-between">
+           <div className="max-w-6xl mx-auto flex items-center justify-between relative">
                <div className="flex items-center relative">
                    <img 
                        src="/favicon.png" 
@@ -17,8 +17,8 @@ export function Header() {
                    <h1 className="text-2xl font-bold text-white absolute left-14">TFTPad</h1>
                </div>
                
-               {/* Desktop Navigation */}
-               <nav className="hidden md:flex items-center space-x-6">
+               {/* Desktop Navigation - Centered */}
+               <nav className="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2">
                    <Link 
                        to="/" 
                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
