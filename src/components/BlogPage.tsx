@@ -48,7 +48,7 @@ export function BlogPage() {
       description: "Understanding item pools and optimal itemization",
       path: "/blog/item-pool",
       color: "from-red-500 to-red-600",
-      comingSoon: true,
+      comingSoon: false,
       backgroundImage: "/blog-tile-6.png"
     },
     {
