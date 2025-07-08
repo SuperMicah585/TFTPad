@@ -75,7 +75,7 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                         <div className="flex items-center justify-start">
                             <div className="flex items-center gap-2">
                                 <label htmlFor="matchId" className="block text-sm font-medium text-gray-700">
-                                    Load Match Data
+                                    Load Game Data
                                 </label>
                                 <button
                                     onClick={onShowGameIdModal}
@@ -92,7 +92,7 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                                     id="matchId"
                                     value={matchId}
                                     onChange={(e) => setMatchId(e.target.value)}
-                                    placeholder="Enter match ID (e.g., NA1_5320285575)"
+                                    placeholder="Enter game ID (e.g., NA1_5320285575)"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                                 />
                             </div>
@@ -102,7 +102,7 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                                 className="px-4 py-2 text-white rounded-md hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                                 style={{ backgroundColor: '#964B00' }}
                             >
-                                {matchLoading ? "Loading..." : "Load Match"}
+                                {matchLoading ? "Loading..." : "Load Game"}
                             </button>
                         </div>
                     </div>

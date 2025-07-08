@@ -4,6 +4,14 @@ import { Link } from 'react-router-dom'
 export function BlogPage() {
   const blogTopics = [
     {
+      title: "Positioning Units",
+      description: "Strategic unit placement and positioning fundamentals",
+      path: "/blog/positioning-units",
+      color: "from-purple-500 to-purple-600",
+      comingSoon: false,
+      backgroundImage: "/blog-tile-5.png"
+    },
+    {
       title: "Defensive Stats",
       description: "Understanding armor, magic resist, and defensive mechanics in TFT",
       path: "/blog/defensive-stats",
@@ -34,14 +42,6 @@ export function BlogPage() {
       color: "from-yellow-500 to-yellow-600",
       comingSoon: false,
       backgroundImage: "/blog-tile-4.png"
-    },
-    {
-      title: "Positioning Units",
-      description: "Strategic unit placement and positioning fundamentals",
-      path: "/blog/positioning-units",
-      color: "from-purple-500 to-purple-600",
-      comingSoon: false,
-      backgroundImage: "/blog-tile-5.png"
     },
     {
       title: "Items",
