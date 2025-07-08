@@ -695,7 +695,7 @@ function App() {
         Damage Amp is pretty simple - it multiplies with other damage sources to increase the total damage output of all damage that a unit deals.
       </p>
 
-      <SectionHeader id="how-damage-amp-works-together">How does damage amplification work together?</SectionHeader>
+              <SectionHeader id="how-damage-amp-works-together">How Does Damage Amplification Work Together?</SectionHeader>
       <p className="text-left">
         There are three 'buckets' (AD/AP, crit, and damage amp). Damage within the same bucket is additive. This means that if you have multiple sources of damage amp, those are added and not multiplied. Damage between buckets is multiplied. See the video below for Mortdog's explanation:
       </p>
@@ -736,7 +736,7 @@ function App() {
         I should note that the equation for crit calculates the average damage amp and may not be consistent between rounds that have a smaller sample size of auto attacks, which leads to more variance.
       </p>
 
-      <SectionHeader id="damage-amp-and-reduction">How damage amp and damage reduction work together</SectionHeader>
+              <SectionHeader id="damage-amp-and-reduction">How Damage Amp and Damage Reduction Work Together</SectionHeader>
       <p className="text-left">
         Now let's make the example above more realistic by factoring in damage reduction. To better understand how this works, let's watch the video below:
       </p>
@@ -781,7 +781,7 @@ function App() {
                 </ul>
               </nav>
 
-              <SectionHeader id="base-stats-difference">What is the difference between base stats of units between tiers?</SectionHeader>
+              <SectionHeader id="base-stats-difference">What Is the Difference Between Base Stats of Units Between Tiers?</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 The stats that change as units star-up are ability base dmg, attack damage, and health. In general these stats multiply by about 1.8x per star level. 3★ 4 and 5 costs grow at an even higher rate.
               </p>
@@ -792,7 +792,7 @@ function App() {
                 I will note that ability damage also goes up per star level, but this varies on every unit so I am not going to go over it in this article.
               </p>
 
-              <SectionHeader id="ad-growth">Comparing AD growth of Units</SectionHeader>
+              <SectionHeader id="ad-growth">Comparing AD Growth of Units</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 Below we will compare two champions (Senna and Annie) so that we can compare this growth rate with base AD.
               </p>
@@ -820,7 +820,7 @@ function App() {
                 Based on this, we can assume that Zeri has a base health that is 80% of Sejuani simply due to the difference in their class (range AD carry vs tank).
               </p>
 
-              <SectionHeader id="prioritizing-units">Thinking about base stats when prioritizing units</SectionHeader>
+              <SectionHeader id="prioritizing-units">Thinking About Base Stats When Prioritizing Units</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 An interesting thing to note is that Zed (1050/1890/3780), who is an assassin, has base health that is actually greater than Sejuani. This shows how important it is for his survivability to star up as he gets more than a Warmogs worth of health. This is especially true because you do not usually itemize him with tank stats so this almost doubles his survivability. Zed also benefits from the AD scaling (50/90/180) and ability damage from making him star up. I believe this is why AD frontline-bruiser units feel so binary - they're either weak at 1★ or strong at 2★ - and why it feels like such a big power level spike when they are starred-up.
               </p>
@@ -834,7 +834,7 @@ function App() {
                 AD backliners benefit from all of the stats when increasing their star level. The only stat they might care less about is health, but even that is appreciated on units that don't have defensive stats from their traits (Aphelios/Urgot).
               </p>
 
-              <SectionHeader id="survivability">How much does starring a unit up increase its survivability</SectionHeader>
+              <SectionHeader id="survivability">How Much Does Starring a Unit Up Increase Its Survivability</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 If you haven't, take a look at <a href="https://tftpad.com/blog/defensive-stats" className="text-blue-700 underline hover:text-blue-900">https://tftpad.com/blog/defensive-stats</a> for the discussion on effective health.
               </p>
