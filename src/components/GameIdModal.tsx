@@ -91,33 +91,20 @@ export function GameIdModal({ isOpen, onClose }: GameIdModalProps) {
                         </div>
                     </div>
 
-                    {/* Step 5 */}
-                    <div className="space-y-4">
-                        <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 bg-orange-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
-                                5
-                            </div>
-                            <h3 className="text-lg font-semibold text-gray-800">Finalize the Game ID</h3>
-                        </div>
-                        <p className="text-gray-600 ml-11">
-                            Delete the rest of the URL so that it looks like what is shown in the image. Press search and the match data should show!
-                        </p>
-                        <div className="ml-11">
-                            <img src="/image4.png" alt="Final game ID format" className="rounded-lg border border-gray-200 max-w-full" />
-                        </div>
-                    </div>
-
                     {/* Final Step */}
                     <div className="space-y-4">
                         <div className="flex items-center gap-3">
                             <div className="w-8 h-8 bg-green-500 text-white rounded-full flex items-center justify-center font-bold text-sm">
                                 ✓
                             </div>
-                            <h3 className="text-lg font-semibold text-gray-800">Load Your Match!</h3>
+                            <h3 className="text-lg font-semibold text-gray-800">Load Your Game!</h3>
                         </div>
                         <p className="text-gray-600 ml-11">
-                            Press the "Load Match" button and TFTPad will populate all the rows with the actual match data, allowing you to analyze the game and see what the optimal comps would have been!
+                            Delete the rest of the URL so that it looks like what is shown in the image. Then press the "Load Game" button and TFTPad will populate all the rows with the actual match data, allowing you to analyze the game and see what the optimal comps would have been!
                         </p>
+                        <div className="ml-11">
+                            <img src="/image4.png" alt="Final game ID format" className="rounded-lg border border-gray-200 max-w-full" />
+                        </div>
                     </div>
 
                     {/* Tips */}
