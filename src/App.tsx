@@ -628,8 +628,8 @@ function App() {
               <li><a href="#damage-amp" className="hover:underline">• Damage Amp</a></li>
             </ul>
           </li>
-          <li><a href="#how-damage-amp-works-together" className="hover:underline">How does damage amplification work together?</a></li>
-          <li><a href="#damage-amp-and-reduction" className="hover:underline">How damage amp and damage reduction work together</a></li>
+                            <li><a href="#how-damage-amp-works-together" className="hover:underline">How Does Damage Amplification Work Together?</a></li>
+                      <li><a href="#damage-amp-and-reduction" className="hover:underline">How Damage Amp and Damage Reduction Work Together</a></li>
         </ul>
       </nav>
 
@@ -772,11 +772,11 @@ function App() {
               <nav className="mb-8 p-3 md:p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
                 <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-800">On this page</h2>
                 <ul className="space-y-1 list-disc list-inside text-blue-700 text-sm md:text-base">
-                  <li><a href="#base-stats-difference" className="hover:underline">What is the difference between base stats of units between tiers?</a></li>
-                  <li><a href="#ad-growth" className="hover:underline">Comparing AD growth of Units</a></li>
+                  <li><a href="#base-stats-difference" className="hover:underline">What Is the Difference Between Base Stats of Units Between Tiers?</a></li>
+                                      <li><a href="#ad-growth" className="hover:underline">Comparing AD Growth of Units</a></li>
                   <li><a href="#health-growth" className="hover:underline">Comparing Health Growth of Units</a></li>
-                  <li><a href="#prioritizing-units" className="hover:underline">Thinking about base stats when prioritizing units</a></li>
-                  <li><a href="#survivability" className="hover:underline">How much does starring a unit up increase its survivability</a></li>
+                                      <li><a href="#prioritizing-units" className="hover:underline">Thinking About Base Stats When Prioritizing Units</a></li>
+                                      <li><a href="#survivability" className="hover:underline">How Much Does Starring a Unit Up Increase Its Survivability</a></li>
                   <li><a href="#tier-comparison" className="hover:underline">Are 2* units at lower tiers tankier than 1* units at higher tiers?</a></li>
                 </ul>
               </nav>
