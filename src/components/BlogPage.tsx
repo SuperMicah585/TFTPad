@@ -56,7 +56,7 @@ export function BlogPage() {
       description: "Comprehensive guide to damage mechanics in TFT",
       path: "/blog/understanding-dmg",
       color: "from-orange-500 to-orange-600",
-      comingSoon: true,
+      comingSoon: false,
       backgroundImage: "/blog-tile-7.png"
     },
     {
