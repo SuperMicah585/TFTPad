@@ -12,9 +12,11 @@ import { GoogleAnalytics, trackEvent } from './components/GoogleAnalytics'
 import './App.css'
 import { Link } from 'react-router-dom'
 import { Link as LinkIcon } from 'lucide-react'
+import { GameIdModal } from './components/GameIdModal'
 
 function MainApp() {
   const [activeTab, setActiveTab] = useState<'game' | 'units' | 'comps'>('game')
+  const [showGameIdModal, setShowGameIdModal] = useState(false)
 
   const handleTabChange = (tab: 'game' | 'units' | 'comps') => {
     setActiveTab(tab);
@@ -117,7 +119,7 @@ function MainApp() {
 
         {/* Tab Content */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full">
-          {activeTab === 'game' ? <CompHolder /> : activeTab === 'units' ? <UnitsHolder /> : <CompsHolder />}
+          {activeTab === 'game' ? <CompHolder onShowGameIdModal={() => setShowGameIdModal(true)} /> : activeTab === 'units' ? <UnitsHolder /> : <CompsHolder />}
         </div>
       </div>
       
@@ -127,6 +129,12 @@ function MainApp() {
           <p>2025-2025 TFTPad. TFTPad isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
         </div>
       </footer>
+
+      {/* Game ID Modal */}
+      <GameIdModal 
+        isOpen={showGameIdModal} 
+        onClose={() => setShowGameIdModal(false)} 
+      />
     </div>
   )
 }

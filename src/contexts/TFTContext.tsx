@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
-import { fetchTFTComps, fetchCurrentVersion, fetchChampionData, createChampionImageMappings, fetchCompsWithPlacementStats, fetchTraitData, type ChampionData, type TraitData, type DetailedTraitData } from '../services/tftService';
+import { fetchTFTComps, fetchCurrentVersion, fetchChampionData, createChampionImageMappings, fetchCompsWithPlacementStats, fetchTraitData, fetchMatchData, parseMatchDataForGameTab, type ChampionData, type TraitData, type DetailedTraitData } from '../services/tftService';
 import type { TFTComp } from '../services/tftService';
 
 interface Champion {
@@ -45,12 +45,16 @@ interface TFTContextType {
     // Unit selection tracking
     selectedUnits: { [playerId: number]: (Champion | null)[] };
     updatePlayerUnits: (playerId: number, units: (Champion | null)[]) => void;
-    playerStars: { [playerId: number]: string[] };
-    updatePlayerStars: (playerId: number, stars: string[]) => void;
+    playerStars: { [playerId: number]: { [unitName: string]: number } };
+    updatePlayerStars: (playerId: number, stars: { [unitName: string]: number }) => void;
     getUnitContestRates: () => { [unitName: string]: number };
     // Player names tracking
     playerNames: { [playerId: number]: string };
     updatePlayerName: (playerId: number, name: string) => void;
+    // Match data loading
+    loadMatchData: (matchId: string) => Promise<void>;
+    matchLoading: boolean;
+    matchError: string | null;
 }
 
 const TFTContext = createContext<TFTContextType | undefined>(undefined);
@@ -82,10 +86,14 @@ export function TFTProvider({ children }: TFTProviderProps) {
     const [selectedUnits, setSelectedUnits] = useState<{ [playerId: number]: (Champion | null)[] }>({});
 
     // Player stars tracking for all 8 players
-    const [playerStars, setPlayerStars] = useState<{ [playerId: number]: string[] }>({});
+    const [playerStars, setPlayerStars] = useState<{ [playerId: number]: { [unitName: string]: number } }>({});
 
     // Player names tracking for all 8 players
     const [playerNames, setPlayerNames] = useState<{ [playerId: number]: string }>({});
+    
+    // Match data loading state
+    const [matchLoading, setMatchLoading] = useState(false);
+    const [matchError, setMatchError] = useState<string | null>(null);
 
     const updatePlayerUnits = (playerId: number, units: (Champion | null)[]) => {
         setSelectedUnits(prev => ({
@@ -94,7 +102,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
         }));
     };
 
-    const updatePlayerStars = (playerId: number, stars: string[]) => {
+    const updatePlayerStars = (playerId: number, stars: { [unitName: string]: number }) => {
         setPlayerStars(prev => ({
             ...prev,
             [playerId]: stars
@@ -108,18 +116,140 @@ export function TFTProvider({ children }: TFTProviderProps) {
         }));
     };
 
+    const loadMatchData = async (matchId: string) => {
+        setMatchLoading(true);
+        setMatchError(null);
+
+        try {
+            // Check if champions data is loaded
+            if (Object.keys(champions).length === 0) {
+                console.log('Champions data not loaded yet, waiting...');
+                // Wait a bit for champions to load
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                if (Object.keys(champions).length === 0) {
+                    throw new Error('Champions data not available');
+                }
+            }
+            
+            console.log('Champions data loaded, keys count:', Object.keys(champions).length);
+            
+            const matchData = await fetchMatchData(matchId);
+            const parsedData = parseMatchDataForGameTab(matchData);
+            
+            // Clear existing data
+            const newSelectedUnits: { [playerId: number]: (Champion | null)[] } = {};
+            const newPlayerStars: { [playerId: number]: { [unitName: string]: number } } = {};
+            const newPlayerNames: { [playerId: number]: string } = {};
+            
+            // Populate data for each player (0-7)
+            parsedData.forEach((player, index) => {
+                const playerId = index;
+                
+                // Set player name
+                newPlayerNames[playerId] = player.playerName;
+                
+                // Convert champions to the format expected by the app
+                const units: (Champion | null)[] = Array(9).fill(null);
+                const stars: { [unitName: string]: number } = {};
+                
+                player.champions.forEach((champion, unitIndex) => {
+                    if (unitIndex < 9) { // Max 9 units per player
+                        console.log(`Processing champion: ${champion.name}, stars: ${champion.stars}`);
+                        console.log(`Champions object keys count:`, Object.keys(champions).length);
+                        console.log(`First few champion keys:`, Object.keys(champions).slice(0, 5));
+                        
+                        // Try to find the champion by searching for the TFT14_ prefixed name in the full path
+                        const tft14Name = `TFT14_${champion.name}`;
+                        let championData = null;
+                        let foundKey = null;
+                        
+                        // Search through all keys to find the one containing our champion name
+                        for (const key of Object.keys(champions)) {
+                            if (key.includes(tft14Name)) {
+                                championData = champions[key];
+                                foundKey = key;
+                                break;
+                            }
+                        }
+                        
+                        console.log(`Looking for: ${tft14Name}`);
+                        console.log(`Found champion:`, !!championData);
+                        if (foundKey) {
+                            console.log(`Found by key: ${foundKey}`);
+                        }
+                        
+                        if (!championData) {
+                            // If not found, try searching for just the name without TFT14_ prefix
+                            for (const key of Object.keys(champions)) {
+                                if (key.includes(champion.name)) {
+                                    championData = champions[key];
+                                    foundKey = key;
+                                    break;
+                                }
+                            }
+                            console.log(`Looking for direct name: ${champion.name}`);
+                            console.log(`Found by direct name:`, !!championData);
+                            if (foundKey) {
+                                console.log(`Found by key: ${foundKey}`);
+                            }
+                        }
+                        
+                        if (championData) {
+                            console.log(`Champion data for ${champion.name}:`, championData);
+                            console.log(`Image full:`, championData.image.full);
+                            
+                            // Construct the full image URL
+                            const fullImageUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${championData.image.full}`;
+                            
+                            units[unitIndex] = {
+                                name: championData.name, // Use the official name from champion data
+                                imageUrl: fullImageUrl,
+                                tier: championData.tier
+                            };
+                            
+                            // Add to stars object if 3-star or 4-star
+                            if (champion.stars === 3 || champion.stars === 4) {
+                                stars[championData.name] = champion.stars;
+                            }
+                            
+                            console.log(`Successfully mapped: ${champion.name} -> ${championData.name}`);
+                            console.log(`Image URL: ${fullImageUrl}`);
+                        } else {
+                            console.log(`No champion data found for: ${champion.name}`);
+                            console.log(`Tried looking for: TFT14_${champion.name}, ${champion.name}`);
+                            console.log(`Available champion keys:`, Object.keys(champions).slice(0, 10));
+                        }
+                    }
+                });
+                
+                newSelectedUnits[playerId] = units;
+                newPlayerStars[playerId] = stars;
+            });
+            
+            // Update all state at once
+            setSelectedUnits(newSelectedUnits);
+            setPlayerStars(newPlayerStars);
+            setPlayerNames(newPlayerNames);
+            
+        } catch (err) {
+            setMatchError(err instanceof Error ? err.message : "Failed to load match data");
+        } finally {
+            setMatchLoading(false);
+        }
+    };
+
     const getUnitContestRates = () => {
         const unitCounts: { [unitName: string]: number } = {};
         // Pool sizes by tier
         const TIER_POOLS = { 1: 30, 2: 25, 3: 18, 4: 10, 5: 9 };
         Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
-                const currentPlayerStars = playerStars[parseInt(playerId)] || [];
+                const currentPlayerStars = playerStars[parseInt(playerId)] || {};
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        // Only 3-star units are tracked via playerStars, all others are 1-star or 2-star
-                        const isThreeStar = currentPlayerStars.includes(unit.name);
-                        const weight = isThreeStar ? 9 : 3; // 3-star units count as 9, all others as 3
+                        // Check if unit is starred and get star level
+                        const starLevel = currentPlayerStars[unit.name] || 0;
+                        const weight = starLevel === 4 ? 27 : starLevel === 3 ? 9 : 3; // 4-star = 27, 3-star = 9, others = 3
                         unitCounts[unit.name] = (unitCounts[unit.name] || 0) + weight;
                     }
                 });
@@ -243,7 +373,10 @@ export function TFTProvider({ children }: TFTProviderProps) {
         updatePlayerStars,
         getUnitContestRates,
         playerNames,
-        updatePlayerName
+        updatePlayerName,
+        loadMatchData,
+        matchLoading,
+        matchError
     };
 
     return (

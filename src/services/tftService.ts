@@ -1035,3 +1035,104 @@ export function generateTeamPlannerCode(champions: string[]): string {
     // Combine prefix + champion codes + set identifier
     return result;
 } 
+
+export interface MatchData {
+  metadata: {
+    data_version: string;
+    match_id: string;
+    participants: string[];
+  };
+  info: {
+    endOfGameResult: string;
+    gameCreation: number;
+    gameId: number;
+    game_datetime: number;
+    game_length: number;
+    game_version: string;
+    mapId: number;
+    participants: PlayerData[];
+    queueId: number;
+    queue_id: number;
+    tft_game_type: string;
+    tft_set_core_name: string;
+    tft_set_number: number;
+  };
+}
+
+export interface PlayerData {
+  companion: any;
+  gold_left: number;
+  last_round: number;
+  level: number;
+  missions: any;
+  placement: number;
+  players_eliminated: number;
+  puuid: string;
+  riotIdGameName: string;
+  riotIdTagline: string;
+  time_eliminated: number;
+  total_damage_to_players: number;
+  traits: any[];
+  units: UnitData[];
+  win: boolean;
+}
+
+export interface UnitData {
+  character_id: string;
+  itemNames: string[];
+  name: string;
+  rarity: number;
+  tier: number;
+}
+
+export async function fetchMatchData(matchId: string): Promise<MatchData> {
+  try {
+    // Create a timeout promise that rejects after 5 seconds
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Request timed out after 5 seconds. Please try again.'));
+      }, 5000);
+    });
+
+    // Create the fetch promise
+    const fetchPromise = fetch(`https://tftpad-phelpsm4.pythonanywhere.com/api/match/${matchId}`);
+    
+    // Race between the fetch and timeout
+    const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Match ID not found. Please check the ID and try again.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error fetching match data:', error);
+    throw error;
+  }
+}
+
+export function parseMatchDataForGameTab(matchData: MatchData) {
+  // Sort participants by placement (1st to 8th)
+  const sortedPlayers = matchData.info.participants.sort((a, b) => a.placement - b.placement);
+  
+  return sortedPlayers.map(player => {
+    // Convert character_id to champion name (remove TFT14_ prefix)
+    const champions = player.units.map(unit => {
+      const championName = unit.character_id.replace('TFT14_', '');
+      // Map tier to star level: tier 2 = normal, tier 3 = 3*, tier 4 = 4*
+      const starLevel = unit.tier === 4 ? 4 : unit.tier === 3 ? 3 : unit.tier === 2 ? 2 : 1;
+      console.log(`Parsing unit: ${championName}, tier: ${unit.tier}, starLevel: ${starLevel}`);
+      return { name: championName, stars: starLevel };
+    });
+    
+    return {
+      playerName: player.riotIdGameName,
+      placement: player.placement,
+      champions: champions
+    };
+  });
+} 

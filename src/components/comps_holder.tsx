@@ -351,10 +351,10 @@ export function CompsHolder() {
         const totalPlayers = 8;
         Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
-                const currentPlayerStars = playerStars[parseInt(playerId)] || [];
+                const currentPlayerStars = playerStars[parseInt(playerId)] || {};
                 console.log(`Comps tab - Player ${playerId} stars:`, currentPlayerStars);
-                // Debug: Check if Nidalee is in the stars array
-                const nidaleeInStars = currentPlayerStars.find(star => star.toLowerCase().includes('nidalee'));
+                // Debug: Check if Nidalee is in the stars object
+                const nidaleeInStars = Object.keys(currentPlayerStars).find(star => star.toLowerCase().includes('nidalee'));
                 if (nidaleeInStars) {
                     console.log(`DEBUG NIDALEE STARS: Found Nidalee in stars: "${nidaleeInStars}"`);
                 }
@@ -368,8 +368,8 @@ export function CompsHolder() {
                         
                         // Only count itemized units
                         if (isItemized) {
-                            const isStarred = currentPlayerStars.includes(unit.name);
-                            const weight = isStarred ? 3 : 1;
+                            const starLevel = currentPlayerStars[unit.name] || 0;
+                            const weight = starLevel >= 3 ? 3 : 1; // 3-star and 4-star units count as 3, others as 1
                             // Normalize unit name to match Comps tab display (remove TFT14_ prefix and trim)
                             let normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().trim();
                             
@@ -378,7 +378,7 @@ export function CompsHolder() {
                                 normalizedUnitName = 'nidaleecougar';
                             }
                             unitCounts[normalizedUnitName] = (unitCounts[normalizedUnitName] || 0) + weight;
-                            console.log(`Comps tab - Unit ${unit.name} (normalized: ${normalizedUnitName}) from player ${playerId}: isStarred=${isStarred}, weight=${weight}, total count=${unitCounts[normalizedUnitName]}`);
+                            console.log(`Comps tab - Unit ${unit.name} (normalized: ${normalizedUnitName}) from player ${playerId}: starLevel=${starLevel}, weight=${weight}, total count=${unitCounts[normalizedUnitName]}`);
                             // Debug: Log all unit names to see what's being stored
                             if (unit.name.toLowerCase().includes('nidalee')) {
                                 console.log(`DEBUG NIDALEE: Original name: "${unit.name}", Normalized: "${normalizedUnitName}"`);
@@ -549,6 +549,8 @@ export function CompsHolder() {
                 const tier = getChampionTier(unit);
                 const isStarred = comp.stars.includes(`TFT14_${unit}`);
                 if (isStarred) {
+                    // For now, assume 3-star since comp data doesn't track star levels yet
+                    // TODO: Update when comp data structure supports star levels
                     totalCost += tier * 9; // 3* units cost tier * 9
                 } else {
                     totalCost += tier * 3; // 1* and 2* units cost tier * 3
@@ -689,7 +691,7 @@ export function CompsHolder() {
                                             <li><span className="text-red-300 font-semibold">Score</span>: Weighted score based on contest rate and average placement.</li>
                                             <li><span className="text-blue-300 font-semibold">Avg</span>: Average placement for this comp.</li>
                                             <li><span className="text-green-300 font-semibold">Games</span>: Number of games the comp was played based on the division filter.</li>
-                                            <li><span className="text-yellow-300 font-semibold">Cost</span>: Total gold required to build the comp (3★ units count as tier × 9, others as tier × 3).</li>
+                                            <li><span className="text-yellow-300 font-semibold">Cost</span>: Total gold required to build the comp (4★ units count as tier × 27, 3★ units count as tier × 9, others as tier × 3).</li>
                                         </ul>
                                     </div>
                                     <div className="arrow absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900 transition-transform duration-200"></div>

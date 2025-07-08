@@ -26,12 +26,12 @@ export function UnitsHolder() {
         
         Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
-                const currentPlayerStars = playerStars[parseInt(playerId)] || [];
+                const currentPlayerStars = playerStars[parseInt(playerId)] || {};
                 playerUnits.forEach(unit => {
                     if (unit) {
-                        // Only 3-star units are tracked via playerStars, all others are 1-star or 2-star
-                        const isThreeStar = currentPlayerStars.includes(unit.name);
-                        const weight = isThreeStar ? 9 : 3; // 3-star units count as 9, all others as 3
+                        // Check star level and calculate weight
+                        const starLevel = currentPlayerStars[unit.name] || 0;
+                        const weight = starLevel === 4 ? 27 : starLevel === 3 ? 9 : 3; // 4-star = 27, 3-star = 9, others = 3
                         tierUsage[unit.tier] = (tierUsage[unit.tier] || 0) + weight;
                     }
                 });
@@ -190,7 +190,7 @@ export function UnitsHolder() {
                             })}
                         </div>
                         <div className="text-xs text-gray-500 mt-2">
-                            * 3-star units count as 9 copies, all other units count as 3 copies
+                            * 4-star units count as 27 copies, 3-star units count as 9 copies, all other units count as 3 copies
                         </div>
                     </div>
                     

@@ -25,7 +25,7 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
     const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0, shouldPositionAbove: false });
     const [isEditingPlayer, setIsEditingPlayer] = useState(false);
     const rowRef = useRef<HTMLDivElement>(null);
-    const starredUnits = playerStars[player] || [];
+    const starredUnits = playerStars[player] || {};
     const [popupIndex, setPopupIndex] = useState<number | null>(null);
     const popupRef = useRef<HTMLDivElement | null>(null);
 
@@ -82,13 +82,15 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
         setIsModalOpen(false);
     };
 
-    const handleCompSelect = (champions: Champion[], stars: string[]) => {
+    const handleCompSelect = (champions: Champion[], stars: { [unitName: string]: number }) => {
         // Fill the array with champions and pad with nulls to maintain 10 slots
         const newChampions: (Champion | null)[] = [...champions];
         while (newChampions.length < 10) {
             newChampions.push(null);
         }
         updatePlayerUnits(player, newChampions.slice(0, 10));
+        
+        // Stars are already in object format
         updatePlayerStars(player, stars);
         setIsModalOpen(false);
     };
@@ -154,14 +156,14 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
     };
 
     // Toggle stars
-    const handleToggleStars = (index: number) => {
+    const handleToggleStars = (index: number, starLevel: number) => {
         const unit = selectedChampions[index];
         if (!unit) return;
-        let newStars: string[];
-        if (starredUnits.includes(unit.name)) {
-            newStars = starredUnits.filter(name => name !== unit.name);
+        let newStars: { [unitName: string]: number } = { ...starredUnits };
+        if (starredUnits[unit.name] === starLevel) {
+            delete newStars[unit.name];
         } else {
-            newStars = [...starredUnits, unit.name];
+            newStars[unit.name] = starLevel;
         }
         updatePlayerStars(player, newStars);
         setPopupIndex(null);
@@ -276,22 +278,28 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
                                 champion={selectedChampions[index] || undefined} 
                                 onClick={() => handleHexagonClick(index)}
                                 isSelected={isSelected}
-                                starred={!!selectedChampions[index] && starredUnits.includes(selectedChampions[index].name)}
+                                starLevel={selectedChampions[index] ? (starredUnits[selectedChampions[index].name] || 0) : 0}
                             />
                             {/* Popup menu for actions */}
                             {popupIndex === index && selectedChampions[index] && (
                                 <div ref={popupRef} className="absolute z-50 top-1/2 left-full ml-2 -translate-y-1/2 bg-white border border-gray-300 rounded shadow-lg flex flex-col min-w-[120px]">
                                     <button
-                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-200 last:border-b-0"
+                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-200"
                                         onClick={() => handleRemoveUnit(index)}
                                     >
                                         Remove unit
                                     </button>
                                     <button
-                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm"
-                                        onClick={() => handleToggleStars(index)}
+                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-200"
+                                        onClick={() => handleToggleStars(index, 3)}
                                     >
-                                        {starredUnits.includes(selectedChampions[index].name) ? 'Remove stars' : '3 star'}
+                                        {starredUnits[selectedChampions[index].name] === 3 ? 'Remove 3★' : '3★ star'}
+                                    </button>
+                                    <button
+                                        className="px-4 py-2 text-left hover:bg-gray-100 text-sm"
+                                        onClick={() => handleToggleStars(index, 4)}
+                                    >
+                                        {starredUnits[selectedChampions[index].name] === 4 ? 'Remove 4★' : '4★ star'}
                                     </button>
                                 </div>
                             )}

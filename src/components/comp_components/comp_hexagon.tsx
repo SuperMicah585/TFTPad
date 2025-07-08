@@ -6,10 +6,10 @@ interface CompHexagonProps {
   };
   onClick?: (e: React.MouseEvent<HTMLDivElement>) => void;
   isSelected?: boolean;
-  starred?: boolean;
+  starLevel?: number; // 0 = no stars, 3 = 3-star, 4 = 4-star
 }
 
-export function CompHexagon({ champion, onClick, isSelected, starred }: CompHexagonProps) {
+export function CompHexagon({ champion, onClick, isSelected, starLevel = 0 }: CompHexagonProps) {
   const getTierBackgroundColor = (tier: number): string => {
     const tierColors = {
       1: 'bg-gray-400',
@@ -22,15 +22,21 @@ export function CompHexagon({ champion, onClick, isSelected, starred }: CompHexa
   };
 
   if (champion) {
-    console.log(`CompHexagon for ${champion.name}: starred=${starred}`);
+    console.log(`CompHexagon for ${champion.name}: starLevel=${starLevel}`);
     {console.log(champion.tier)}
     return (
       <div className="relative">
         {/* Star overlay for starred units - positioned outside the hex */}
-        {starred && (
+        {starLevel > 0 && (
           <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 flex flex-row gap-0.5 z-10">
-            {[1, 2, 3].map((starIndex) => (
-              <svg key={starIndex} className="w-4 h-4 text-yellow-400 fill-current drop-shadow-lg stroke-black stroke-1" viewBox="0 0 24 24">
+            {Array.from({ length: starLevel }, (_, starIndex) => (
+              <svg 
+                key={starIndex} 
+                className={`w-4 h-4 fill-current drop-shadow-lg stroke-black stroke-1 ${
+                  starLevel === 4 ? 'text-green-400' : 'text-yellow-400'
+                }`} 
+                viewBox="0 0 24 24"
+              >
                 <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
               </svg>
             ))}

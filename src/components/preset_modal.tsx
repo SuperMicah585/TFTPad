@@ -8,7 +8,7 @@ interface PresetModalProps {
     isOpen: boolean;
     onClose: () => void;
     playerNumber: number;
-    onCompSelect?: (champions: { name: string; imageUrl: string; tier: number }[], stars: string[]) => void;
+    onCompSelect?: (champions: { name: string; imageUrl: string; tier: number }[], stars: { [unitName: string]: number }) => void;
 }
 
 export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: PresetModalProps) {
@@ -233,7 +233,15 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                     imageUrl: getChampionIconUrl(unit),
                     tier: getChampionTier(unit)
                 }));
-            onCompSelect(validChampions, comp.stars || []);
+            
+            // Convert stars array to object format
+            const starsObject: { [unitName: string]: number } = {};
+            if (comp.stars) {
+                comp.stars.forEach((starName: string) => {
+                    starsObject[starName] = 3; // Default to 3-star for now
+                });
+            }
+            onCompSelect(validChampions, starsObject);
         }
     };
 
