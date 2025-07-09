@@ -98,7 +98,7 @@ export function BlogPage() {
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">TFTPad Blog</h1>
           
           <p className="text-base md:text-lg text-gray-600 mb-8">
-            Welcome to the TFTPad blog! Here you'll find insights, strategies, and deep dives into Teamfight Tactics mechanics.
+            Hi, I'm Micah (<a href="https://www.metatft.com/player/na/moisturizar-NA1" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">Moisturizar</a>), and below is a space to share my TFT learnings.
           </p>
           
           {/* Topic Tiles Grid */}

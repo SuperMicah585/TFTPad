@@ -679,7 +679,7 @@ function App() {
                           <td className="p-2 border">9.1%</td>
                         </tr>
                         <tr className="border-b">
-                          <td className="p-2 border">Spatula</td>
+                          <td className="p-2 border">Sparring Glove</td>
                           <td className="p-2 border">2</td>
                           <td className="p-2 border">0</td>
                           <td className="p-2 border">2</td>

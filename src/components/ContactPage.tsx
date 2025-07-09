@@ -40,9 +40,9 @@ export function ContactPage() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full p-4 md:p-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Contact TFTPad</h1>
           
-          <p className="text-base md:text-lg text-gray-600 mb-8">
-            Have feedback, suggestions, or requests? We'd love to hear from you! Send us a message and we'll get back to you as soon as possible.
-          </p>
+                      <p className="text-base md:text-lg text-gray-600 mb-8">
+              TFTPad is a hobby project, and any feedback you have is greatly appreciated to help make it better! Whether you've found a bug, have suggestions for new features, or just want to share your thoughts - we'd love to hear from you.
+            </p>
           
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
