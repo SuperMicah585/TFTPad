@@ -64,7 +64,7 @@ export function BlogPage() {
       description: "Understanding mana generation for units in TFT",
       path: "/blog/mana",
       color: "from-indigo-500 to-indigo-600",
-      comingSoon: true,
+      comingSoon: false,
       backgroundImage: "/blog-tile-8.png"
     }
   ];

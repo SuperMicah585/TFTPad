@@ -579,6 +579,138 @@ function App() {
                 Therefore, if we weigh tears and bows equally for our itemization, then it is best to prioritize getting a bow on the first carousel.
               </p>
 
+              <div className="mb-6 mt-8 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Item Bag System Breakdown</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Item Bag Mechanics</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">Starting Bag:</span> 2 copies of each component
+                        </div>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">When Items Drop:</span> Removed from bag
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">After Carousel:</span> +1 of each component
+                        </div>
+                        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium">Total Components:</span> 8 basic items
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Example: Bow vs Tear Decision</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-red-50 border border-red-200 rounded">
+                          <span className="font-medium">Bows dropped:</span> 2 (before carousel)
+                        </div>
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">Tears dropped:</span> 0
+                        </div>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">Bows in bag:</span> 1 (4.5% chance)
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">Tears in bag:</span> 3 (13.6% chance)
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mb-6 mt-8 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Item Drop Probability Calculation</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-gray-100">
+                          <th className="p-2 text-left border">Component</th>
+                          <th className="p-2 text-left border">Starting Count</th>
+                          <th className="p-2 text-left border">Dropped</th>
+                          <th className="p-2 text-left border">Remaining</th>
+                          <th className="p-2 text-left border">Drop Chance</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b">
+                          <td className="p-2 border">B.F. Sword</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 border">Recurve Bow</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">0%</td>
+                        </tr>
+                        <tr className="border-b bg-blue-50">
+                          <td className="p-2 border">Tear of the Goddess</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 border">Chain Vest</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 border">Negatron Cloak</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 border">Giant's Belt</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 border">Spatula</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="p-2 border">Needlessly Large Rod</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">0</td>
+                          <td className="p-2 border">2</td>
+                          <td className="p-2 border">9.1%</td>
+                        </tr>
+                        <tr className="bg-gray-50">
+                          <td className="p-2 border font-medium">Total</td>
+                          <td className="p-2 border font-medium">16</td>
+                          <td className="p-2 border font-medium">2</td>
+                          <td className="p-2 border font-medium">14</td>
+                          <td className="p-2 border font-medium">100%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+                    <p className="text-sm font-medium text-orange-800">After Carousel Addition:</p>
+                    <p className="text-sm text-orange-700">• +1 of each component added to bag</p>
+                    <p className="text-sm text-orange-700">• Bow count: 0 → 1 (4.5% chance)</p>
+                    <p className="text-sm text-orange-700">• Tear count: 2 → 3 (13.6% chance)</p>
+                  </div>
+                </div>
+              </div>
+
               <SectionHeader id="item-slamming">Item Slamming and How It Impacts Your Game</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 Item slamming is the process of making items from components when you might otherwise save the individual components to make a best in slot(BIS) item. The main benefit of this is that it can help you save health early game, or continue a win streak so that you can get more gold relative to the lobby. On the other hand, slamming items has the potential to make your end game board weaker due to your items not being BIS.
@@ -680,6 +812,43 @@ function App() {
         In this case, her new AD would be 127.5 + (127.5 × 0.55) = 197.625.
       </p>
 
+      <div className="mb-6 mt-8">
+        <h4 className="font-semibold text-gray-800 mb-3">AD Calculation Breakdown</h4>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Formula Components</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base AD:</span> Starting attack damage
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">AD%:</span> Percentage increase from items
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Total AD:</span> Final attack damage
+                </div>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Senna Example</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base AD:</span> 127.5
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Deathblade bonus:</span> 55%
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Calculation:</span><br/>
+                  127.5 + (127.5 × 0.55) = <span className="text-purple-600 font-semibold">197.625 AD</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <SubHeader id="ability-power">Ability Power</SubHeader>
       <p className="text-left">
         Items give ability power in the form of a real number, but similar to attack damage, this actually equates to a percentage increase. Every unit starts off with 100 ability power, and ability power adds to this (i.e., +10 ability power → 110 ability power).
@@ -687,6 +856,46 @@ function App() {
       <p className="text-left">
         Let's take Veigar from set 14. His ability has the following description: 'Deal 320 / 420 / 560% AP as magic damage'. With 110 ability power, he would be doing 320 × 1.1 damage as a 1-star unit. You can think of ability power as either a percentage increase to the ability's damage, or as the ability being a percentage of your total ability power.
       </p>
+
+      <div className="mb-6 mt-8">
+        <h4 className="font-semibold text-gray-800 mb-3">Ability Power System</h4>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">AP System Overview</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base AP:</span> 100 (all units start here)
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Item AP:</span> Adds directly (e.g., +10 AP)
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Total AP:</span> 100 + Item bonuses
+                </div>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Veigar Example</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base AP:</span> 100
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Item bonus:</span> +10 AP
+                </div>
+                <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                  <span className="font-medium">Total AP:</span> 110 (110% of base)
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">1★ Ability damage:</span><br/>
+                  320% × 1.1 = <span className="text-purple-600 font-semibold">352% AP damage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <SubHeader id="crit">Crit</SubHeader>
       <p className="text-left">
@@ -708,10 +917,82 @@ function App() {
         Excess crit chance is converted into bonus damage at a 2:1 ratio, meaning for every 2% of crit chance above 100%, the unit gains 1% bonus crit damage. Therefore, if we had a 120% crit chance, the Crit Damage multiplier in the formula above would go from 1.3 to 1.4.
       </p>
 
+      <div className="mb-6 mt-8">
+        <h4 className="font-semibold text-gray-800 mb-3">Critical Strike System</h4>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Crit Mechanics</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Normal Damage:</span> 100% (base damage)
+                </div>
+                <div className="p-2 bg-red-50 border border-red-200 rounded">
+                  <span className="font-medium">Crit Damage:</span> 130% (30% bonus)
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Excess Crit:</span> 2:1 ratio above 100%
+                </div>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">80% Crit Example</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Crit hits:</span> 80% × 130% = 104%
+                </div>
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Normal hits:</span> 20% × 100% = 20%
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Total:</span> 104% + 20% = <span className="text-purple-600 font-semibold">124% damage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <SubHeader id="damage-amp">Damage Amp</SubHeader>
       <p className="text-left">
         Damage Amp is pretty simple - it multiplies with other damage sources to increase the total damage output of all damage that a unit deals.
       </p>
+
+      <div className="mb-6 mt-8">
+        <h4 className="font-semibold text-gray-800 mb-3">Damage Amplification Overview</h4>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">How Damage Amp Works</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base Damage:</span> 100% (starting point)
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Damage Amp:</span> Multiplies total damage
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Final Damage:</span> Base × Amp multiplier
+                </div>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Example: 20% Damage Amp</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base damage:</span> 100
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Amp multiplier:</span> 1.20 (20% increase)
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Final damage:</span> 100 × 1.20 = <span className="text-purple-600 font-semibold">120</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
               <SectionHeader id="how-damage-amp-works-together">How Does Damage Amplification Work Together?</SectionHeader>
       <p className="text-left">
@@ -754,6 +1035,45 @@ function App() {
         I should note that the equation for crit calculates the average damage amp and may not be consistent between rounds that have a smaller sample size of auto attacks, which leads to more variance.
       </p>
 
+      <div className="mb-6 mt-8">
+        <h4 className="font-semibold text-gray-800 mb-3">Complete Damage Calculation Example</h4>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Input Stats</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">AD Bucket:</span> 120% AD
+                </div>
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Crit Bucket:</span> 80% crit chance
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Amp Bucket:</span> 20% damage amp
+                </div>
+              </div>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Step-by-Step Calculation</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">1. Crit calculation:</span><br/>
+                  (0.8 × 1.3) + (0.2 × 1) = 1.24
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">2. Multiply buckets:</span><br/>
+                  1.20 × 1.20 × 1.24
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">3. Final result:</span><br/>
+                  <span className="text-purple-600 font-semibold">1.79x damage multiplier</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
               <SectionHeader id="damage-amp-and-reduction">How Damage Amp and Damage Reduction Work Together</SectionHeader>
       <p className="text-left">
         Now let's make the example above more realistic by factoring in damage reduction. To better understand how this works, let's watch the video below:
@@ -778,11 +1098,364 @@ function App() {
       </p>
       <p className="text-left">
         Therefore, to continue our example, let's say our 2-star Senna has the multiplier 1.79 that we calculated above applied to her AD. She attacks the enemy Leona who has damage reduction equal to 40% for AD attacks (for more detail on reduction calculations, check out <a href="/blog/defensive-stats" className="text-blue-700 underline hover:text-blue-900">Defensive Stats</a>). The calculation from this point would be quite simple: we would just take the multiplier (1.79) × 2-star Senna's base AD (127.5) × (1 - damage reduction) (0.6) = 137 damage per auto.
-              </p>
+      </p>
+
+      <div className="mb-6 mt-8">
+        <h4 className="font-semibold text-gray-800 mb-3">Final Damage Calculation with Reduction</h4>
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Complete Formula</h5>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                <p className="text-sm font-mono text-blue-800">
+                  Final Damage = (Base AD × Damage Multiplier) × (1 - Damage Reduction)
+                </p>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">Damage amp is calculated first, then reduction is applied.</p>
+            </div>
+            <div>
+              <h5 className="font-medium text-gray-700 mb-3">Example: 2★ Senna vs Leona</h5>
+              <div className="space-y-2 text-sm">
+                <div className="p-2 bg-green-50 border border-green-200 rounded">
+                  <span className="font-medium">Base AD:</span> 127.5
+                </div>
+                <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                  <span className="font-medium">Damage multiplier:</span> 1.79 (from previous calc)
+                </div>
+                <div className="p-2 bg-red-50 border border-red-200 rounded">
+                  <span className="font-medium">Leona's reduction:</span> 40% (60% damage taken)
+                </div>
+                <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                  <span className="font-medium">Final calculation:</span><br/>
+                  127.5 × 1.79 × 0.6 = <span className="text-purple-600 font-semibold">137 damage</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </>
   } />
 } />
-        <Route path="/blog/mana" element={<BlogPost title="Mana" content="Understanding mana generation for units in TFT" />} />
+        <Route path="/blog/mana" element={
+          <BlogPost title="Mana" content={
+            <>
+              {/* Table of Contents - static, left-aligned at top */}
+              <nav className="mb-8 p-3 md:p-4 bg-gray-50 border border-gray-200 rounded-lg text-left">
+                <h2 className="text-base md:text-lg font-semibold mb-2 text-gray-800">On this page</h2>
+                <ul className="space-y-1 list-disc list-inside text-blue-700 text-sm md:text-base">
+                  <li><a href="#how-mana-generated" className="hover:underline">How is Mana Generated?</a></li>
+                  <li><a href="#attack-speed-comparison" className="hover:underline">What Level of Bonus Attack Speed is Comparable to Mana Generation Items?</a></li>
+                  <li><a href="#health-vs-damage-reduction" className="hover:underline">Health vs Damage Reduction for Generating Mana on Tanks</a></li>
+                  <li><a href="#shojin-vs-adaptive-vs-blue-buff" className="hover:underline">Shojin vs Adaptive vs Blue Buff</a></li>
+                  <li><a href="#adaptive-vs-protectors" className="hover:underline">Adaptive Helm vs Protector's Vow</a></li>
+                </ul>
+              </nav>
+
+              <SectionHeader id="how-mana-generated">How is Mana Generated?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">Mana is generated from basic attacking and taking damage. All Units generate 10 mana from basic attacks. Mana from Taking damage is a little less straightforward with 1% of pre-mitigation damage and 3% of post-mitigation damage being converted into mana up to 42.5 depending on pre-mitigated damage.</p>
+              <p className="mb-4 pl-4 text-left">Mana that is overflowed will be carried into the starting mana for the unit after they cast(i.e 90/80 → 10/80).</p>
+              <p className="mb-4 pl-4 text-left">Source: <a href="https://wiki.leagueoflegends.com/en-us/TFT:Mana" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">https://wiki.leagueoflegends.com/en-us/TFT:Mana</a></p>
+
+              <SectionHeader id="attack-speed-comparison">What Level of Bonus Attack Speed is Comparable to Mana Generation Items?</SectionHeader>
+              <p className="mb-4 pl-4 text-left">In our comparison we are going to be comparing the attack speed items Guinsoos, Nashors, and Red Buff to the mana generating item Spear of Shojin. Below are the descriptions for each item</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-4">Item Descriptions</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="text-center">
+                    <h5 className="font-medium text-gray-700 mb-3">Spear of Shojin</h5>
+                    <img src="/spear.png" alt="Spear of Shojin" className="mx-auto border rounded" />
+                  </div>
+                  <div className="text-center">
+                    <h5 className="font-medium text-gray-700 mb-3">Nashor's Tooth</h5>
+                    <img src="/nashor.png" alt="Nashor's Tooth" className="mx-auto border rounded" />
+                  </div>
+                  <div className="text-center">
+                    <h5 className="font-medium text-gray-700 mb-3">Guinsoo's Rageblade</h5>
+                    <img src="/guinsoo.png" alt="Guinsoo's Rageblade" className="mx-auto border rounded" />
+                  </div>
+                  <div className="text-center">
+                    <h5 className="font-medium text-gray-700 mb-3">Red Buff</h5>
+                    <img src="/refbuff.png" alt="Red Buff" className="mx-auto border rounded" />
+                  </div>
+                </div>
+              </div>
+
+              <p className="mb-4 pl-4 text-left">The starting mana for Spear of Shojin is +15, which equates to 3 procs of the +5 bonus Mana per attack that it provides. 5 mana is worth half of the mana generation from an auto attack - therefore, a 50% attack speed increase is equivalent to the passive of Shojin.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Red Buff vs Shojin Comparison</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Red Buff</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +35% attack speed</li>
+                        <li>• Mana generation: 135% (100% + 35%)</li>
+                        <li>• No starting mana bonus</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Spear of Shojin</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +5 mana per attack</li>
+                        <li>• Mana generation: 150% (equivalent to 50% attack speed)</li>
+                        <li>• +15 starting mana</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm font-medium text-blue-800">Calculation:</p>
+                    <p className="text-sm text-blue-700">Shojin advantage = (150% - 135%) ÷ 135% = 11.1% better mana generation</p>
+                  </div>
+                </div>
+              </div>
+              <p className="mb-4 pl-4 text-left">The other two items are a little different and harder to compare. Nashor's Tooth doesn't provide its Attack Speed passive until after the champion's first cast. Therefore, it will be worse on units that require more mana to get their first cast.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Nashor's Tooth vs Shojin (After First Cast)</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Nashor's Tooth (Active)</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +60% attack speed (after first cast)</li>
+                        <li>• +10% base attack speed</li>
+                        <li>• Total: 170% mana generation</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Spear of Shojin</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +5 mana per attack</li>
+                        <li>• Mana generation: 150%</li>
+                        <li>• +15 starting mana</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
+                    <p className="text-sm font-medium text-green-800">Calculation:</p>
+                    <p className="text-sm text-green-700">Nashor's advantage = (170% - 150%) ÷ 150% = 13.3% better mana generation</p>
+                  </div>
+                </div>
+              </div>
+              <p className="mb-4 pl-4 text-left">This is why we often see Blue Buff + Nashor's Tooth as best-in-slot (BIS) for units with lower mana thresholds to cast.</p>
+              <p className="mb-4 pl-4 text-left">Guinsoo's Rageblade is also an interesting attack speed item that gives 7% stacking attack speed per second.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Guinsoo's Rageblade Scaling</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-300">
+                          <th className="text-left py-2 px-3">Time (seconds)</th>
+                          <th className="text-left py-2 px-3">Attack Speed Bonus</th>
+                          <th className="text-left py-2 px-3">Total Attack Speed</th>
+                          <th className="text-left py-2 px-3">vs Shojin (150%)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-200">
+                          <td className="py-2 px-3">0s</td>
+                          <td className="py-2 px-3">10%</td>
+                          <td className="py-2 px-3">110%</td>
+                          <td className="py-2 px-3 text-red-600">-26.7%</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="py-2 px-3">3s</td>
+                          <td className="py-2 px-3">21%</td>
+                          <td className="py-2 px-3">131%</td>
+                          <td className="py-2 px-3 text-red-600">-12.7%</td>
+                        </tr>
+                        <tr className="border-b border-gray-200 bg-yellow-50">
+                          <td className="py-2 px-3 font-medium">6s</td>
+                          <td className="py-2 px-3 font-medium">42%</td>
+                          <td className="py-2 px-3 font-medium">152%</td>
+                          <td className="py-2 px-3 font-medium text-green-600">+1.3%</td>
+                        </tr>
+                        <tr className="border-b border-gray-200">
+                          <td className="py-2 px-3">9s</td>
+                          <td className="py-2 px-3">63%</td>
+                          <td className="py-2 px-3">173%</td>
+                          <td className="py-2 px-3 text-green-600">+15.3%</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2 px-3">12s</td>
+                          <td className="py-2 px-3">84%</td>
+                          <td className="py-2 px-3">194%</td>
+                          <td className="py-2 px-3 text-green-600">+29.3%</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+                    <p className="text-sm font-medium text-orange-800">Key Insight:</p>
+                    <p className="text-sm text-orange-700">Guinsoo's becomes better than Shojin after ~6 seconds, making it ideal for long fights and stall comps.</p>
+                  </div>
+                </div>
+              </div>
+              <p className="mb-4 pl-4 text-left">Note: The above comparisons do not take into consideration Shojin's +15 starting mana. This is equivalent to 1.5 auto attacks worth of mana, which is more significant on units with slower base attack speed.</p>
+
+              <SectionHeader id="health-vs-damage-reduction">Health vs Damage Reduction for Generating Mana on Tanks</SectionHeader>
+              <p className="mb-4 pl-4 text-left">When taking damage, units generate mana based on: 1% of pre-mitigation damage and 3% of post-mitigation damage, up to a maximum of 42.5 mana per damage instance.</p>
+              <p className="mb-4 pl-4 text-left">To understand this comparison, we need to clarify what pre-mitigation and post-mitigation damage mean.</p>
+              <p className="mb-4 pl-4 text-left">Let's say we have a tank with 4000 health and 30% damage reduction to physical attacks (see <a href="https://tftpad.com/blog/defensive-stats" className="text-blue-700 underline hover:text-blue-900">our defensive stats guide</a> for damage reduction calculations). Another unit attacks this tank with 1000 physical damage.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Mana Generation Calculation (30% Damage Reduction)</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Input Values</h5>
+                      <ul className="text-sm space-y-2">
+                        <li><span className="font-medium">Incoming Damage:</span> 1000</li>
+                        <li><span className="font-medium">Damage Reduction:</span> 30%</li>
+                        <li><span className="font-medium">Pre-mitigation:</span> 1000 damage</li>
+                        <li><span className="font-medium">Post-mitigation:</span> 1000 × (1 - 0.3) = 700 damage</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Mana Generation</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">Pre-mitigation mana:</span><br/>
+                          1000 × 1% = <span className="text-blue-600 font-semibold">10 mana</span>
+                        </div>
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">Post-mitigation mana:</span><br/>
+                          700 × 3% = <span className="text-green-600 font-semibold">21 mana</span>
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">Total mana generated:</span><br/>
+                          10 + 21 = <span className="text-purple-600 font-semibold">31 mana</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p className="mb-4 pl-4 text-left">Therefore, the unit takes 700 damage and generates 31 mana. As you can see, the equation favors post-mitigation damage, so units with lower damage reduction actually generate more mana from taking damage.</p>
+              <p className="mb-4 pl-4 text-left">Units with heavy damage reduction mechanics will generate significantly less mana than units with health stacking/healing mechanics (think of Mundo vs Leona in Set 14).</p>
+              <p className="mb-4 pl-4 text-left">Now let's increase the damage reduction to 70% for the same tank.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Mana Generation Calculation (70% Damage Reduction)</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Input Values</h5>
+                      <ul className="text-sm space-y-2">
+                        <li><span className="font-medium">Incoming Damage:</span> 1000</li>
+                        <li><span className="font-medium">Damage Reduction:</span> 70%</li>
+                        <li><span className="font-medium">Pre-mitigation:</span> 1000 damage</li>
+                        <li><span className="font-medium">Post-mitigation:</span> 1000 × (1 - 0.7) = 300 damage</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Mana Generation</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">Pre-mitigation mana:</span><br/>
+                          1000 × 1% = <span className="text-blue-600 font-semibold">10 mana</span>
+                        </div>
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">Post-mitigation mana:</span><br/>
+                          300 × 3% = <span className="text-green-600 font-semibold">9 mana</span>
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">Total mana generated:</span><br/>
+                          10 + 9 = <span className="text-purple-600 font-semibold">19 mana</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                    <p className="text-sm font-medium text-red-800">Comparison:</p>
+                    <p className="text-sm text-red-700">70% reduction: 19 mana vs 30% reduction: 31 mana = 38.7% less mana generation</p>
+                  </div>
+                </div>
+              </div>
+
+              <SectionHeader id="shojin-vs-adaptive-vs-blue-buff">Shojin vs Adaptive vs Blue Buff</SectionHeader>
+              <p className="mb-4 pl-4 text-left">This <a href="https://docs.google.com/spreadsheets/d/1pWt8T70A0UMYVERvFeenXxgKOxetLiL8/edit?gid=1772114592#gid=1772114592" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">spreadsheet</a> from <a href="https://www.reddit.com/r/CompetitiveTFT/comments/1igxmwo/an_indepth_look_at_blue_buff_vs_spear_of_shojin/" target="_blank" rel="noopener noreferrer" className="text-blue-700 underline hover:text-blue-900">this Reddit post</a> shows that Blue Buff is only better on units with less than 40 mana. According to the data, Shojin is always better on units with 40 or more mana. This can change when there are other sources of mana (like Dynamo) that allow units to cast faster, making Blue Buff better because it gives 10 starting mana on cast.</p>
+              <p className="mb-4 pl-4 text-left">Adaptive Helm is more similar to Shojin than Blue Buff in terms of use cases. It gives 10 mana every 3 seconds and the same base mana as Shojin.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Adaptive Helm vs Shojin Comparison</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Adaptive Helm</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +10 mana every 3 seconds</li>
+                        <li>• +15 starting mana</li>
+                        <li>• Consistent mana generation</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Spear of Shojin</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +5 mana per attack</li>
+                        <li>• +15 starting mana</li>
+                        <li>• Attack speed dependent</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded">
+                    <p className="text-sm font-medium text-yellow-800">Example Calculation (Brand/Annie with 0.75 attack speed):</p>
+                    <p className="text-sm text-yellow-700">Shojin: 0.75 attacks/sec × 3 sec × 5 mana = 11.25 mana</p>
+                    <p className="text-sm text-yellow-700">Adaptive: 10 mana (fixed)</p>
+                    <p className="text-sm font-medium text-yellow-800">Result: Shojin is 12.5% better for this unit</p>
+                  </div>
+                </div>
+              </div>
+              <p className="mb-4 pl-4 text-left">Another consideration is that Shojin uses a sword component, which is great for AP comps that don't have many other uses for swords outside of Gunblade.</p>
+
+              <SectionHeader id="adaptive-vs-protectors">Adaptive Helm vs Protector's Vow</SectionHeader>
+              <p className="mb-4 pl-4 text-left">When used in the front two rows, Adaptive Helm gives 1 mana when struck by an attack, plus 15 starting mana.</p>
+              <p className="mb-4 pl-4 text-left">If we compare this to Protector's Vow, it gives +30 starting mana, but no extra mana generation.</p>
+              
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Adaptive Helm vs Protector's Vow Comparison</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Adaptive Helm</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +15 starting mana</li>
+                        <li>• +1 mana per attack taken</li>
+                        <li>• Scales with incoming damage</li>
+                        <li>• Better for sustained fights</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-2">Protector's Vow</h5>
+                      <ul className="text-sm space-y-1">
+                        <li>• +30 starting mana</li>
+                        <li>• No additional mana generation</li>
+                        <li>• Immediate mana advantage</li>
+                        <li>• Better for first cast</li>
+                      </ul>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded">
+                    <p className="text-sm font-medium text-purple-800">Break-even Analysis:</p>
+                    <p className="text-sm text-purple-700">Protector's Vow advantage: 30 - 15 = 15 extra starting mana</p>
+                    <p className="text-sm text-purple-700">Adaptive Helm catches up: 15 attacks × 1 mana = 15 mana</p>
+                    <p className="text-sm font-medium text-purple-800">Break-even point: After 15 attacks taken</p>
+                  </div>
+                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                    <p className="text-sm font-medium text-blue-800">Recommendation:</p>
+                    <p className="text-sm text-blue-700">• Protector's Vow: Better for CC-focused tanks needing first cast</p>
+                    <p className="text-sm text-blue-700">• Adaptive Helm: Better for sustain tanks in long fights</p>
+                  </div>
+                </div>
+              </div>
+            </>
+          } />
+        } />
         <Route path="/blog/base-stats-comparison" element={
           <BlogPost title="Comparing Units Base Stats" content={
             <>
@@ -824,6 +1497,54 @@ function App() {
                 In general, the stat websites figure out itemization for you, but it is good to note for some interactions (i.e., eating Senna as Renekton) and in my opinion interesting to know how much base stats translate into actual items worth of AD.
               </p>
 
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">AD Growth Comparison</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Senna (AD Carry)</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">1★ AD:</span> 85
+                        </div>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">2★ AD:</span> 153 (+68)
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">3★ AD:</span> 306 (+153)
+                        </div>
+                        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium">Growth Rate:</span> 1.8x per star
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Annie (Mage)</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">1★ AD:</span> 30
+                        </div>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">2★ AD:</span> 54 (+24)
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">3★ AD:</span> 108 (+54)
+                        </div>
+                        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium">Growth Rate:</span> 1.8x per star
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded">
+                    <p className="text-sm font-medium text-red-800">Item Equivalent Analysis:</p>
+                    <p className="text-sm text-red-700">• Deathblade gives 55% AD increase</p>
+                    <p className="text-sm text-red-700">• Senna 2★ → 3★: +153 AD ≈ 2.8 Deathblades worth</p>
+                    <p className="text-sm text-red-700">• Annie 3★ AD (108) ≈ Senna 1★ AD (85)</p>
+                  </div>
+                </div>
+              </div>
+
               <SectionHeader id="health-growth">Comparing Health Growth of Units</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 Below we are going to compare two units from different classes: Sejuani (tank) and Zeri (AD carry).
@@ -838,6 +1559,54 @@ function App() {
                 Based on this, we can assume that Zeri has a base health that is 80% of Sejuani simply due to the difference in their class (range AD carry vs tank).
               </p>
 
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Health Growth Comparison</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Sejuani (Tank Class)</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">1★ Health:</span> 1000
+                        </div>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">2★ Health:</span> 1800 (+800)
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">3★ Health:</span> 3240 (+1440)
+                        </div>
+                        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium">Growth Rate:</span> 1.8x per star
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Zeri (AD Carry Class)</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">1★ Health:</span> 800
+                        </div>
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">2★ Health:</span> 1440 (+640)
+                        </div>
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">3★ Health:</span> 2592 (+1152)
+                        </div>
+                        <div className="p-2 bg-yellow-50 border border-yellow-200 rounded">
+                          <span className="font-medium">Growth Rate:</span> 1.8x per star
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
+                    <p className="text-sm font-medium text-orange-800">Key Comparison:</p>
+                    <p className="text-sm text-orange-700">• Sejuani 1★ → 2★: +800 health (≈ 1.33 Warmogs)</p>
+                    <p className="text-sm text-orange-700">• Zeri 1★ → 2★: +640 health (≈ 1.07 Warmogs)</p>
+                    <p className="text-sm text-orange-700">• Zeri has 80% of Sejuani's health at each star level</p>
+                  </div>
+                </div>
+              </div>
+
               <SectionHeader id="prioritizing-units">Thinking About Base Stats When Prioritizing Units</SectionHeader>
               <p className="mb-4 pl-4 text-left">
                 An interesting thing to note is that Zed (1050/1890/3780), who is an assassin, has base health that is actually greater than Sejuani. This shows how important it is for his survivability to star up as he gets more than a Warmogs worth of health. This is especially true because you do not usually itemize him with tank stats so this almost doubles his survivability. Zed also benefits from the AD scaling (50/90/180) and ability damage from making him star up. I believe this is why AD frontline-bruiser units feel so binary - they're either weak at 1★ or strong at 2★ - and why it feels like such a big power level spike when they are starred-up.
@@ -851,6 +1620,45 @@ function App() {
               <p className="mb-4 pl-4 text-left">
                 AD backliners benefit from all of the stats when increasing their star level. The only stat they might care less about is health, but even that is appreciated on units that don't have defensive stats from their traits (Aphelios/Urgot).
               </p>
+
+              <div className="mb-6 pl-4">
+                <h4 className="font-semibold text-gray-800 mb-3">Unit Class Priority Analysis</h4>
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Frontline Units</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-blue-50 border border-blue-200 rounded">
+                          <span className="font-medium">Assassins (Zed):</span><br/>
+                          • Health: 1050 → 1890 (+80%)<br/>
+                          • AD: 50 → 90 (+80%)
+                        </div>
+                        <div className="p-2 bg-green-50 border border-green-200 rounded">
+                          <span className="font-medium">Tanks (Sejuani):</span><br/>
+                          • Health: 1000 → 1800 (+80%)<br/>
+                          • AD: Less important
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <h5 className="font-medium text-gray-700 mb-3">Backline Units</h5>
+                      <div className="space-y-2 text-sm">
+                        <div className="p-2 bg-purple-50 border border-purple-200 rounded">
+                          <span className="font-medium">Mages (Annie):</span><br/>
+                          • Health: 800 → 1440 (+80%)<br/>
+                          • AD: 30 → 54 (+80%)
+                        </div>
+                        <div className="p-2 bg-orange-50 border border-orange-200 rounded">
+                          <span className="font-medium">AD Carries:</span><br/>
+                          • All stats benefit<br/>
+                          • Health provides survivability
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
 
               <SectionHeader id="survivability">How Much Does Starring a Unit Up Increase Its Survivability</SectionHeader>
               <p className="mb-4 pl-4 text-left">
