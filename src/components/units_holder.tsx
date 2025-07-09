@@ -149,13 +149,13 @@ export function UnitsHolder() {
                                 }}
                             >
                                 <div>
-                                    <div className="font-semibold mb-2 text-left">Unit Pool Usage:</div>
+                                    <div className="font-semibold mb-2 text-left">Tier Usage from Game Tab:</div>
                                     <div className="text-xs mb-2">
-                                        This page shows unit usage via total number of units taken from each tier pool. In general, it's a good idea to go uncontested comps where main units aren't being heavily used by other players.
+                                        The <span className="text-blue-400 font-medium">tier usage statistics</span> count units you've placed in the <span className="text-orange-400 font-medium">Game tab</span> to track how many units from each tier are being used in your lobby.
                                     </div>
                                     <div className="font-semibold mb-2 text-left">Champion Information:</div>
                                     <div className="text-xs mb-2">
-                                        Below shows all champions and how contested they are. You can filter this information in various ways using the search bar and sort options.
+                                        Each champion displays a <span className="text-green-400 font-medium">contest rate percentage</span> calculated from the total available units minus those expected to be taken based on your <span className="text-orange-400 font-medium">Game tab</span> selections.
                                     </div>
                                 </div>
                                 <div className="arrow absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
@@ -216,21 +216,39 @@ export function UnitsHolder() {
                     <div className="flex flex-col sm:flex-row gap-4 mb-4">
                         {/* Search Bar */}
                         <div className="flex-1">
+                            <h3 className="text-gray-800 font-medium mb-2 text-left">Filter Units</h3>
                             <input
                                 type="text"
                                 placeholder="Search units..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-transparent"
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = 'rgb(253, 186, 116)';
+                                    e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#d1d5db'; // gray-300
+                                    e.target.style.boxShadow = 'none';
+                                }}
                             />
                         </div>
                         
                         {/* Sort Dropdown */}
                         <div className="sm:w-48">
+                            <h3 className="text-gray-800 font-medium mb-2 text-left">Sort By</h3>
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value as 'contest' | 'name' | 'tier')}
-                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-blue-500"
+                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-transparent"
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = 'rgb(253, 186, 116)';
+                                    e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#d1d5db'; // gray-300
+                                    e.target.style.boxShadow = 'none';
+                                }}
                             >
                                 <option value="contest">Sort by Contest Rate</option>
                                 <option value="name">Sort by Name</option>

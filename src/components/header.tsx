@@ -23,7 +23,7 @@ export function Header() {
                        to="/" 
                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname === '/'
-                               ? 'bg-orange-300 text-gray-800 shadow-md'
+                               ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
@@ -33,7 +33,7 @@ export function Header() {
                        to="/blog" 
                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname === '/blog'
-                               ? 'bg-orange-300 text-gray-800 shadow-md'
+                               ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
@@ -43,7 +43,7 @@ export function Header() {
                        to="/contact" 
                        className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname === '/contact'
-                               ? 'bg-orange-300 text-gray-800 shadow-md'
+                               ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
@@ -96,7 +96,7 @@ export function Header() {
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                                location.pathname === '/'
-                                   ? 'bg-orange-300 text-gray-800 shadow-md'
+                                   ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
@@ -107,7 +107,7 @@ export function Header() {
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                                location.pathname === '/blog'
-                                   ? 'bg-orange-300 text-gray-800 shadow-md'
+                                   ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
@@ -118,7 +118,7 @@ export function Header() {
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                                location.pathname === '/contact'
-                                   ? 'bg-orange-300 text-gray-800 shadow-md'
+                                   ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >

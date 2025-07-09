@@ -680,7 +680,7 @@ export function CompsHolder() {
                                     <div>
                                         <div className="font-semibold mb-2 text-left">Comp Ordering & Scoring:</div>
                                         <div className="text-xs mb-2">
-                                            <span className="text-blue-400 font-medium">Comps are ordered by best score</span> based on the weights you can adjust below. The score combines contest rate and average placement.
+                                            <span className="text-blue-400 font-medium">Comps are ordered by least contested/highest avg placement</span> based on the weights you can adjust below. The score combines contest rate and average placement. Contest rates are calculated based on the units currently selected in the 'Game' tab.
                                         </div>
                                         <div className="font-semibold mb-2 text-left">Red Borders:</div>
                                         <div className="text-xs mb-2">
@@ -768,13 +768,21 @@ export function CompsHolder() {
 
                 {/* Search Bar */}
                 <div className="mb-4">
-                    <h3 className="text-gray-800 font-medium mb-2">Search Comps</h3>
+                    <h3 className="text-gray-800 font-medium mb-2 text-left">Filter Comps</h3>
                     <input
                         type="text"
                         placeholder="Search comps, units, or traits..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-transparent"
+                        onFocus={(e) => {
+                            e.target.style.borderColor = 'rgb(253, 186, 116)';
+                            e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
+                        }}
+                        onBlur={(e) => {
+                            e.target.style.borderColor = '#d1d5db'; // gray-300
+                            e.target.style.boxShadow = 'none';
+                        }}
                     />
                 </div>
 

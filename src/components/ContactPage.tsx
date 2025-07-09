@@ -117,7 +117,7 @@ export function ContactPage() {
       </div>
       
       {/* Footer */}
-      <footer className="py-6 bg-gray-50 border-t border-gray-200 relative z-10">
+      <footer className="py-6 border-t border-gray-200 relative z-10" style={{ backgroundColor: '#F0F3F0' }}>
         <div className="container mx-auto px-4 text-center text-gray-600 text-sm max-w-6xl">
           <p>2025-2025 TFTPad. TFTPad isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
         </div>

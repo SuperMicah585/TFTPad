@@ -93,7 +93,15 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                                     value={matchId}
                                     onChange={(e) => setMatchId(e.target.value)}
                                     placeholder="Enter game ID (e.g., NA1_5320285575)"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-transparent"
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = 'rgb(253, 186, 116)';
+                                        e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#d1d5db'; // gray-300
+                                        e.target.style.boxShadow = 'none';
+                                    }}
                                 />
                             </div>
                             <button

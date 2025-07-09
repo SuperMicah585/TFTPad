@@ -56,11 +56,17 @@ function MainApp() {
           <div className="flex-1 relative group">
             <button
               onClick={() => handleTabChange('game')}
-              className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
+              className={`w-full py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent ${
                 activeTab === 'game'
                   ? 'bg-white text-gray-800 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.border = '2px solid rgb(253, 186, 116)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.border = '2px solid transparent';
+              }}
             >
               Game
             </button>
@@ -77,11 +83,17 @@ function MainApp() {
           <div className="flex-1 relative group">
             <button
               onClick={() => handleTabChange('comps')}
-              className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
+              className={`w-full py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent ${
                 activeTab === 'comps'
                   ? 'bg-white text-gray-800 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.border = '2px solid rgb(253, 186, 116)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.border = '2px solid transparent';
+              }}
             >
               Comps
             </button>
@@ -98,11 +110,17 @@ function MainApp() {
           <div className="flex-1 relative group">
             <button
               onClick={() => handleTabChange('units')}
-              className={`w-full py-2 px-4 rounded-md font-medium transition-colors ${
+              className={`w-full py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent ${
                 activeTab === 'units'
                   ? 'bg-white text-gray-800 shadow-sm'
                   : 'text-gray-600 hover:text-gray-800'
               }`}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.border = '2px solid rgb(253, 186, 116)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.border = '2px solid transparent';
+              }}
             >
               Units
             </button>
@@ -124,7 +142,7 @@ function MainApp() {
       </div>
       
       {/* Footer */}
-      <footer className="mt-8 py-6 bg-gray-50 border-t border-gray-200 relative z-10">
+      <footer className="mt-8 py-6 border-t border-gray-200 relative z-10" style={{ backgroundColor: '#F0F3F0' }}>
         <div className="container mx-auto px-4 text-center text-gray-600 text-sm" style={{ width: '1152px' }}>
           <p>2025-2025 TFTPad. TFTPad isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
         </div>
@@ -185,7 +203,7 @@ function BlogPost({ title, content }: { title: string; content: React.ReactNode 
       </div>
       
       {/* Footer */}
-      <footer className="py-6 bg-gray-50 border-t border-gray-200 relative z-10">
+      <footer className="py-6 border-t border-gray-200 relative z-10" style={{ backgroundColor: '#F0F3F0' }}>
         <div className="container mx-auto px-4 text-center text-gray-600 text-sm max-w-6xl">
           <p>2025-2025 TFTPad. TFTPad isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.</p>
         </div>
