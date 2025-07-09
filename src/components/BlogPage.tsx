@@ -72,7 +72,7 @@ export function BlogPage() {
   return (
     <div className="min-h-screen bg-white text-gray-800 relative flex flex-col">
       {/* Notebook Lines Background - Full Viewport */}
-      <div className="absolute inset-0 bg-white dark:bg-gray-950 overflow-hidden">
+      <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
         <div className="absolute inset-0 opacity-15 dark:opacity-20">
           <svg width="100%" height="100%">
             <pattern id="notebook-lines" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
