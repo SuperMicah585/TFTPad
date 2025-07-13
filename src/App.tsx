@@ -26,9 +26,6 @@ function MainApp() {
 
   return (
     <div className="min-h-screen bg-white text-gray-800 relative">
-      {/* Google Analytics - Configure with VITE_GA_MEASUREMENT_ID in .env file */}
-      <GoogleAnalytics />
-      
       {/* Notebook Lines Background - Full Viewport */}
       <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
         <div className="absolute inset-0 opacity-15 dark:opacity-20">
@@ -279,12 +276,14 @@ function getPageTitle(pathname: string): string {
 
 function App() {
   return (
-    <TFTProvider>
+    <>
+      <GoogleAnalytics />
       <PageViewTracker />
-      <Routes>
-        <Route path="/" element={<MainApp />} />
-        <Route path="/blog" element={<BlogPage />} />
-        <Route path="/contact" element={<ContactPage />} />
+      <TFTProvider>
+        <Routes>
+          <Route path="/" element={<MainApp />} />
+          <Route path="/blog" element={<BlogPage />} />
+          <Route path="/contact" element={<ContactPage />} />
         <Route path="/blog/defensive-stats" element={<BlogPost 
           title="Defensive Stats" 
           content={<>
@@ -1789,8 +1788,9 @@ function App() {
             </>
           } />
         } />
-      </Routes>
-    </TFTProvider>
+        </Routes>
+      </TFTProvider>
+    </>
   )
 }
 
