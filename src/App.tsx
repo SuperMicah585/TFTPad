@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import { CompHolder } from './components/comp_holder'
 import { UnitsHolder } from './components/units_holder'
 import { CompsHolder } from './components/comps_holder'
@@ -8,7 +8,7 @@ import { BlogPage } from './components/BlogPage'
 import { ContactPage } from './components/ContactPage'
 import { TFTProvider } from './contexts/TFTContext'
 import { HelpCircle } from 'lucide-react'
-import { GoogleAnalytics, trackEvent } from './components/GoogleAnalytics'
+import { GoogleAnalytics, trackEvent, trackPageView } from './components/GoogleAnalytics'
 import './App.css'
 import { Link } from 'react-router-dom'
 import { Link as LinkIcon } from 'lucide-react'
@@ -234,9 +234,53 @@ function SubHeader({ id, children }: { id: string, children: React.ReactNode }) 
   )
 }
 
+// Component to track page views
+function PageViewTracker() {
+  const location = useLocation();
+  
+  useEffect(() => {
+    // Track page view when location changes
+    const pageTitle = getPageTitle(location.pathname);
+    trackPageView(pageTitle, window.location.href);
+  }, [location]);
+
+  return null;
+}
+
+// Helper function to get page title based on pathname
+function getPageTitle(pathname: string): string {
+  switch (pathname) {
+    case '/':
+      return 'TFTPad - Home';
+    case '/blog':
+      return 'TFTPad - Blog';
+    case '/contact':
+      return 'TFTPad - Contact';
+    case '/blog/defensive-stats':
+      return 'TFTPad - Defensive Stats';
+    case '/blog/champion-pool':
+      return 'TFTPad - Champion Pool';
+    case '/blog/econ':
+      return 'TFTPad - Econ';
+    case '/blog/positioning-units':
+      return 'TFTPad - Positioning Units';
+    case '/blog/base-stats-comparison':
+      return 'TFTPad - Base Stats Comparison';
+    case '/blog/item-pool':
+      return 'TFTPad - Item Pool';
+    case '/blog/understanding-dmg':
+      return 'TFTPad - Understanding DMG';
+    case '/blog/mana':
+      return 'TFTPad - Mana';
+    default:
+      return 'TFTPad';
+  }
+}
+
 function App() {
   return (
     <TFTProvider>
+      <PageViewTracker />
       <Routes>
         <Route path="/" element={<MainApp />} />
         <Route path="/blog" element={<BlogPage />} />
