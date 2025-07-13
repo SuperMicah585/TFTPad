@@ -238,6 +238,11 @@ function PageViewTracker() {
   useEffect(() => {
     // Track page view when location changes
     const pageTitle = getPageTitle(location.pathname);
+    
+    // Update document title to match our custom page title
+    document.title = pageTitle;
+    
+    // Track page view with custom title
     trackPageView(pageTitle, window.location.href);
   }, [location]);
 
