@@ -44,7 +44,7 @@ TFTPad is a hobby project created by Micah (Moisturizar) to share TFT learnings 
 ### Backend
 - **PythonAnywhere** hosting
 - **Python** for data processing
-- **Flask** (likely) for API endpoints
+- **Flask** for API endpoints
 
 ## Project Structure
 
