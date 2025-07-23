@@ -2,13 +2,13 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [react()],
   // Ensure environment variables are loaded
   envDir: '.',
-  server: {
+  server: command === 'serve' ? {
     proxy: {
-      '/api': 'http://localhost:5001',
+      '/api': process.env.VITE_API_SERVER_URL || 'http://localhost:5001',
     },
-  },
-})
+  } : undefined,
+}))
