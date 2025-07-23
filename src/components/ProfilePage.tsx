@@ -311,7 +311,7 @@ function ProfileContent() {
               </div>
               <div className="text-right">
                 <p className="text-sm text-black mb-1">Signed in as</p>
-                <p className="font-semibold text-black mb-4">{user?.email}</p>
+                <p className="font-semibold text-black mb-4">{user?.email || 'User'}</p>
                 <button
                   onClick={handleDeleteButtonClick}
                   disabled={!userId || deletingAccount}

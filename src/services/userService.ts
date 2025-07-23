@@ -46,7 +46,7 @@ async function retryWithBackoff<T>(
 
 interface User {
   id: number
-  email: string
+  email?: string
   description: string
   available: number
   days: string[]

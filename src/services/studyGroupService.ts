@@ -92,7 +92,7 @@ export interface StudyGroupsParams {
 export interface User {
   id: number;
   created_at: string;
-  email: string;
+  email?: string;
   description: string;
   available: number;
 }
