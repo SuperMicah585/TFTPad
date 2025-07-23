@@ -73,11 +73,13 @@ export interface RespondToInviteRequest {
   response: 'accept' | 'decline';
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export const studyGroupInviteService = {
   // Create a new study group invite
   async createInvite(data: CreateInviteRequest): Promise<{ message: string; invite: StudyGroupInvite }> {
     const response = await retryWithBackoff(() => 
-      fetch('/api/study-group-invites', {
+      fetch(`${API_BASE_URL}/api/study-group-invites`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -97,7 +99,7 @@ export const studyGroupInviteService = {
   // Get pending invites for a user (user_two - receiver)
   async getUserInvites(userId: number): Promise<StudyGroupInvite[]> {
     const response = await retryWithBackoff(() => 
-      fetch(`/api/study-group-invites/user/${userId}`)
+      fetch(`${API_BASE_URL}/api/study-group-invites/user/${userId}`)
     );
     
     if (!response.ok) {
@@ -112,7 +114,7 @@ export const studyGroupInviteService = {
   // Get invites sent by a user (user_one - sender)
   async getSentInvites(userId: number): Promise<StudyGroupInvite[]> {
     const response = await retryWithBackoff(() => 
-      fetch(`/api/study-group-invites/sent/${userId}`)
+      fetch(`${API_BASE_URL}/api/study-group-invites/sent/${userId}`)
     );
     
     if (!response.ok) {
@@ -127,7 +129,7 @@ export const studyGroupInviteService = {
   // Respond to an invite (accept or decline)
   async respondToInvite(inviteId: number, response: 'accept' | 'decline'): Promise<{ message: string; status: string }> {
     const responseData = await retryWithBackoff(() => 
-      fetch(`/api/study-group-invites/${inviteId}/respond`, {
+      fetch(`${API_BASE_URL}/api/study-group-invites/${inviteId}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

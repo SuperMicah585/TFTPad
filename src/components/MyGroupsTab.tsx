@@ -57,6 +57,8 @@ interface GroupSettings {
 
 
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export function MyGroupsTab() {
   const { userId } = useAuth()
   const [myGroups, setMyGroups] = useState<MyGroup[]>([])
@@ -609,7 +611,7 @@ export function MyGroupsTab() {
       }
 
       // Fetch league data using the riot_id (which contains the PUUID)
-      const response = await fetch(`/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
+      const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch league data');
       }
@@ -2526,7 +2528,7 @@ function InvitationCard({
       }
 
       // Fetch league data using the riot_id (which contains the PUUID)
-      const response = await fetch(`/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
+      const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch league data');
       }

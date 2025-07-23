@@ -1167,9 +1167,11 @@ interface TftLeagueEntry {
   } | null
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export const tftService = {
   async getTftLeagueData(puuid: string, userId: number): Promise<TftLeagueEntry[]> {
-    const response = await fetch(`/api/tft-league/${puuid}?user_id=${userId}`)
+    const response = await fetch(`${API_BASE_URL}/api/tft-league/${puuid}?user_id=${userId}`)
     
     if (!response.ok) {
       const errorData = await response.json()

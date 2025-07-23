@@ -288,6 +288,8 @@ interface NewPostData {
   message: string;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export function FreeAgentsTab() {
   const { userId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -447,7 +449,7 @@ export function FreeAgentsTab() {
     
     try {
       // Get the agent's Riot account to get their puuid
-      const agentRiotAccount = await fetch(`/api/user-riot-account/${agentId}`).then(res => res.json());
+      const agentRiotAccount = await fetch(`${API_BASE_URL}/api/user-riot-account/${agentId}`).then(res => res.json());
       
       if (agentRiotAccount.error) {
         setLeagueDataError('No Riot account found for this player');
@@ -456,7 +458,7 @@ export function FreeAgentsTab() {
       }
       
       // Fetch TFT league data using the same API as Profile tab
-      const leagueResponse = await fetch(`/api/tft-league/${agentRiotAccount.riot_id}?user_id=${agentId}`);
+      const leagueResponse = await fetch(`${API_BASE_URL}/api/tft-league/${agentRiotAccount.riot_id}?user_id=${agentId}`);
       const leagueData = await leagueResponse.json();
       
       if (leagueResponse.ok) {

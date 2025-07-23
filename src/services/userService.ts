@@ -71,9 +71,11 @@ interface RiotAccount {
   date_updated?: string
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export const userService = {
   async loginOrCreateUser(email: string): Promise<User> {
-    const response = await retryWithBackoff(() => fetch('/api/users/login', {
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/users/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -92,7 +94,7 @@ export const userService = {
 
   async getUserRiotAccount(userId: number): Promise<RiotAccount | null> {
     try {
-      const response = await retryWithBackoff(() => fetch(`/api/user-riot-account/${userId}`))
+      const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/user-riot-account/${userId}`))
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -110,7 +112,7 @@ export const userService = {
   },
 
   async getUserProfile(userId: number): Promise<User> {
-    const response = await retryWithBackoff(() => fetch(`/api/users/${userId}`))
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/users/${userId}`))
     
     if (!response.ok) {
       const errorData = await response.json()
@@ -121,7 +123,7 @@ export const userService = {
   },
 
   async updateUserProfile(userId: number, updates: { description?: string; available?: number; days?: string[]; time?: string; timezone?: string }): Promise<User> {
-    const response = await retryWithBackoff(() => fetch(`/api/users/${userId}`, {
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/users/${userId}`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -138,7 +140,7 @@ export const userService = {
   },
 
   async deleteUserRiotAccount(userId: number): Promise<void> {
-    const response = await retryWithBackoff(() => fetch(`/api/user-riot-account/${userId}`, {
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/user-riot-account/${userId}`, {
       method: 'DELETE',
     }))
 
@@ -149,7 +151,7 @@ export const userService = {
   },
 
   async updateUserRiotAccountRank(userId: number): Promise<{ rank: string }> {
-    const response = await retryWithBackoff(() => fetch(`/api/user-riot-account/${userId}/update-rank`, {
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/user-riot-account/${userId}/update-rank`, {
       method: 'POST',
     }))
 
@@ -162,7 +164,7 @@ export const userService = {
   },
 
   async updateUserRiotAccountIcon(userId: number): Promise<{ icon_id: number }> {
-    const response = await retryWithBackoff(() => fetch(`/api/user-riot-account/${userId}/update-icon`, {
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/user-riot-account/${userId}/update-icon`, {
       method: 'POST',
     }))
 
@@ -175,7 +177,7 @@ export const userService = {
   },
 
   async deleteUserAccount(userId: number): Promise<{ message: string }> {
-    const response = await retryWithBackoff(() => fetch(`/api/users/${userId}/delete-account`, {
+    const response = await retryWithBackoff(() => fetch(`${API_BASE_URL}/api/users/${userId}/delete-account`, {
       method: 'DELETE',
     }))
 

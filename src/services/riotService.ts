@@ -24,9 +24,11 @@ export interface SummonerData {
   summonerLevel: number
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export const riotService = {
   async connectRiotAccount(gameName: string, tagLine: string, userId: number, region: string): Promise<RiotAccountResponse> {
-    const response = await fetch('/api/riot-account', {
+    const response = await fetch(`${API_BASE_URL}/api/riot-account`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -59,7 +61,7 @@ export const riotService = {
   },
 
   async getSummonerData(puuid: string, region: string): Promise<SummonerData> {
-    const response = await fetch(`/api/summoner/${puuid}?region=${region}`)
+    const response = await fetch(`${API_BASE_URL}/api/summoner/${puuid}?region=${region}`)
     
     if (!response.ok) {
       const errorData = await response.json()
