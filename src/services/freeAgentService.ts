@@ -86,6 +86,8 @@ async function retryWithBackoff<T>(
   throw lastError!;
 }
 
+const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 export const freeAgentService = {
   async getFreeAgents(filters?: FreeAgentFilters): Promise<FreeAgentResponse> {
     try {
@@ -105,7 +107,7 @@ export const freeAgentService = {
         if (filters.sort_order) params.append('sort_order', filters.sort_order);
       }
       
-      const url = `/api/free-agents${params.toString() ? `?${params.toString()}` : ''}`;
+      const url = `${API_BASE_URL}/api/free-agents${params.toString() ? `?${params.toString()}` : ''}`;
       
       const response = await retryWithBackoff(() => fetch(url));
       
