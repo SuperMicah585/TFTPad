@@ -5,6 +5,7 @@ import { useProfile } from '../contexts/ProfileContext'
 import { ProtectedRoute } from './auth/ProtectedRoute'
 import { RiotConnectModal } from './auth/RiotConnectModal'
 import { Footer } from './Footer'
+import { LoadingSpinner } from './auth/LoadingSpinner'
 import { userService } from '../services/userService'
 import { tftService } from '../services/tftService'
 
@@ -298,19 +299,19 @@ function ProfileContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50">
+    <div className="min-h-screen bg-white">
       <div className="container mx-auto px-4 py-8 relative z-10 max-w-7xl">
         {/* Header Section */}
         <div className="mb-8">
-          <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-8">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-4xl font-bold text-amber-900 mb-2">Player Dashboard</h1>
-                <p className="text-amber-700 text-lg">Track your TFT performance and manage your account</p>
+                <h1 className="text-4xl font-bold text-black mb-2">Player Dashboard</h1>
+                <p className="text-black text-lg">Track your TFT performance and manage your account</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-amber-600 mb-1">Signed in as</p>
-                <p className="font-semibold text-amber-900 mb-4">{user?.email}</p>
+                <p className="text-sm text-black mb-1">Signed in as</p>
+                <p className="font-semibold text-black mb-4">{user?.email}</p>
                 <button
                   onClick={handleDeleteButtonClick}
                   disabled={!userId || deletingAccount}
@@ -318,7 +319,7 @@ function ProfileContent() {
                 >
                   {deletingAccount ? (
                     <div className="flex items-center justify-center gap-2">
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                      <LoadingSpinner size="sm" />
                       Deleting...
                     </div>
                   ) : (
@@ -333,8 +334,8 @@ function ProfileContent() {
         {loading ? (
           <div className="flex items-center justify-center py-20">
             <div className="text-center">
-              <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-amber-600 mx-auto mb-6"></div>
-              <p className="text-amber-700 text-lg font-medium">Loading your dashboard...</p>
+              <LoadingSpinner size="lg" className="mx-auto mb-6" />
+              <p className="text-black text-lg font-medium">Loading your dashboard...</p>
             </div>
           </div>
         ) : (
@@ -343,7 +344,7 @@ function ProfileContent() {
             <div className="space-y-8">
               {/* Riot Account Card */}
               {riotAccountError ? (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-red-200 p-6">
+                <div className="bg-white rounded-2xl shadow-lg border border-red-200 p-6">
                   <div className="flex items-center justify-between mb-6">
                     <h2 className="text-2xl font-bold text-red-900 flex items-center gap-3">
                       <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
@@ -373,10 +374,10 @@ function ProfileContent() {
                   </div>
                 </div>
               ) : riotAccount && (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-amber-900 flex items-center gap-3">
-                      <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center overflow-hidden">
+                    <h2 className="text-2xl font-bold text-black flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                         {profileIconUrl ? (
                           <img 
                             src={profileIconUrl} 
@@ -385,29 +386,29 @@ function ProfileContent() {
                             onError={() => {}} // Error handling is managed by the context
                           />
                         ) : (
-                          <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
                       Riot Account
                     </h2>
-                    <span className="px-3 py-1 bg-amber-100 text-amber-800 rounded-full text-sm font-medium">
+                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
                       Connected
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-amber-50 rounded-xl p-4">
-                      <p className="text-sm text-amber-600 mb-1">Summoner Name</p>
-                      <p className="font-semibold text-amber-900 text-lg">{riotAccount.summoner_name}</p>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-black mb-1">Summoner Name</p>
+                      <p className="font-semibold text-black text-lg">{riotAccount.summoner_name}</p>
                     </div>
-                    <div className="bg-amber-50 rounded-xl p-4">
-                      <p className="text-sm text-amber-600 mb-1">Region</p>
-                      <p className="font-semibold text-amber-900 text-lg">{riotAccount.region.charAt(0).toUpperCase() + riotAccount.region.slice(1)}</p>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-black mb-1">Region</p>
+                      <p className="font-semibold text-black text-lg">{riotAccount.region.charAt(0).toUpperCase() + riotAccount.region.slice(1)}</p>
                     </div>
-                    <div className="bg-amber-50 rounded-xl p-4">
-                      <p className="text-sm text-amber-600 mb-1">Connected Since</p>
-                      <p className="font-semibold text-amber-900 text-lg">{new Date(riotAccount.created_at).toLocaleDateString()}</p>
+                    <div className="bg-gray-50 rounded-xl p-4">
+                      <p className="text-sm text-black mb-1">Connected Since</p>
+                      <p className="font-semibold text-black text-lg">{new Date(riotAccount.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                   
@@ -415,7 +416,7 @@ function ProfileContent() {
                   <div className="mb-6">
                     {profileLoading ? (
                       <div className="flex justify-center items-center py-4">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600"></div>
+                        <LoadingSpinner size="md" />
                       </div>
                     ) : (
                       <div className="space-y-4">
@@ -431,7 +432,7 @@ function ProfileContent() {
                             />
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 bg-[#00c9ac] rounded-full"></div>
-                              <span className="text-amber-900 font-medium">Available</span>
+                              <span className="text-black font-medium">Available</span>
                             </div>
                           </label>
                           <label className="flex items-center gap-3 cursor-pointer">
@@ -445,12 +446,12 @@ function ProfileContent() {
                             />
                             <div className="flex items-center gap-2">
                               <div className="w-3 h-3 bg-[#ff8889] rounded-full"></div>
-                              <span className="text-amber-900 font-medium">Not Available</span>
+                              <span className="text-black font-medium">Not Available</span>
                             </div>
                           </label>
                         </div>
-                        <div className="bg-amber-50 rounded-xl p-3">
-                          <p className="text-amber-700 text-xs">
+                        <div className="bg-gray-50 rounded-xl p-3">
+                          <p className="text-black text-xs">
                             <strong>Available:</strong> Study groups can see you're open to joining<br/>
                             <strong>Not Available:</strong> You won't appear in search results
                           </p>
@@ -480,11 +481,11 @@ function ProfileContent() {
 
               {/* Connect Riot Account - Show when no account is connected */}
               {!riotAccount && !riotAccountError && (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-amber-900 flex items-center gap-3">
-                      <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                        <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                    <h2 className="text-2xl font-bold text-black flex items-center gap-3">
+                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                        <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                         </svg>
                       </div>
@@ -494,13 +495,13 @@ function ProfileContent() {
                       Not Connected
                     </span>
                   </div>
-                  <div className="bg-amber-50 rounded-xl p-6 mb-6">
+                  <div className="bg-gray-50 rounded-xl p-6 mb-6">
                     <div className="text-center">
-                      <svg className="w-12 h-12 text-amber-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-12 h-12 text-gray-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                       </svg>
-                      <h3 className="text-lg font-semibold text-amber-900 mb-2">Connect Your Riot Account</h3>
-                      <p className="text-amber-700 text-sm">
+                      <h3 className="text-lg font-semibold text-black mb-2">Connect Your Riot Account</h3>
+                      <p className="text-black text-sm">
                         Connect your Riot Games account to unlock personalized features and track your TFT performance.
                       </p>
                     </div>
@@ -517,7 +518,7 @@ function ProfileContent() {
 
               {/* TFT League Stats */}
               {leagueDataError ? (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-red-200 p-6">
+                <div className="bg-white rounded-2xl shadow-lg border border-red-200 p-6">
                   <h2 className="text-2xl font-bold text-red-900 mb-6 flex items-center gap-3">
                     <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
                       <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
@@ -542,10 +543,10 @@ function ProfileContent() {
                   </div>
                 </div>
               ) : leagueData.length > 0 && (
-                <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6">
-                  <h2 className="text-2xl font-bold text-amber-900 mb-6 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
+                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
                       </svg>
                     </div>
@@ -554,10 +555,10 @@ function ProfileContent() {
                   <div className="space-y-4">
                     {/* Ranked TFT */}
                     {getRankedTftData() && (
-                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
-                        <h3 className="font-bold text-amber-900 mb-3 flex items-center gap-2">
-                          <div className="w-5 h-5 bg-amber-200 rounded-lg flex items-center justify-center">
-                            <svg className="w-3 h-3 text-amber-700" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <h3 className="font-bold text-black mb-3 flex items-center gap-2">
+                          <div className="w-5 h-5 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <svg className="w-3 h-3 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                             </svg>
                           </div>
@@ -566,25 +567,25 @@ function ProfileContent() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-6">
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Rank</p>
-                              <p className="font-bold text-amber-900 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
+                              <p className="text-xs text-black mb-1">Rank</p>
+                              <p className="font-bold text-black text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">LP</p>
-                              <p className="font-bold text-amber-900 text-lg">{getRankedTftData()?.leaguePoints}</p>
+                              <p className="text-xs text-black mb-1">LP</p>
+                              <p className="font-bold text-black text-lg">{getRankedTftData()?.leaguePoints}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Wins</p>
-                              <p className="font-bold text-amber-900 text-lg">{getRankedTftData()?.wins}</p>
+                              <p className="text-xs text-black mb-1">Wins</p>
+                              <p className="font-bold text-black text-lg">{getRankedTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Losses</p>
-                              <p className="font-bold text-amber-900 text-lg">{getRankedTftData()?.losses}</p>
+                              <p className="text-xs text-black mb-1">Losses</p>
+                              <p className="font-bold text-black text-lg">{getRankedTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center border-l border-amber-200 pl-6">
-                            <p className="text-xs text-amber-600 mb-1">Win Rate</p>
-                            <p className="font-bold text-amber-900 text-xl">
+                          <div className="text-center border-l border-gray-200 pl-6">
+                            <p className="text-xs text-black mb-1">Win Rate</p>
+                            <p className="font-bold text-black text-xl">
                               {getRankedTftData() ? 
                                 `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
                             </p>
@@ -595,10 +596,10 @@ function ProfileContent() {
 
                     {/* Turbo TFT */}
                     {getTurboTftData() && (
-                      <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-4 border border-amber-200">
-                        <h3 className="font-bold text-amber-900 mb-3 flex items-center gap-2">
-                          <div className="w-5 h-5 bg-amber-200 rounded-lg flex items-center justify-center">
-                            <svg className="w-3 h-3 text-amber-700" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                        <h3 className="font-bold text-black mb-3 flex items-center gap-2">
+                          <div className="w-5 h-5 bg-gray-200 rounded-lg flex items-center justify-center">
+                            <svg className="w-3 h-3 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           </div>
@@ -607,25 +608,25 @@ function ProfileContent() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-6">
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Tier</p>
-                              <p className="font-bold text-amber-900 text-lg">{getTurboTftData()?.ratedTier}</p>
+                              <p className="text-xs text-black mb-1">Tier</p>
+                              <p className="font-bold text-black text-lg">{getTurboTftData()?.ratedTier}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Rating</p>
-                              <p className="font-bold text-amber-900 text-lg">{getTurboTftData()?.ratedRating}</p>
+                              <p className="text-xs text-black mb-1">Rating</p>
+                              <p className="font-bold text-black text-lg">{getTurboTftData()?.ratedRating}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Wins</p>
-                              <p className="font-bold text-amber-900 text-lg">{getTurboTftData()?.wins}</p>
+                              <p className="text-xs text-black mb-1">Wins</p>
+                              <p className="font-bold text-black text-lg">{getTurboTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-amber-600 mb-1">Losses</p>
-                              <p className="font-bold text-amber-900 text-lg">{getTurboTftData()?.losses}</p>
+                              <p className="text-xs text-black mb-1">Losses</p>
+                              <p className="font-bold text-black text-lg">{getTurboTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center border-l border-amber-200 pl-6">
-                            <p className="text-xs text-amber-600 mb-1">Win Rate</p>
-                            <p className="font-bold text-amber-900 text-xl">
+                          <div className="text-center border-l border-gray-200 pl-6">
+                            <p className="text-xs text-black mb-1">Win Rate</p>
+                            <p className="font-bold text-black text-xl">
                               {getTurboTftData() ? 
                                 `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
                             </p>
@@ -641,10 +642,10 @@ function ProfileContent() {
             {/* Right Column - Actions & Features */}
             <div className="space-y-8">
               {/* User Profile Description */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6">
-                <h2 className="text-xl font-bold text-amber-900 mb-4 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-3">
+                  <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
                   </div>
@@ -657,7 +658,7 @@ function ProfileContent() {
                 )}
                 {profileLoading ? (
                   <div className="flex justify-center items-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600"></div>
+                    <LoadingSpinner size="md" />
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -667,7 +668,7 @@ function ProfileContent() {
                           value={descriptionDraft}
                           onChange={(e) => setDescriptionDraft(e.target.value)}
                           placeholder="Tell others about yourself..."
-                          className="w-full p-3 border border-amber-300 rounded-lg text-amber-900 placeholder-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
+                          className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-xs"
                           rows={4}
                         />
                         <div className="flex gap-2">
@@ -686,14 +687,14 @@ function ProfileContent() {
                         </div>
                       </div>
                     ) : (
-                      <div>
-                        <div className="bg-amber-50 rounded-xl p-4 min-h-[100px]">
-                          {userProfile?.description ? (
-                            <p className="text-amber-900 whitespace-pre-wrap text-left">{userProfile.description}</p>
-                          ) : (
-                            <p className="text-amber-500 italic text-left">No description added yet.</p>
-                          )}
-                        </div>
+                                              <div>
+                          <div className="bg-gray-50 rounded-xl p-4 min-h-[100px]">
+                            {userProfile?.description ? (
+                              <p className="text-black whitespace-pre-wrap text-left text-xs">{userProfile.description}</p>
+                            ) : (
+                              <p className="text-gray-500 italic text-left text-xs">No description added yet.</p>
+                            )}
+                          </div>
                         <div className="mt-3 flex justify-between items-center">
                           <button
                             onClick={() => setIsEditingDescription(true)}
@@ -703,7 +704,7 @@ function ProfileContent() {
                           </button>
                           <button
                             onClick={() => setIsEditingDescription(true)}
-                            className="hidden md:flex items-center gap-2 text-amber-600 hover:text-amber-700 transition-colors"
+                            className="hidden md:flex items-center gap-2 text-gray-600 hover:text-gray-700 transition-colors"
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -718,10 +719,10 @@ function ProfileContent() {
               </div>
 
               {/* Availability */}
-              <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg border border-amber-200 p-6">
-                <h2 className="text-xl font-bold text-amber-900 mb-4 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-amber-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-amber-600" fill="currentColor" viewBox="0 0 20 20">
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-3">
+                  <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                     </svg>
                   </div>
@@ -734,61 +735,85 @@ function ProfileContent() {
                 )}
                 {profileLoading ? (
                   <div className="flex justify-center items-center py-4">
-                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-600"></div>
+                    <LoadingSpinner size="md" />
                   </div>
                 ) : (
                   <div className="space-y-6">
-                                        {/* Days Section */}
-                    <div className="space-y-4">
-                      <h3 className="text-lg font-semibold text-amber-900">Available Days</h3>
-                      <div className="bg-amber-50 rounded-xl p-4 min-h-[60px]">
-                        {userProfile?.days && userProfile.days.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {userProfile.days.map(day => (
-                              <span key={day} className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-sm font-medium">
-                                {day}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-amber-500 italic">No days selected yet.</p>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Time Section */}
-                    <div className="space-y-4 border-t border-amber-200 pt-6">
-                      <h3 className="text-lg font-semibold text-amber-900">Preferred Time</h3>
-                      <div className="bg-amber-50 rounded-xl p-4 min-h-[60px]">
-                        {timeDraft ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                              <span className="text-amber-700 font-medium">Time:</span>
-                              <span className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-sm font-medium">
-                                {timeDraft.charAt(0).toUpperCase() + timeDraft.slice(1)}
-                              </span>
-                            </div>
-                            {timezoneDraft && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-amber-700 font-medium">Timezone:</span>
-                                <span className="px-3 py-1 bg-amber-200 text-amber-800 rounded-full text-sm font-medium">
-                                  {timezoneDraft}
-                                </span>
+                    {/* Display Mode */}
+                    {!isEditingDays && (
+                      <>
+                        {/* Days Section */}
+                        <div className="space-y-4">
+                          <h3 className="text-lg font-semibold text-black">Available Days</h3>
+                          <div className="bg-gray-50 rounded-xl p-4 min-h-[60px]">
+                            {userProfile?.days && userProfile.days.length > 0 ? (
+                              <div className="flex flex-wrap gap-2">
+                                {userProfile.days.map(day => (
+                                  <span key={day} className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium">
+                                    {day}
+                                  </span>
+                                ))}
                               </div>
+                            ) : (
+                              <p className="text-gray-500 italic">No days selected yet.</p>
                             )}
                           </div>
-                        ) : (
-                          <p className="text-amber-500 italic">No time selected yet.</p>
-                        )}
-                      </div>
-                    </div>
+                        </div>
+
+                        {/* Time Section */}
+                        <div className="space-y-4 border-t border-gray-200 pt-6">
+                          <h3 className="text-lg font-semibold text-black">Preferred Time</h3>
+                          <div className="bg-gray-50 rounded-xl p-4 min-h-[60px]">
+                            {timeDraft ? (
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-black font-medium">Time:</span>
+                                  <span className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium">
+                                    {timeDraft.charAt(0).toUpperCase() + timeDraft.slice(1)}
+                                  </span>
+                                </div>
+                                {timezoneDraft && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-black font-medium">Timezone:</span>
+                                    <span className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium">
+                                      {timezoneDraft}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 italic">No time selected yet.</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Edit Button */}
+                        <div className="mt-6 flex justify-between items-center">
+                          <button
+                            onClick={() => setIsEditingDays(true)}
+                            className="md:hidden w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
+                          >
+                            Edit Availability
+                          </button>
+                          <button
+                            onClick={() => setIsEditingDays(true)}
+                            className="hidden md:flex items-center gap-2 text-gray-600 hover:text-gray-700 transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <span className="text-sm font-medium">Edit</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
 
                     {/* Edit Mode */}
                     {isEditingDays && (
-                      <div className="space-y-6 border-t border-amber-200 pt-6">
+                      <div className="space-y-6">
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-amber-900">Edit Available Days</h3>
-                          <p className="text-amber-700 text-sm">
+                          <h3 className="text-lg font-semibold text-black">Edit Available Days</h3>
+                          <p className="text-black text-sm">
                             Select the days you're typically available for study groups.
                           </p>
                           <div className="grid grid-cols-2 gap-2">
@@ -800,26 +825,26 @@ function ProfileContent() {
                                   onChange={() => handleDayChange(day)}
                                   className="mr-2 w-4 h-4 text-amber-600 bg-gray-100 border-amber-300 focus:ring-amber-500"
                                 />
-                                <span className="text-amber-900">{day}</span>
+                                <span className="text-black">{day}</span>
                               </label>
                             ))}
                           </div>
                         </div>
 
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-amber-900">Edit Preferred Time</h3>
-                          <p className="text-amber-700 text-sm">
+                          <h3 className="text-lg font-semibold text-black">Edit Preferred Time</h3>
+                          <p className="text-black text-sm">
                             Select your preferred time of day for study group activities.
                           </p>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                              <label className="block text-sm font-medium text-amber-900 mb-2">
+                              <label className="block text-sm font-medium text-black mb-2">
                                 Time of Day
                               </label>
                               <select
                                 value={timeDraft}
                                 onChange={(e) => handleTimeChange(e.target.value)}
-                                className="w-full p-3 border border-amber-300 rounded-lg text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                className="w-full p-3 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                               >
                                 <option value="">Select time...</option>
                                 <option value="mornings">Mornings</option>
@@ -829,13 +854,13 @@ function ProfileContent() {
                               </select>
                             </div>
                             <div>
-                              <label className="block text-sm font-medium text-amber-900 mb-2">
+                              <label className="block text-sm font-medium text-black mb-2">
                                 Timezone
                               </label>
                               <select
                                 value={timezoneDraft}
                                 onChange={(e) => handleTimezoneChange(e.target.value)}
-                                className="w-full p-3 border border-amber-300 rounded-lg text-amber-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                className="w-full p-3 border border-gray-300 rounded-lg text-black focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                               >
                                 <option value="">Select timezone...</option>
                                 <option value="UTC-8">Pacific Time (UTC-8)</option>
@@ -867,27 +892,6 @@ function ProfileContent() {
                             Cancel
                           </button>
                         </div>
-                      </div>
-                    )}
-
-                    {/* Single Edit Button */}
-                    {!isEditingDays && (
-                      <div className="mt-6 flex justify-between items-center">
-                        <button
-                          onClick={() => setIsEditingDays(true)}
-                          className="md:hidden w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200"
-                        >
-                          Edit Availability
-                        </button>
-                        <button
-                          onClick={() => setIsEditingDays(true)}
-                          className="hidden md:flex items-center gap-2 text-amber-600 hover:text-amber-700 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          <span className="text-sm font-medium">Edit</span>
-                        </button>
                       </div>
                     )}
                   </div>
@@ -972,7 +976,7 @@ function ProfileContent() {
               >
                 {deletingAccount ? (
                   <div className="flex items-center justify-center gap-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <LoadingSpinner size="sm" />
                     Deleting...
                   </div>
                 ) : (

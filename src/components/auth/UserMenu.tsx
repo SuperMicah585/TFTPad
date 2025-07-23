@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { useProfile } from '../../contexts/ProfileContext'
 import { LogOut, User } from 'lucide-react'
+import { LoadingSpinner } from './LoadingSpinner'
 
 export function UserMenu() {
   const { user, signOut } = useAuth()
@@ -35,7 +36,7 @@ export function UserMenu() {
         className="rounded-full focus:outline-none focus:ring-0 border-0 overflow-hidden"
       >
         {loading ? (
-          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+          <LoadingSpinner size="sm" />
         ) : profileIconUrl ? (
           <img 
             src={profileIconUrl} 

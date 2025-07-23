@@ -7,6 +7,7 @@ import { studyGroupInviteService, type StudyGroupInvite } from '../services/stud
 import { OAuthLoginModal } from './auth/OAuthLoginModal'
 import { RiotConnectModal } from './auth/RiotConnectModal'
 import { useImageUpload } from '../hooks/useImageUpload'
+import { LoadingSpinner } from './auth/LoadingSpinner'
 
 import { riotService } from '../services/riotService'
 
@@ -229,6 +230,7 @@ export function MyGroupsTab() {
   // Player modal state
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
   const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
@@ -648,6 +650,7 @@ export function MyGroupsTab() {
     }
     
     setSelectedPlayer(member);
+    setClickedMemberId(member.user_id);
     setShowPlayerModal(true);
     setActivePlayerTab('stats');
     
@@ -709,14 +712,14 @@ export function MyGroupsTab() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              {!userId ? 'Sign In to Create Group' : !riotAccount ? 'Link Riot Account to Create Group' : 'Create New Group'}
+              {!userId ? 'Login to Create Group' : !riotAccount ? 'Link Riot Account to Create Group' : 'Create New Group'}
             </button>
           </div>
         </div>
 
         {loading ? (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-orange-600 mx-auto mb-4"></div>
+            <LoadingSpinner size="lg" className="mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-orange-800 mb-2">Loading Your Groups</h3>
             <p className="text-orange-700">Please wait while we fetch your study groups...</p>
           </div>
@@ -739,13 +742,13 @@ export function MyGroupsTab() {
             </button>
           </div>
         ) : myGroups.length === 0 ? (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
-            <UserCheck className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-orange-800 mb-2">No Groups Yet</h3>
-            <p className="text-orange-700 mb-4">You haven't joined any study groups yet.</p>
+          <div className="text-center flex-1 flex flex-col items-center justify-center">
+            <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Groups Yet</h3>
+            <p className="text-gray-600 mb-4">You haven't joined any study groups yet.</p>
             <button 
               onClick={() => window.location.href = '/study-groups/groups'}
-              className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Browse Groups
             </button>
@@ -797,7 +800,7 @@ export function MyGroupsTab() {
           {/* Mock invitations data - TODO: Replace with real invitations API */}
           {invitationsLoading ? (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <LoadingSpinner size="md" className="mx-auto mb-4" />
               <p className="text-blue-700">Loading invitations...</p>
             </div>
           ) : invitations.length === 0 ? (
@@ -827,9 +830,10 @@ export function MyGroupsTab() {
                 <h3 className="text-xl font-semibold text-gray-800">Create New Study Group</h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                  className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                  style={{ lineHeight: 0 }}
                 >
-                  <SquareX className="w-10 h-10 text-black" />
+                  <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
                 </button>
               </div>
               
@@ -1048,9 +1052,10 @@ export function MyGroupsTab() {
                 <h3 className="text-lg font-semibold text-gray-800">Group Members</h3>
                 <button
                   onClick={() => setShowMembers(false)}
-                  className="w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                  className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                  style={{ lineHeight: 0 }}
                 >
-                  <SquareX className="w-10 h-10 text-black" />
+                  <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
                 </button>
               </div>
               <div className="space-y-2">
@@ -1135,7 +1140,7 @@ export function MyGroupsTab() {
                   >
                     {deleteLoading ? (
                       <div className="flex items-center gap-2">
-                        <div className="animate-spin rounded-full h-4 w-4 border-b border-white"></div>
+                        <LoadingSpinner size="sm" />
                         <span>Deleting...</span>
                       </div>
                     ) : (
@@ -1156,9 +1161,10 @@ export function MyGroupsTab() {
                 <h3 className="text-lg font-semibold text-gray-800">Manage Group</h3>
                 <button
                   onClick={() => setShowSettings(false)}
-                  className="w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                  className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                  style={{ lineHeight: 0 }}
                 >
-                  <SquareX className="w-10 h-10 text-black" />
+                  <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
                 </button>
               </div>
               
@@ -1242,7 +1248,7 @@ export function MyGroupsTab() {
                               >
                                 {promoteLoading === member.summoner_name ? (
                                   <div className="flex items-center gap-1">
-                                    <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>
+                                    <LoadingSpinner size="sm" />
                                     <span>Promoting...</span>
                                   </div>
                                 ) : (
@@ -1443,9 +1449,10 @@ export function MyGroupsTab() {
             {/* Close button - absolute positioned */}
             <button
               onClick={() => setShowCombinedModal(false)}
-              className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+              style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black" />
+              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
             
             {/* Profile Header */}
@@ -1538,7 +1545,14 @@ export function MyGroupsTab() {
                 <div className="space-y-4">
                   <div className="space-y-3">
                     {members.map((member, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-[#fff6ea] rounded-lg border border-[#e6d7c3]">
+                      <div 
+                        key={index} 
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ${
+                          clickedMemberId === member.user_id 
+                            ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
+                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                        }`}
+                      >
                         {/* Member Icon */}
                         <ProfileIcon 
                           memberId={member.user_id || index}
@@ -1552,7 +1566,11 @@ export function MyGroupsTab() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <span 
-                              className="font-medium text-gray-800 truncate cursor-pointer hover:text-blue-600 transition-colors"
+                              className={`font-medium truncate cursor-pointer transition-all duration-300 ${
+                                clickedMemberId === member.user_id 
+                                  ? 'text-blue-600 scale-105' 
+                                  : 'text-gray-800 hover:text-blue-600'
+                              }`}
                               onClick={() => handlePlayerClick(member)}
                             >
                               {member.summoner_name}
@@ -1592,16 +1610,16 @@ export function MyGroupsTab() {
                   <div className="space-y-4 w-full">
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Description</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                        <p className="text-gray-700 whitespace-pre-wrap text-left">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                           {selectedGroup.description || "No description provided"}
                         </p>
                       </div>
                     </div>
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Application Instructions</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                        <p className="text-gray-700 whitespace-pre-wrap text-left">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                           {selectedGroup.application_instructions || "No application instructions provided"}
                         </p>
                       </div>
@@ -1620,14 +1638,14 @@ export function MyGroupsTab() {
                         {/* Switch Captain Section */}
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Switch Captain</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <p className="text-gray-700 text-sm mb-3">Promote another member to captain:</p>
                         <div className="space-y-2">
                           {members.filter((m: GroupMember) => m.summoner_name !== captain).length === 0 ? (
                             <p className="text-gray-500 text-sm">No other members to promote.</p>
                           ) : (
                             members.filter((m: GroupMember) => m.summoner_name !== captain).map((member: GroupMember, idx: number) => (
-                              <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-[#e6d7c3]">
+                              <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
                                 <div className="flex items-center gap-3 flex-1 min-w-0">
                                   <ProfileIcon 
                                     memberId={member.user_id || idx}
@@ -1669,7 +1687,7 @@ export function MyGroupsTab() {
                                   >
                                     {promoteLoading === member.summoner_name ? (
                                       <div className="flex items-center gap-1">
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b border-white"></div>
+                                        <LoadingSpinner size="sm" />
                                         <span>Promoting...</span>
                                       </div>
                                     ) : (
@@ -1688,7 +1706,7 @@ export function MyGroupsTab() {
                     {/* Group Settings Section */}
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Group Settings</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full space-y-4">
                         <div>
                           <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2">
                             Group Name
@@ -1972,19 +1990,21 @@ export function MyGroupsTab() {
 
         {/* Player Modal */}
         {showPlayerModal && selectedPlayer && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-            <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4 animate-in fade-in duration-300">
+            <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative animate-in zoom-in-95 duration-300">
               {/* Close button - absolute positioned */}
               <button
                 onClick={() => {
                   setShowPlayerModal(false);
                   setSelectedPlayer(null);
+                  setClickedMemberId(null);
                   setPlayerLeagueData([]);
                   setPlayerProfile(null);
                 }}
-                className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                style={{ lineHeight: 0 }}
               >
-                <SquareX className="w-10 h-10 text-black" />
+                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
               </button>
               
               {/* Profile Header */}
@@ -2066,7 +2086,7 @@ export function MyGroupsTab() {
                     {leagueDataLoading ? (
                       <div className="flex justify-center items-center py-8">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                          <LoadingSpinner size="md" className="mx-auto mb-2" />
                           <p className="text-gray-500">Loading league data...</p>
                         </div>
                       </div>
@@ -2078,7 +2098,7 @@ export function MyGroupsTab() {
                       <div className="space-y-4">
                         {/* Ranked TFT */}
                         {getRankedTftData() && (
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3]">
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                               <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
                                 <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
@@ -2105,7 +2125,7 @@ export function MyGroupsTab() {
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                               </div>
                             </div>
-                            <div className="text-center mt-4 pt-4 border-t border-[#e6d7c3]">
+                            <div className="text-center mt-4 pt-4 border-t border-gray-200">
                               <p className="text-xs text-gray-600 mb-1">Win Rate</p>
                               <p className="font-bold text-gray-800 text-xl">
                                 {getRankedTftData() ? 
@@ -2117,7 +2137,7 @@ export function MyGroupsTab() {
 
                         {/* Turbo TFT */}
                         {getTurboTftData() && (
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3]">
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                               <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
                                 <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
@@ -2144,7 +2164,7 @@ export function MyGroupsTab() {
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                               </div>
                             </div>
-                            <div className="text-center mt-4 pt-4 border-t border-[#e6d7c3]">
+                            <div className="text-center mt-4 pt-4 border-t border-gray-200">
                               <p className="text-xs text-gray-600 mb-1">Win Rate</p>
                               <p className="font-bold text-gray-800 text-xl">
                                 {getTurboTftData() ? 
@@ -2155,7 +2175,7 @@ export function MyGroupsTab() {
                         )}
                       </div>
                     ) : (
-                      <div className="bg-[#fff6ea] border border-[#e6d7c3] rounded-lg p-4 text-center">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
                         <p className="text-gray-600">No league data available</p>
                       </div>
                     )}
@@ -2168,7 +2188,7 @@ export function MyGroupsTab() {
                     {profileLoading ? (
                       <div className="flex justify-center items-center py-8">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                          <LoadingSpinner size="md" className="mx-auto mb-2" />
                           <p className="text-gray-500">Loading profile data...</p>
                         </div>
                       </div>
@@ -2181,8 +2201,8 @@ export function MyGroupsTab() {
                         {/* Description */}
                         <div className="w-full">
                           <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                            <p className="text-gray-700 whitespace-pre-wrap text-left">
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                            <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {playerProfile.description || "No description provided"}
                             </p>
                           </div>
@@ -2192,8 +2212,8 @@ export function MyGroupsTab() {
                         {playerProfile.days && playerProfile.days.length > 0 && (
                           <div className="w-full">
                             <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
-                            <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                              <div className="flex items-center gap-2 text-gray-700">
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                              <div className="flex items-center gap-2 text-gray-700 text-xs">
                                 <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
                                 <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
                               </div>
@@ -2205,8 +2225,8 @@ export function MyGroupsTab() {
                         {playerProfile.time && (
                           <div className="w-full">
                             <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
-                            <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                              <div className="flex items-center gap-2 text-gray-700">
+                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                              <div className="flex items-center gap-2 text-gray-700 text-xs">
                                 <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                                 </svg>
@@ -2220,7 +2240,7 @@ export function MyGroupsTab() {
                         )}
                       </div>
                     ) : (
-                      <div className="bg-[#fff6ea] border border-[#e6d7c3] rounded-lg p-4 text-center">
+                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
                         <p className="text-gray-600">No profile data available</p>
                       </div>
                     )}
@@ -2673,9 +2693,10 @@ function InvitationCard({
             {/* Close button */}
             <button
               onClick={() => setShowDetails(false)}
-              className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+              style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black" />
+              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
             
             {/* Profile Header */}
@@ -2727,7 +2748,7 @@ function InvitationCard({
               {detailsLoading ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="text-left">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#564ec7] mb-2"></div>
+                    <LoadingSpinner size="md" className="mb-2" />
                     <p className="text-gray-500">Loading group details...</p>
                   </div>
                 </div>
@@ -2736,15 +2757,15 @@ function InvitationCard({
                   {/* Group Members */}
                   <div className="w-full">
                     <h5 className="font-medium text-gray-800 mb-2 text-left">Group Members ({groupMembers.length})</h5>
-                    <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                       {membersLoading ? (
                         <div className="flex justify-center items-center py-4">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#564ec7]"></div>
+                          <LoadingSpinner size="sm" />
                         </div>
                       ) : groupMembers.length > 0 ? (
                         <div className="space-y-3">
                           {groupMembers.map((member, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 bg-[#fff6ea] rounded-lg border border-[#e6d7c3]">
+                            <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                               {/* Member Icon */}
                               <ProfileIcon 
                                 memberId={member.user_id || index}
@@ -2798,7 +2819,7 @@ function InvitationCard({
                   {/* Group Description */}
                   <div className="w-full">
                     <h5 className="font-medium text-gray-800 mb-2 text-left">Description</h5>
-                    <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                       <p className="text-gray-700 whitespace-pre-wrap text-left">
                         {groupDetails?.description || invitation.study_group?.description || "No description provided"}
                       </p>
@@ -2809,7 +2830,7 @@ function InvitationCard({
                   {groupDetails?.application_instructions && (
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Application Instructions</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <p className="text-gray-700 whitespace-pre-wrap text-left">
                           {groupDetails.application_instructions}
                         </p>
@@ -2821,7 +2842,7 @@ function InvitationCard({
                   {groupDetails?.meeting_schedule && groupDetails.meeting_schedule.length > 0 && (
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Meeting Schedule</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <div className="flex items-center gap-2 text-gray-700">
                           <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
                           <span>{Array.isArray(groupDetails.meeting_schedule) ? groupDetails.meeting_schedule.join(", ") : groupDetails.meeting_schedule}</span>
@@ -2834,7 +2855,7 @@ function InvitationCard({
                   {groupDetails?.time && (
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left">Preferred Time</h5>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <div className="flex items-center gap-2 text-gray-700">
                           <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -2860,15 +2881,16 @@ function InvitationCard({
           <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
             {/* Close button - absolute positioned */}
             <button
-              onClick={() => {
-                setShowPlayerModal(false);
-                setSelectedPlayer(null);
-                setPlayerLeagueData([]);
-                setPlayerProfile(null);
-              }}
-              className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                              onClick={() => {
+                  setShowPlayerModal(false);
+                  setSelectedPlayer(null);
+                  setPlayerLeagueData([]);
+                  setPlayerProfile(null);
+                }}
+                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black" />
+              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
             
             {/* Profile Header */}
@@ -2950,7 +2972,7 @@ function InvitationCard({
                   {leagueDataLoading ? (
                     <div className="flex justify-center items-center py-8">
                       <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                        <LoadingSpinner size="md" className="mx-auto mb-2" />
                         <p className="text-gray-500">Loading league data...</p>
                       </div>
                     </div>
@@ -2962,7 +2984,7 @@ function InvitationCard({
                     <div className="space-y-4">
                       {/* Ranked TFT */}
                       {getRankedTftData() && (
-                        <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3]">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                             <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
                               <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
@@ -2989,19 +3011,19 @@ function InvitationCard({
                               <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center mt-4 pt-4 border-t border-[#e6d7c3]">
+                          <div className="text-center mt-4 pt-4 border-t border-gray-200">
                             <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                            <p className="font-bold text-gray-800 text-xl">
-                              {getRankedTftData() ? 
-                                `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                            </p>
+                                                          <p className="font-bold text-gray-800 text-xl">
+                                {getRankedTftData() ? 
+                                  `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
 
                       {/* Turbo TFT */}
                       {getTurboTftData() && (
-                        <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3]">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                           <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                             <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
                               <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
@@ -3028,7 +3050,7 @@ function InvitationCard({
                               <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center mt-4 pt-4 border-t border-[#e6d7c3]">
+                          <div className="text-center mt-4 pt-4 border-t border-gray-200">
                             <p className="text-xs text-gray-600 mb-1">Win Rate</p>
                             <p className="font-bold text-gray-800 text-xl">
                               {getTurboTftData() ? 
@@ -3039,7 +3061,7 @@ function InvitationCard({
                       )}
                     </div>
                   ) : (
-                    <div className="bg-[#fff6ea] border border-[#e6d7c3] rounded-lg p-4 text-center">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
                       <p className="text-gray-600">No league data available</p>
                     </div>
                   )}
@@ -3052,7 +3074,7 @@ function InvitationCard({
                   {profileLoading ? (
                     <div className="flex justify-center items-center py-8">
                       <div className="text-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                        <LoadingSpinner size="md" className="mx-auto mb-2" />
                         <p className="text-gray-500">Loading profile data...</p>
                       </div>
                     </div>
@@ -3065,8 +3087,8 @@ function InvitationCard({
                       {/* Description */}
                       <div className="w-full">
                         <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
-                        <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                          <p className="text-gray-700 whitespace-pre-wrap text-left">
+                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                          <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                             {playerProfile.description || "No description provided"}
                           </p>
                         </div>
@@ -3076,8 +3098,8 @@ function InvitationCard({
                       {playerProfile.days && playerProfile.days.length > 0 && (
                         <div className="w-full">
                           <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                            <div className="flex items-center gap-2 text-gray-700">
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                            <div className="flex items-center gap-2 text-gray-700 text-xs">
                               <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
                               <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
                             </div>
@@ -3089,8 +3111,8 @@ function InvitationCard({
                       {playerProfile.time && (
                         <div className="w-full">
                           <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                            <div className="flex items-center gap-2 text-gray-700">
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                            <div className="flex items-center gap-2 text-gray-700 text-xs">
                               <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                               </svg>
@@ -3104,7 +3126,7 @@ function InvitationCard({
                       )}
                     </div>
                   ) : (
-                    <div className="bg-[#fff6ea] border border-[#e6d7c3] rounded-lg p-4 text-center">
+                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
                       <p className="text-gray-600">No profile data available</p>
                     </div>
                   )}

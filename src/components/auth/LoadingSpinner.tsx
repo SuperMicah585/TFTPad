@@ -7,12 +7,14 @@ interface LoadingSpinnerProps {
 
 export function LoadingSpinner({ size = 'md', className = '' }: LoadingSpinnerProps) {
   const sizeClasses = {
-    sm: 'h-4 w-4',
-    md: 'h-8 w-8',
-    lg: 'h-12 w-12'
+    sm: 'w-4 h-4',
+    md: 'w-8 h-8',
+    lg: 'w-12 h-12'
   }
 
   return (
-    <div className={`animate-spin rounded-full border-b-2 border-orange-500 ${sizeClasses[size]} ${className}`}></div>
+    <div className={`loader border-t-2 rounded-full border-yellow-500 bg-yellow-300 animate-spin aspect-square ${sizeClasses[size]} flex justify-center items-center text-yellow-700 ${className}`}>
+      $
+    </div>
   )
 } 

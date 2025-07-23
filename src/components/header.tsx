@@ -75,7 +75,7 @@ export function Header() {
                            onClick={() => setShowLoginModal(true)}
                            className="bg-orange-300 text-white hover:bg-orange-400 rounded-full p-2 focus:outline-none focus:ring-0 border-0 text-xs"
                        >
-                           Sign In
+                           Login
                        </button>
                    )}
                </div>
@@ -182,9 +182,9 @@ export function Header() {
                                    setShowLoginModal(true)
                                    setIsMobileMenuOpen(false)
                                }}
-                               className="bg-[#ff8889] hover:bg-[#ff7778] text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                               className="text-orange-300 hover:text-white hover:bg-orange-400/20 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent"
                            >
-                               Sign In
+                               Login
                            </button>
                        )}
                    </nav>

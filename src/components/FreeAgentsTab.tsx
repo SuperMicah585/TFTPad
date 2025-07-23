@@ -8,6 +8,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { riotService } from '../services/riotService'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
+import { LoadingSpinner } from './auth/LoadingSpinner'
 
 // Function to get TFT rank icon URL
 function getRankIconUrl(rank: string): string {
@@ -281,25 +282,42 @@ function ProfileIcon({
   )
 }
 
-interface NewPostData {
-  looking_for: string;
-  availability: string[];
-  experience: string;
-  message: string;
-}
+
 
 const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
 
-export function FreeAgentsTab() {
+interface FreeAgentsTabProps {
+  minRankFilter?: string;
+  setMinRankFilter?: (filter: string) => void;
+  maxRankFilter?: string;
+  setMaxRankFilter?: (filter: string) => void;
+  availabilityDaysFilter?: string[];
+  setAvailabilityDaysFilter?: (filter: string[] | ((prev: string[]) => string[])) => void;
+  availabilityTimeFilter?: string;
+  setAvailabilityTimeFilter?: (filter: string) => void;
+  availabilityTimezoneFilter?: string;
+  setAvailabilityTimezoneFilter?: (filter: string) => void;
+  regionFilter?: string;
+  setRegionFilter?: (filter: string) => void;
+}
+
+export function FreeAgentsTab({
+  minRankFilter: propMinRankFilter,
+  setMinRankFilter: propSetMinRankFilter,
+  maxRankFilter: propMaxRankFilter,
+  setMaxRankFilter: propSetMaxRankFilter,
+  availabilityDaysFilter: propAvailabilityDaysFilter,
+  setAvailabilityDaysFilter: propSetAvailabilityDaysFilter,
+  availabilityTimeFilter: propAvailabilityTimeFilter,
+  setAvailabilityTimeFilter: propSetAvailabilityTimeFilter,
+  availabilityTimezoneFilter: propAvailabilityTimezoneFilter,
+  setAvailabilityTimezoneFilter: propSetAvailabilityTimezoneFilter,
+  regionFilter: propRegionFilter,
+  setRegionFilter: propSetRegionFilter,
+}: FreeAgentsTabProps = {}) {
   const { userId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [showCreatePostModal, setShowCreatePostModal] = useState(false);
-  const [newPostData, setNewPostData] = useState<NewPostData>({
-    looking_for: "",
-    availability: [] as string[],
-    experience: "",
-    message: ""
-  });
+
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [selectedAgent, setSelectedAgent] = useState<FreeAgent | null>(null);
   const [inviteMessage, setInviteMessage] = useState("");
@@ -380,35 +398,7 @@ export function FreeAgentsTab() {
     }
   }, [userId, hasInitialized]); // Only depend on userId and initialization state
 
-  const handleCreatePost = () => {
-    // Mock function - in real app this would save to database
-    console.log("Creating new post:", newPostData);
-    // Add the new post to the freeAgents array
-    const newPost: FreeAgent = {
-      id: freeAgents.length + 1,
-      summoner_name: "Moisturizar", // mock current user
-      elo: 2450, // mock current user ELO
-      rank: "Diamond I", // mock current user rank
-      looking_for: newPostData.looking_for + ". " + newPostData.message,
-      availability: newPostData.availability,
-      experience: newPostData.experience,
-      created_date: new Date().toISOString().split('T')[0],
-      region: "Unknown",
-      date_updated: new Date().toISOString()
-    };
-    setFreeAgents(prev => [newPost, ...prev]); // Add to beginning of array
-    setShowCreatePostModal(false);
-    setNewPostData({ looking_for: "", availability: [], experience: "", message: "" });
-  };
 
-  const handleAvailabilityChange = (day: string) => {
-    setNewPostData(prev => ({
-      ...prev,
-      availability: prev.availability.includes(day)
-        ? prev.availability.filter(d => d !== day)
-        : [...prev.availability, day]
-    }));
-  };
 
   const handleSendInvite = async () => {
     if (!userId || !selectedAgent || !selectedStudyGroupId) {
@@ -488,12 +478,27 @@ export function FreeAgentsTab() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
-  const [minRankFilter, setMinRankFilter] = useState("iron+");
-  const [maxRankFilter, setMaxRankFilter] = useState("challenger");
-  const [availabilityDaysFilter, setAvailabilityDaysFilter] = useState<string[]>([]);
-  const [availabilityTimeFilter, setAvailabilityTimeFilter] = useState("");
-  const [availabilityTimezoneFilter, setAvailabilityTimezoneFilter] = useState("");
-  const [regionFilter, setRegionFilter] = useState("");
+  // Use props if provided, otherwise use local state
+  const [localMinRankFilter, setLocalMinRankFilter] = useState("iron+");
+  const [localMaxRankFilter, setLocalMaxRankFilter] = useState("challenger");
+  const [localAvailabilityDaysFilter, setLocalAvailabilityDaysFilter] = useState<string[]>([]);
+  const [localAvailabilityTimeFilter, setLocalAvailabilityTimeFilter] = useState("");
+  const [localAvailabilityTimezoneFilter, setLocalAvailabilityTimezoneFilter] = useState("");
+
+  const minRankFilter = propMinRankFilter ?? localMinRankFilter;
+  const setMinRankFilter = propSetMinRankFilter ?? setLocalMinRankFilter;
+  const maxRankFilter = propMaxRankFilter ?? localMaxRankFilter;
+  const setMaxRankFilter = propSetMaxRankFilter ?? setLocalMaxRankFilter;
+  const availabilityDaysFilter = propAvailabilityDaysFilter ?? localAvailabilityDaysFilter;
+  const setAvailabilityDaysFilter = propSetAvailabilityDaysFilter ?? setLocalAvailabilityDaysFilter;
+  const availabilityTimeFilter = propAvailabilityTimeFilter ?? localAvailabilityTimeFilter;
+  const setAvailabilityTimeFilter = propSetAvailabilityTimeFilter ?? setLocalAvailabilityTimeFilter;
+  const availabilityTimezoneFilter = propAvailabilityTimezoneFilter ?? localAvailabilityTimezoneFilter;
+  const setAvailabilityTimezoneFilter = propSetAvailabilityTimezoneFilter ?? setLocalAvailabilityTimezoneFilter;
+  
+  const [localRegionFilter, setLocalRegionFilter] = useState("");
+  const regionFilter = propRegionFilter ?? localRegionFilter;
+  const setRegionFilter = propSetRegionFilter ?? setLocalRegionFilter;
 
   // Rank options for dropdown
   const rankOptions = [
@@ -610,15 +615,7 @@ export function FreeAgentsTab() {
               <div className="flex items-center gap-2 mt-40">
                 <h1 className="text-3xl font-bold text-gray-800">Free Agents</h1>
               </div>
-              {userId && (
-                <button
-                  onClick={() => setShowCreatePostModal(true)}
-                  className="bg-[#964B00] hover:bg-[#7c3a00] text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
-                >
-                  <Users className="w-5 h-5" />
-                  Create Post
-                </button>
-              )}
+
             </div>
           </div>
 
@@ -685,10 +682,10 @@ export function FreeAgentsTab() {
           </div>
 
           {loading ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-orange-600 mx-auto mb-4"></div>
-              <h3 className="text-lg font-semibold text-orange-800 mb-2">Loading Free Agents</h3>
-              <p className="text-orange-700">Please wait while we fetch available players...</p>
+            <div className="text-center flex-1 flex flex-col items-center justify-center">
+              <LoadingSpinner size="lg" className="mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Free Agents</h3>
+              <p className="text-gray-600">Please wait while we fetch available players...</p>
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
@@ -703,10 +700,10 @@ export function FreeAgentsTab() {
               </button>
             </div>
           ) : freeAgents.length === 0 ? (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
-              <Users className="w-12 h-12 text-orange-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-orange-800 mb-2">No Free Agents Found</h3>
-              <p className="text-orange-700">No players match your current filters.</p>
+            <div className="text-center flex-1 flex flex-col items-center justify-center">
+              <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Free Agents Found</h3>
+              <p className="text-gray-600">No players match your current filters.</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 flex-1">
@@ -726,7 +723,7 @@ export function FreeAgentsTab() {
 
           {freeAgents.length > 0 && (
             <div className="text-center mt-8 mb-4">
-              {pagination && pagination.has_next ? (
+              {pagination && pagination.has_next && (
                 <button
                   onClick={async () => {
                     const nextPage = pagination.current_page + 1;
@@ -760,190 +757,18 @@ export function FreeAgentsTab() {
                 >
                   {loadingMore ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <LoadingSpinner size="sm" />
                       Loading...
                     </>
                   ) : (
                     'Load More'
                   )}
                 </button>
-              ) : (
-                <p className="text-gray-500 text-sm">No more players to load</p>
               )}
             </div>
           )}
 
-          {/* Create Post Modal */}
-          {showCreatePostModal && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-              <div className="bg-white rounded-lg p-6 w-[600px] max-h-[90vh] overflow-y-auto">
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xl font-semibold text-gray-800">Create Free Agent Post</h3>
-                  <button
-                    onClick={() => setShowCreatePostModal(false)}
-                    className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
-                    style={{ lineHeight: 0 }}
-                  >
-                    <SquareX className="w-10 h-10 text-black" />
-                  </button>
-                </div>
-                <form onSubmit={(e) => { e.preventDefault(); handleCreatePost(); }} className="space-y-4">
-                  <div>
-                    <label htmlFor="lookingFor" className="block text-sm font-medium text-gray-700 mb-2">
-                      What are you looking for? *
-                    </label>
-                    <input
-                      type="text"
-                      id="lookingFor"
-                      value={newPostData.looking_for}
-                      onChange={(e) => setNewPostData({...newPostData, looking_for: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400"
-                      placeholder="e.g., Tournament preparation, competitive play"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Availability *
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Monday")}
-                          onChange={() => handleAvailabilityChange("Monday")}
-                          className="mr-2"
-                        />
-                        Monday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Tuesday")}
-                          onChange={() => handleAvailabilityChange("Tuesday")}
-                          className="mr-2"
-                        />
-                        Tuesday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Wednesday")}
-                          onChange={() => handleAvailabilityChange("Wednesday")}
-                          className="mr-2"
-                        />
-                        Wednesday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Thursday")}
-                          onChange={() => handleAvailabilityChange("Thursday")}
-                          className="mr-2"
-                        />
-                        Thursday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Friday")}
-                          onChange={() => handleAvailabilityChange("Friday")}
-                          className="mr-2"
-                        />
-                        Friday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Saturday")}
-                          onChange={() => handleAvailabilityChange("Saturday")}
-                          className="mr-2"
-                        />
-                        Saturday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Sunday")}
-                          onChange={() => handleAvailabilityChange("Sunday")}
-                          className="mr-2"
-                        />
-                        Sunday
-                      </label>
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newPostData.availability.includes("Flexible")}
-                          onChange={() => handleAvailabilityChange("Flexible")}
-                          className="mr-2"
-                        />
-                        Flexible
-                      </label>
-                    </div>
-                  </div>
-                  <div>
-                    <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-2">
-                      Peak Rating *
-                    </label>
-                    <select
-                      id="experience"
-                      value={newPostData.experience}
-                      onChange={(e) => setNewPostData({...newPostData, experience: e.target.value})}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400"
-                    >
-                      <option value="" disabled>Select peak rating</option>
-                      <option value="Iron">Iron</option>
-                      <option value="Bronze">Bronze</option>
-                      <option value="Silver">Silver</option>
-                      <option value="Gold">Gold</option>
-                      <option value="Platinum">Platinum</option>
-                      <option value="Diamond">Diamond</option>
-                      <option value="Master">Master</option>
-                      <option value="Grandmaster">Grandmaster</option>
-                      <option value="Challenger">Challenger</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-                      Additional Message *
-                    </label>
-                    <textarea
-                      id="message"
-                      value={newPostData.message}
-                      onChange={(e) => setNewPostData({...newPostData, message: e.target.value})}
-                      rows={4}
-                      required
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400 resize-vertical"
-                      placeholder="Tell potential groups about yourself and what you're looking for..."
-                    />
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <button
-                      type="button"
-                      onClick={() => setShowCreatePostModal(false)}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="flex-1 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                      style={{ backgroundColor: '#964B00' }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = '#7c3a00';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = '#964B00';
-                      }}
-                    >
-                      Create Post
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
       {/* Invitation Modal at top level */}
@@ -959,9 +784,11 @@ export function FreeAgentsTab() {
                   setInviteMessage(""); 
                   setSelectedStudyGroupId(null);
                 }}
-                              >
-                  <SquareX className="w-10 h-10 text-black" />
-                </button>
+                className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                style={{ lineHeight: 0 }}
+              >
+                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+              </button>
             </div>
             <div className="space-y-4">
               <div className="bg-[#00c9ac]/10 border border-[#00c9ac]/20 rounded-lg p-4">
@@ -1045,10 +872,10 @@ export function FreeAgentsTab() {
                 setSelectedAgentForDetails(null);
                 setLeagueData([]);
               }}
-              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
               style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black" />
+              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
             
             {/* Profile Header */}
@@ -1150,7 +977,7 @@ export function FreeAgentsTab() {
                 {leagueDataLoading ? (
                   <div className="flex justify-center items-center py-8">
                     <div className="text-center">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                      <LoadingSpinner size="md" className="mx-auto mb-2" />
                       <p className="text-gray-500">Loading league data...</p>
                     </div>
                   </div>
@@ -1162,7 +989,7 @@ export function FreeAgentsTab() {
                   <div className="space-y-4">
                     {/* Ranked TFT */}
                     {getRankedTftData() && (
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3]">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
                             <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
@@ -1189,7 +1016,7 @@ export function FreeAgentsTab() {
                             <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                           </div>
                         </div>
-                        <div className="text-center mt-4 pt-4 border-t border-[#e6d7c3]">
+                        <div className="text-center mt-4 pt-4 border-t border-gray-200">
                           <p className="text-xs text-gray-600 mb-1">Win Rate</p>
                           <p className="font-bold text-gray-800 text-xl">
                             {getRankedTftData() ? 
@@ -1201,7 +1028,7 @@ export function FreeAgentsTab() {
 
                     {/* Turbo TFT */}
                     {getTurboTftData() && (
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3]">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                         <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
                           <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
                             <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
@@ -1228,7 +1055,7 @@ export function FreeAgentsTab() {
                             <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                           </div>
                         </div>
-                        <div className="text-center mt-4 pt-4 border-t border-[#e6d7c3]">
+                        <div className="text-center mt-4 pt-4 border-t border-gray-200">
                           <p className="text-xs text-gray-600 mb-1">Win Rate</p>
                           <p className="font-bold text-gray-800 text-xl">
                             {getTurboTftData() ? 
@@ -1239,7 +1066,7 @@ export function FreeAgentsTab() {
                     )}
                   </div>
                 ) : (
-                  <div className="bg-[#fff6ea] border border-[#e6d7c3] rounded-lg p-4 text-center">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
                     <p className="text-gray-600">No league data available</p>
                   </div>
                 )}
@@ -1252,8 +1079,8 @@ export function FreeAgentsTab() {
                   {/* Description */}
                   <div className="w-full">
                     <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
-                    <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                      <p className="text-gray-700 whitespace-pre-wrap text-left">
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                         {selectedAgentForDetails.looking_for || "No description provided"}
                       </p>
                     </div>
@@ -1263,8 +1090,8 @@ export function FreeAgentsTab() {
                   {selectedAgentForDetails.availability && selectedAgentForDetails.availability.length > 0 && (
                     <div className="w-full">
                       <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                        <div className="flex items-center gap-2 text-gray-700">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                        <div className="flex items-center gap-2 text-gray-700 text-xs">
                           <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
                           <span>{Array.isArray(selectedAgentForDetails.availability) ? selectedAgentForDetails.availability.join(", ") : selectedAgentForDetails.availability}</span>
                         </div>
@@ -1276,8 +1103,8 @@ export function FreeAgentsTab() {
                   {selectedAgentForDetails.time && (
                     <div className="w-full">
                       <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
-                      <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                        <div className="flex items-center gap-2 text-gray-700">
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                        <div className="flex items-center gap-2 text-gray-700 text-xs">
                           <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                             <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                           </svg>
@@ -1300,7 +1127,7 @@ export function FreeAgentsTab() {
         </div>
       )}
       {!loading && !error && !hasMore && freeAgents.length > 0 && (
-        <div className="text-center py-8 mt-4 w-full absolute bottom-0 left-0">
+        <div className="text-center py-8 mt-8 w-full">
           <p className="text-gray-500 text-sm">No more players to load</p>
         </div>
       )}
@@ -1311,11 +1138,11 @@ export function FreeAgentsTab() {
           <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-full max-w-xl animate-fadeIn relative" style={{ minWidth: '480px', maxWidth: '600px' }}>
             <button
               onClick={() => setShowFilters(false)}
-              className="absolute top-4 right-4 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+              className="absolute top-4 right-4 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
               aria-label="Close"
               style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black" />
+              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
             <div className="mb-4 mt-6">
               <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
@@ -1437,8 +1264,7 @@ function FreeAgentCard({
 }) {
   return (
     <div 
-      className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative h-full" 
-      style={{ backgroundColor: '#fff6ea', borderColor: '#e6d7c3' }}
+      className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative h-full bg-gray-50 border-gray-200" 
       onClick={() => onTileClick(agent)}
     >
       {/* Hover arrow */}

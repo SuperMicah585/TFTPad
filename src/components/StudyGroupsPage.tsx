@@ -7,6 +7,7 @@ import { MyGroupsTab } from './MyGroupsTab'
 import { FreeAgentsTab } from './FreeAgentsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
 import { useAuth } from '../contexts/AuthContext';
+import { LoadingSpinner } from './auth/LoadingSpinner';
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -49,6 +50,14 @@ export function StudyGroupsPage() {
   const debouncedMinEloFilter = useDebounce(minEloFilter, 1000);
   const debouncedMaxEloFilter = useDebounce(maxEloFilter, 1000);
   const [timezoneFilter, setTimezoneFilter] = useState<string>('');
+
+  // Free Agents filter state
+  const [minRankFilter, setMinRankFilter] = useState<string>("iron+");
+  const [maxRankFilter, setMaxRankFilter] = useState<string>("challenger");
+  const [availabilityDaysFilter, setAvailabilityDaysFilter] = useState<string[]>([]);
+  const [availabilityTimeFilter, setAvailabilityTimeFilter] = useState<string>("");
+  const [availabilityTimezoneFilter, setAvailabilityTimezoneFilter] = useState<string>("");
+  const [regionFilter, setRegionFilter] = useState<string>("");
 
   // Real data state with caching
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
@@ -528,7 +537,7 @@ export function StudyGroupsPage() {
                           {infoLoading ? (
                             <div className="flex justify-center items-center py-8">
                               <div className="text-center">
-                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+                                <LoadingSpinner size="md" className="mx-auto mb-2" />
                                 <p className="text-gray-600">Loading group details...</p>
                               </div>
                             </div>
@@ -560,7 +569,22 @@ export function StudyGroupsPage() {
                   </div>
                 </div>
               )}
-              {activeTab === 'free-agents' && <FreeAgentsTab />}
+              {activeTab === 'free-agents' && (
+                <FreeAgentsTab
+                  minRankFilter={minRankFilter}
+                  setMinRankFilter={setMinRankFilter}
+                  maxRankFilter={maxRankFilter}
+                  setMaxRankFilter={setMaxRankFilter}
+                  availabilityDaysFilter={availabilityDaysFilter}
+                  setAvailabilityDaysFilter={setAvailabilityDaysFilter}
+                  availabilityTimeFilter={availabilityTimeFilter}
+                  setAvailabilityTimeFilter={setAvailabilityTimeFilter}
+                  availabilityTimezoneFilter={availabilityTimezoneFilter}
+                  setAvailabilityTimezoneFilter={setAvailabilityTimezoneFilter}
+                  regionFilter={regionFilter}
+                  setRegionFilter={setRegionFilter}
+                />
+              )}
             </div>
             
             <Footer />
