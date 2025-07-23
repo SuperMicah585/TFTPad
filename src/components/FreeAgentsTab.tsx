@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Globe, Calendar, ArrowRight, Zap } from 'lucide-react'
+import { Users, Globe, Calendar, ArrowRight, Zap, SquareX } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { freeAgentService, type FreeAgent, type FreeAgentFilters } from '../services/freeAgentService'
 import { studyGroupService } from '../services/studyGroupService'
@@ -549,6 +549,16 @@ export function FreeAgentsTab() {
     await fetchFreeAgents(filters);
   };
 
+  // Clear all filters
+  const clearFilters = () => {
+    setMinRankFilter("iron+");
+    setMaxRankFilter("challenger");
+    setAvailabilityDaysFilter([]);
+    setAvailabilityTimeFilter("");
+    setAvailabilityTimezoneFilter("");
+    setRegionFilter("");
+  };
+
   // Single effect to handle all data fetching - initial load and filter changes
   useEffect(() => {
     if (hasInitialized) {
@@ -556,14 +566,14 @@ export function FreeAgentsTab() {
     }
   }, [hasInitialized, activeSearchQuery, minRankFilter, maxRankFilter, availabilityDaysFilter, availabilityTimeFilter, availabilityTimezoneFilter, regionFilter]);
 
-  // Mark as initialized after first load
+  // Mark as initialized after first load - allow non-logged in users to browse
   useEffect(() => {
-    if (userId && !hasInitialized) {
+    if (!hasInitialized) {
       setHasInitialized(true);
     }
-  }, [userId, hasInitialized]);
+  }, [hasInitialized]);
 
-  // Initial data fetch - only fetch user study groups, free agents are handled by the filter effect
+  // Initial data fetch - only fetch user study groups when logged in, free agents are handled by the filter effect
   useEffect(() => {
     if (userId) {
       fetchUserStudyGroups();
@@ -598,121 +608,22 @@ export function FreeAgentsTab() {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 mt-40">
+                <h1 className="text-3xl font-bold text-gray-800">Free Agents</h1>
               </div>
+              {userId && (
+                <button
+                  onClick={() => setShowCreatePostModal(true)}
+                  className="bg-[#964B00] hover:bg-[#7c3a00] text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+                >
+                  <Users className="w-5 h-5" />
+                  Create Post
+                </button>
+              )}
             </div>
           </div>
 
           {/* Filter Controls */}
           <div className="mb-4 mt-2 relative">
-
-            {showFilters && (
-              <div className="absolute left-0 mt-2 w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-fadeIn" style={{ minWidth: '480px', maxWidth: '600px' }}>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-                  aria-label="Close"
-                >
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#eee"/><path d="M15 9l-6 6m0-6l6 6" stroke="#888" strokeWidth="2" strokeLinecap="round"/></svg>
-                </button>
-                <div className="mb-4">
-                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
-                    Meeting Days
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {availableDays.map(day => (
-                      <label key={day} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={availabilityDaysFilter.includes(day)}
-                          onChange={(e) => {
-                            if (e.target.checked) setAvailabilityDaysFilter(prev => [...prev, day]);
-                            else setAvailabilityDaysFilter(prev => prev.filter(d => d !== day));
-                          }}
-                          className="mr-1 accent-[#007460]"
-                        />
-                        <span className="text-sm text-gray-700 whitespace-nowrap">{day}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <hr className="my-4 border-gray-200" />
-                <div className="mb-4">
-                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Zap className="w-5 h-5" style={{ color: '#facc15' }} />
-                    Rank Range
-                  </h4>
-                  <RankRangeDropdown
-                    minRank={minRankFilter}
-                    maxRank={maxRankFilter}
-                    onMinRankChange={setMinRankFilter}
-                    onMaxRankChange={setMaxRankFilter}
-                    rankOptions={rankOptions}
-                  />
-                </div>
-                <hr className="my-4 border-gray-200" />
-                <div className="mb-4">
-                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Globe className="w-5 h-5" style={{ color: '#00c9ac' }} />
-                    Timezone
-                  </h4>
-                  <select
-                    value={availabilityTimezoneFilter}
-                    onChange={e => setAvailabilityTimezoneFilter(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-                  >
-                    <option value="">Any Timezone</option>
-                    <option value="UTC-8">Pacific Time (UTC-8)</option>
-                    <option value="UTC-7">Mountain Time (UTC-7)</option>
-                    <option value="UTC-6">Central Time (UTC-6)</option>
-                    <option value="UTC-5">Eastern Time (UTC-5)</option>
-                    <option value="UTC+0">UTC</option>
-                    <option value="UTC+1">Central European Time (UTC+1)</option>
-                    <option value="UTC+2">Eastern European Time (UTC+2)</option>
-                    <option value="UTC+8">China Standard Time (UTC+8)</option>
-                    <option value="UTC+9">Japan Standard Time (UTC+9)</option>
-                    <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
-                  </select>
-                </div>
-                <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <h4 className="font-bold text-gray-700 mb-2">Time Preference</h4>
-                    <select
-                      value={availabilityTimeFilter}
-                      onChange={e => setAvailabilityTimeFilter(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-                    >
-                      <option value="">Any Time</option>
-                      <option value="mornings">Mornings</option>
-                      <option value="afternoons">Afternoons</option>
-                      <option value="evenings">Evenings</option>
-                      <option value="flexible">Flexible</option>
-                    </select>
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-gray-700 mb-2">Region</h4>
-                    <select
-                      value={regionFilter}
-                      onChange={e => setRegionFilter(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-                    >
-                      <option value="">All Regions</option>
-                      {availableRegions.map(region => (
-                        <option key={region} value={region}>{region}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-                <div className="flex justify-end mt-6">
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
-                  >
-                    Apply Filters
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Search Bar */}
@@ -747,11 +658,28 @@ export function FreeAgentsTab() {
               </button>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className={`p-2 rounded-lg shadow border border-gray-200 bg-white flex items-center justify-center transition-all duration-200 ${showFilters ? 'ring-2 ring-[#007460] border-[#007460]' : ''}`}
+                className={`p-2 rounded-lg shadow border border-gray-200 bg-white flex items-center justify-center transition-all duration-200 relative ${showFilters ? 'ring-2 ring-[#007460] border-[#007460]' : ''}`}
                 style={{ color: showFilters ? '#007460' : '#222', minWidth: '40px', minHeight: '40px' }}
                 aria-label="Filter Options"
               >
                 <HiOutlineAdjustmentsHorizontal size={22} />
+                {/* Filter count indicator */}
+                {(() => {
+                  const activeFilters = [
+                    minRankFilter !== "iron+",
+                    maxRankFilter !== "challenger", 
+                    availabilityDaysFilter.length > 0,
+                    availabilityTimeFilter !== "",
+                    availabilityTimezoneFilter !== "",
+                    regionFilter !== ""
+                  ].filter(Boolean).length;
+                  
+                  return activeFilters > 0 ? (
+                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                      {activeFilters}
+                    </div>
+                  ) : null;
+                })()}
               </button>
             </div>
           </div>
@@ -853,9 +781,10 @@ export function FreeAgentsTab() {
                   <h3 className="text-xl font-semibold text-gray-800">Create Free Agent Post</h3>
                   <button
                     onClick={() => setShowCreatePostModal(false)}
-                    className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                    className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                    style={{ lineHeight: 0 }}
                   >
-                    <div className="text-black font-bold"> x </div>
+                    <SquareX className="w-10 h-10 text-black" />
                   </button>
                 </div>
                 <form onSubmit={(e) => { e.preventDefault(); handleCreatePost(); }} className="space-y-4">
@@ -1030,10 +959,9 @@ export function FreeAgentsTab() {
                   setInviteMessage(""); 
                   setSelectedStudyGroupId(null);
                 }}
-                className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="text-black font-bold"> x </div>
-              </button>
+                              >
+                  <SquareX className="w-10 h-10 text-black" />
+                </button>
             </div>
             <div className="space-y-4">
               <div className="bg-[#00c9ac]/10 border border-[#00c9ac]/20 rounded-lg p-4">
@@ -1091,13 +1019,15 @@ export function FreeAgentsTab() {
                 >
                   Cancel
                 </button>
-                <button
-                  onClick={handleSendInvite}
-                  disabled={!selectedStudyGroupId || inviteLoading}
-                  className="flex-1 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {inviteLoading ? 'Sending...' : 'Send Invitation'}
-                </button>
+                {userId && (
+                  <button
+                    onClick={handleSendInvite}
+                    disabled={!selectedStudyGroupId || inviteLoading}
+                    className="flex-1 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {inviteLoading ? 'Sending...' : 'Send Invitation'}
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -1115,9 +1045,10 @@ export function FreeAgentsTab() {
                 setSelectedAgentForDetails(null);
                 setLeagueData([]);
               }}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+              style={{ lineHeight: 0 }}
             >
-              <div className="text-black font-bold"> x </div>
+              <SquareX className="w-10 h-10 text-black" />
             </button>
             
             {/* Profile Header */}
@@ -1164,21 +1095,23 @@ export function FreeAgentsTab() {
                 <p className="text-gray-500 text-sm text-left">{selectedAgentForDetails.region}</p>
                 
                 {/* Message button */}
-                <div className="mt-4">
-                  <button
-                    onClick={() => {
-                      setSelectedAgent(selectedAgentForDetails);
-                      setShowAgentModal(false);
-                      setShowInviteModal(true);
-                    }}
-                    className="bg-[#00c9ac] hover:bg-[#00b89a] text-white px-4 py-2 rounded font-medium transition-colors flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                    </svg>
-                    Send Invitation
-                  </button>
-                </div>
+                {userId && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => {
+                        setSelectedAgent(selectedAgentForDetails);
+                        setShowAgentModal(false);
+                        setShowInviteModal(true);
+                      }}
+                      className="bg-[#00c9ac] hover:bg-[#00b89a] text-white px-4 py-2 rounded font-medium transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM9 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                      </svg>
+                      Send Invitation
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -1369,6 +1302,125 @@ export function FreeAgentsTab() {
       {!loading && !error && !hasMore && freeAgents.length > 0 && (
         <div className="text-center py-8 mt-4 w-full absolute bottom-0 left-0">
           <p className="text-gray-500 text-sm">No more players to load</p>
+        </div>
+      )}
+
+      {/* Fixed Filter Modal */}
+      {showFilters && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-full max-w-xl animate-fadeIn relative" style={{ minWidth: '480px', maxWidth: '600px' }}>
+            <button
+              onClick={() => setShowFilters(false)}
+              className="absolute top-4 right-4 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+              aria-label="Close"
+              style={{ lineHeight: 0 }}
+            >
+              <SquareX className="w-10 h-10 text-black" />
+            </button>
+            <div className="mb-4 mt-6">
+              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+                Meeting Days
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {availableDays.map(day => (
+                  <label key={day} className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={availabilityDaysFilter.includes(day)}
+                      onChange={(e) => {
+                        if (e.target.checked) setAvailabilityDaysFilter(prev => [...prev, day]);
+                        else setAvailabilityDaysFilter(prev => prev.filter(d => d !== day));
+                      }}
+                      className="mr-1 accent-[#007460]"
+                    />
+                    <span className="text-sm text-gray-700 whitespace-nowrap">{day}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <hr className="my-4 border-gray-200" />
+            <div className="mb-4">
+              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                <Zap className="w-5 h-5" style={{ color: '#facc15' }} />
+                Rank Range
+              </h4>
+              <RankRangeDropdown
+                minRank={minRankFilter}
+                maxRank={maxRankFilter}
+                onMinRankChange={setMinRankFilter}
+                onMaxRankChange={setMaxRankFilter}
+                rankOptions={rankOptions}
+              />
+            </div>
+            <hr className="my-4 border-gray-200" />
+            <div className="mb-4">
+              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                <Globe className="w-5 h-5" style={{ color: '#00c9ac' }} />
+                Timezone
+              </h4>
+              <select
+                value={availabilityTimezoneFilter}
+                onChange={e => setAvailabilityTimezoneFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+              >
+                <option value="">Any Timezone</option>
+                <option value="UTC-8">Pacific Time (UTC-8)</option>
+                <option value="UTC-7">Mountain Time (UTC-7)</option>
+                <option value="UTC-6">Central Time (UTC-6)</option>
+                <option value="UTC-5">Eastern Time (UTC-5)</option>
+                <option value="UTC+0">UTC</option>
+                <option value="UTC+1">Central European Time (UTC+1)</option>
+                <option value="UTC+2">Eastern European Time (UTC+2)</option>
+                <option value="UTC+8">China Standard Time (UTC+8)</option>
+                <option value="UTC+9">Japan Standard Time (UTC+9)</option>
+                <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
+              </select>
+            </div>
+            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <h4 className="font-bold text-gray-700 mb-2">Time Preference</h4>
+                <select
+                  value={availabilityTimeFilter}
+                  onChange={e => setAvailabilityTimeFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                >
+                  <option value="">Any Time</option>
+                  <option value="mornings">Mornings</option>
+                  <option value="afternoons">Afternoons</option>
+                  <option value="evenings">Evenings</option>
+                  <option value="flexible">Flexible</option>
+                </select>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-700 mb-2">Region</h4>
+                <select
+                  value={regionFilter}
+                  onChange={e => setRegionFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                >
+                  <option value="">All Regions</option>
+                  {availableRegions.map(region => (
+                    <option key={region} value={region}>{region}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-between mt-6">
+              <button
+                onClick={clearFilters}
+                className="bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+              >
+                Clear Filters
+              </button>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+              >
+                Apply Filters
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </>

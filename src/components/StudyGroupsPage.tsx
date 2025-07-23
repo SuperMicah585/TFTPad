@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { HelpCircle } from 'lucide-react'
+import { HelpCircle, Users, SquareX } from 'lucide-react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { Footer } from './Footer'
 import { GroupsTab } from './GroupsTab'
 import { MyGroupsTab } from './MyGroupsTab'
 import { FreeAgentsTab } from './FreeAgentsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
+import { useAuth } from '../contexts/AuthContext';
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -26,6 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
 // Study Groups Page Component
 export function StudyGroupsPage() {
+  const { userId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -319,6 +321,14 @@ export function StudyGroupsPage() {
     navigate(`/study-groups/${tab}`);
   };
 
+  // Redirect non-logged-in users away from my-groups tab
+  useEffect(() => {
+    if (activeTab === 'my-groups' && !userId) {
+      setActiveTab('groups');
+      navigate('/study-groups/groups');
+    }
+  }, [activeTab, userId, navigate]);
+
   // Retry function for manual retry
   const handleRetry = () => {
     setError(null);
@@ -439,32 +449,34 @@ export function StudyGroupsPage() {
                 </div>
               </div>
               
-              <div className="flex-1 relative group">
-                <button
-                  onClick={() => handleTabChange('my-groups')}
-                  className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
-                    activeTab === 'my-groups'
-                      ? 'bg-white text-gray-800 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-800'
-                  }`}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.border = '2px solid rgb(253, 186, 116)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.border = '2px solid transparent';
-                  }}
-                >
-                  My Groups
-                </button>
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-                  <HelpCircle size={16} className="text-gray-400" />
+              {userId && (
+                <div className="flex-1 relative group">
+                  <button
+                    onClick={() => handleTabChange('my-groups')}
+                    className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
+                      activeTab === 'my-groups'
+                        ? 'bg-white text-gray-800 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.border = '2px solid rgb(253, 186, 116)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.border = '2px solid transparent';
+                    }}
+                  >
+                    My Groups
+                  </button>
+                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+                    <HelpCircle size={16} className="text-gray-400" />
+                  </div>
+                  {/* My Groups Tab Tooltip - Hidden on mobile */}
+                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
+                    <div className="text-center">Manage groups you're part of</div>
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                  </div>
                 </div>
-                {/* My Groups Tab Tooltip - Hidden on mobile */}
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
-                  <div className="text-center">Manage groups you're part of</div>
-                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
-                </div>
-              </div>
+              )}
             </div>
 
             {/* Tab Content */}
@@ -509,7 +521,7 @@ export function StudyGroupsPage() {
                             onClick={() => setShowInfoPopup(false)}
                             className="text-gray-400 hover:text-gray-600 transition-colors"
                           >
-                            ×
+                            <SquareX className="w-6 h-6 text-black" />
                           </button>
                         </div>
                         <div className="flex-1 overflow-y-auto">
@@ -538,7 +550,16 @@ export function StudyGroupsPage() {
                   )}
                 </>
               )}
-              {activeTab === 'my-groups' && <MyGroupsTab />}
+              {activeTab === 'my-groups' && userId && <MyGroupsTab />}
+              {activeTab === 'my-groups' && !userId && (
+                <div className="p-8 text-center">
+                  <div className="text-gray-500 mb-4">
+                    <Users className="w-16 h-16 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-700 mb-2">Login Required</h3>
+                    <p className="text-gray-600">You need to be logged in to view your groups.</p>
+                  </div>
+                </div>
+              )}
               {activeTab === 'free-agents' && <FreeAgentsTab />}
             </div>
             

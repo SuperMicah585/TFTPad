@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
-import { Users, Zap, Crown, ArrowRight, Calendar, Globe } from 'lucide-react'
+import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
@@ -211,6 +211,14 @@ export function GroupsTab({
     return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
   };
 
+  // Clear all filters
+  const clearFilters = () => {
+    setMeetingDayFilter("");
+    setMinEloFilter(0);
+    setMaxEloFilter(5000);
+    setTimezoneFilter("");
+  };
+
   return (
     <div className="relative w-full min-h-screen">
       {/* Hero Background Image - Only show on Groups tab */}
@@ -241,107 +249,6 @@ export function GroupsTab({
         
           {/* Filter & Sort Controls */}
           <div className="mb-4 mt-2 relative">
-            {showFilters && (
-              <div className="absolute left-0 mt-2 w-full max-w-xl bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 z-50 animate-fadeIn" style={{ minWidth: '480px', maxWidth: '600px' }}>
-                <button
-                  onClick={() => setShowFilters(false)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
-                  aria-label="Close"
-                >
-                  <svg width="20" height="20" fill="none" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="#eee"/><path d="M15 9l-6 6m0-6l6 6" stroke="#888" strokeWidth="2" strokeLinecap="round"/></svg>
-                </button>
-                <div className="mb-4">
-                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
-                    Meeting Days
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    <label className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={meetingDayFilter === ''}
-                        onChange={(e) => { if (e.target.checked) setMeetingDayFilter(''); }}
-                        className="mr-1 accent-[#007460]"
-                      />
-                      <span className="text-sm text-gray-700 whitespace-nowrap">Any Meeting Day</span>
-                    </label>
-                    {meetingDays.map(day => (
-                      <label key={day} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={meetingDayFilter === day}
-                          onChange={(e) => { if (e.target.checked) setMeetingDayFilter(day); else setMeetingDayFilter(''); }}
-                          className="mr-1 accent-[#007460]"
-                        />
-                        <span className="text-sm text-gray-700 whitespace-nowrap">{day}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-                <hr className="my-4 border-gray-200" />
-                <div className="mb-4">
-                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Zap className="w-5 h-5" style={{ color: '#facc15' }} />
-                    ELO Range
-                  </h4>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      min="0"
-                      max="5000"
-                      step="100"
-                      value={minEloFilter || ''}
-                      onChange={e => setMinEloFilter(e.target.value === '' ? 0 : Number(e.target.value))}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-                      placeholder="0"
-                    />
-                    <span className="flex items-center text-gray-500">to</span>
-                    <input
-                      type="number"
-                      min="0"
-                      max="5000"
-                      step="100"
-                      value={maxEloFilter || ''}
-                      onChange={e => setMaxEloFilter(e.target.value === '' ? 5000 : Number(e.target.value))}
-                      className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-                      placeholder="5000"
-                    />
-                  </div>
-                </div>
-                <hr className="my-4 border-gray-200" />
-                <div className="mb-4">
-                  <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                    <Globe className="w-5 h-5" style={{ color: '#00c9ac' }} />
-                    Timezone
-                  </h4>
-                  <select
-                    value={timezoneFilter}
-                    onChange={e => setTimezoneFilter(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-                  >
-                    <option value="Any Timezone">Any Timezone</option>
-                    <option value="UTC-8">Pacific Time (UTC-8)</option>
-                    <option value="UTC-7">Mountain Time (UTC-7)</option>
-                    <option value="UTC-6">Central Time (UTC-6)</option>
-                    <option value="UTC-5">Eastern Time (UTC-5)</option>
-                    <option value="UTC+0">UTC</option>
-                    <option value="UTC+1">Central European Time (UTC+1)</option>
-                    <option value="UTC+2">Eastern European Time (UTC+2)</option>
-                    <option value="UTC+8">China Standard Time (UTC+8)</option>
-                    <option value="UTC+9">Japan Standard Time (UTC+9)</option>
-                    <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
-                  </select>
-                </div>
-                <div className="flex justify-end mt-6">
-                  <button
-                    onClick={() => setShowFilters(false)}
-                    className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
-                  >
-                    Apply Filters
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
           
@@ -382,11 +289,26 @@ export function GroupsTab({
             </button>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-lg shadow border border-gray-200 bg-white flex items-center justify-center transition-all duration-200 ${showFilters ? 'ring-2 ring-[#007460] border-[#007460]' : ''}`}
+              className={`p-2 rounded-lg shadow border border-gray-200 bg-white flex items-center justify-center transition-all duration-200 relative ${showFilters ? 'ring-2 ring-[#007460] border-[#007460]' : ''}`}
               style={{ color: showFilters ? '#007460' : '#222', minWidth: '40px', minHeight: '40px' }}
               aria-label="Filter & Sort"
             >
               <HiOutlineAdjustmentsHorizontal size={22} />
+              {/* Filter count indicator */}
+              {(() => {
+                const activeFilters = [
+                  meetingDayFilter !== "",
+                  minEloFilter !== 0,
+                  maxEloFilter !== 5000,
+                  timezoneFilter !== ""
+                ].filter(Boolean).length;
+                
+                return activeFilters > 0 ? (
+                  <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                    {activeFilters}
+                  </div>
+                ) : null;
+              })()}
             </button>
           </div>
         </div>
@@ -470,9 +392,10 @@ export function GroupsTab({
               {/* Close button - absolute positioned */}
               <button
                 onClick={() => setShowCombinedModal(false)}
-                className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                style={{ lineHeight: 0 }}
               >
-                <div className="text-black font-bold" > x </div>
+                <SquareX className="w-10 h-10 text-black" />
               </button>
               
               {/* Profile Header */}
@@ -561,7 +484,7 @@ export function GroupsTab({
                     ) : (
                       <div className="space-y-3">
                         {selectedGroupMembers.map((member, index) => (
-                          <div key={index} className="flex items-center gap-3 p-3 bg-[#fff6ea] rounded-lg border border-[#e6d7c3]">
+                          <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
                             {/* Member Icon */}
                             <ProfileIcon 
                               memberId={member.user_id || index}
@@ -623,17 +546,17 @@ export function GroupsTab({
                     ) : (
                       <div className="space-y-4 w-full">
                         <div className="w-full">
-                          <h5 className="font-medium text-gray-800 mb-2 text-left">Description</h5>
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                            <p className="text-gray-700 whitespace-pre-wrap text-left">
+                          <h5 className="font-medium text-gray-800 mb-2 text-left text-xs">Description</h5>
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                            <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {groupInfo.description || "No description provided"}
                             </p>
                           </div>
                         </div>
                         <div className="w-full">
-                          <h5 className="font-medium text-gray-800 mb-2 text-left">Application Instructions</h5>
-                          <div className="bg-[#fff6ea] rounded-lg p-4 border border-[#e6d7c3] w-full">
-                            <p className="text-gray-700 whitespace-pre-wrap text-left">
+                          <h5 className="font-medium text-gray-800 mb-2 text-left text-xs">Application Instructions</h5>
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                            <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {groupInfo.instructions || "No application instructions provided"}
                             </p>
                           </div>
@@ -659,9 +582,10 @@ export function GroupsTab({
                   setPlayerLeagueData([]);
                   setPlayerProfile(null);
                 }}
-                className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                style={{ lineHeight: 0 }}
               >
-                <div className="text-black font-bold"> x </div>
+                <SquareX className="w-10 h-10 text-black" />
               </button>
               
               {/* Profile Header */}
@@ -903,6 +827,118 @@ export function GroupsTab({
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Fixed Filter Modal */}
+        {showFilters && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-full max-w-xl animate-fadeIn relative" style={{ minWidth: '480px', maxWidth: '600px' }}>
+              <button
+                onClick={() => setShowFilters(false)}
+                className="absolute top-4 right-4 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
+                aria-label="Close"
+                style={{ lineHeight: 0 }}
+              >
+                <SquareX className="w-10 h-10 text-black" />
+              </button>
+              <div className="mb-4 mt-6">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+                  Meeting Days
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={meetingDayFilter === ''}
+                      onChange={(e) => { if (e.target.checked) setMeetingDayFilter(''); }}
+                      className="mr-1 accent-[#007460]"
+                    />
+                    <span className="text-sm text-gray-700 whitespace-nowrap">Any Meeting Day</span>
+                  </label>
+                  {meetingDays.map(day => (
+                    <label key={day} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={meetingDayFilter === day}
+                        onChange={(e) => { if (e.target.checked) setMeetingDayFilter(day); else setMeetingDayFilter(''); }}
+                        className="mr-1 accent-[#007460]"
+                      />
+                      <span className="text-sm text-gray-700 whitespace-nowrap">{day}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <hr className="my-4 border-gray-200" />
+              <div className="mb-4">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Zap className="w-5 h-5" style={{ color: '#facc15' }} />
+                  ELO Range
+                </h4>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="5000"
+                    step="100"
+                    value={minEloFilter || ''}
+                    onChange={e => setMinEloFilter(e.target.value === '' ? 0 : Number(e.target.value))}
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                    placeholder="0"
+                  />
+                  <span className="flex items-center text-gray-500">to</span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="5000"
+                    step="100"
+                    value={maxEloFilter || ''}
+                    onChange={e => setMaxEloFilter(e.target.value === '' ? 5000 : Number(e.target.value))}
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                    placeholder="5000"
+                  />
+                </div>
+              </div>
+              <hr className="my-4 border-gray-200" />
+              <div className="mb-4">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Globe className="w-5 h-5" style={{ color: '#00c9ac' }} />
+                  Timezone
+                </h4>
+                <select
+                  value={timezoneFilter}
+                  onChange={e => setTimezoneFilter(e.target.value)}
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                >
+                  <option value="">Any Timezone</option>
+                  <option value="UTC-8">Pacific Time (UTC-8)</option>
+                  <option value="UTC-7">Mountain Time (UTC-7)</option>
+                  <option value="UTC-6">Central Time (UTC-6)</option>
+                  <option value="UTC-5">Eastern Time (UTC-5)</option>
+                  <option value="UTC+0">UTC</option>
+                  <option value="UTC+1">Central European Time (UTC+1)</option>
+                  <option value="UTC+2">Eastern European Time (UTC+2)</option>
+                  <option value="UTC+8">China Standard Time (UTC+8)</option>
+                  <option value="UTC+9">Japan Standard Time (UTC+9)</option>
+                  <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
+                </select>
+              </div>
+              <div className="flex justify-between mt-6">
+                <button
+                  onClick={clearFilters}
+                  className="bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+                >
+                  Clear Filters
+                </button>
+                <button
+                  onClick={() => setShowFilters(false)}
+                  className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+                >
+                  Apply Filters
+                </button>
               </div>
             </div>
           </div>

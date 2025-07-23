@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { UserCheck, Mail, Users, Zap, Crown, ArrowRight, Calendar, Upload, Eye } from 'lucide-react'
+import { UserCheck, Mail, Users, Zap, Crown, ArrowRight, Calendar, Upload, Eye, SquareX } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
@@ -827,9 +827,9 @@ export function MyGroupsTab() {
                 <h3 className="text-xl font-semibold text-gray-800">Create New Study Group</h3>
                 <button
                   onClick={() => setShowCreateModal(false)}
-                  className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
                 >
-                  <div className="text-black font-bold"> x </div>
+                  <SquareX className="w-10 h-10 text-black" />
                 </button>
               </div>
               
@@ -1048,9 +1048,9 @@ export function MyGroupsTab() {
                 <h3 className="text-lg font-semibold text-gray-800">Group Members</h3>
                 <button
                   onClick={() => setShowMembers(false)}
-                  className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
                 >
-                  <div className="text-black font-bold"> x </div>
+                  <SquareX className="w-10 h-10 text-black" />
                 </button>
               </div>
               <div className="space-y-2">
@@ -1156,9 +1156,9 @@ export function MyGroupsTab() {
                 <h3 className="text-lg font-semibold text-gray-800">Manage Group</h3>
                 <button
                   onClick={() => setShowSettings(false)}
-                  className="bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                  className="w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
                 >
-                  <div className="text-black font-bold"> x </div>
+                  <SquareX className="w-10 h-10 text-black" />
                 </button>
               </div>
               
@@ -1443,9 +1443,9 @@ export function MyGroupsTab() {
             {/* Close button - absolute positioned */}
             <button
               onClick={() => setShowCombinedModal(false)}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
             >
-              <div className="text-black font-bold"> x </div>
+              <SquareX className="w-10 h-10 text-black" />
             </button>
             
             {/* Profile Header */}
@@ -1982,9 +1982,9 @@ export function MyGroupsTab() {
                   setPlayerLeagueData([]);
                   setPlayerProfile(null);
                 }}
-                className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+                className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
               >
-                <div className="text-black font-bold"> x </div>
+                <SquareX className="w-10 h-10 text-black" />
               </button>
               
               {/* Profile Header */}
@@ -2673,9 +2673,9 @@ function InvitationCard({
             {/* Close button */}
             <button
               onClick={() => setShowDetails(false)}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
             >
-              <div className="text-black font-bold"> x </div>
+              <SquareX className="w-10 h-10 text-black" />
             </button>
             
             {/* Profile Header */}
@@ -2866,9 +2866,9 @@ function InvitationCard({
                 setPlayerLeagueData([]);
                 setPlayerProfile(null);
               }}
-              className="absolute top-4 right-4 z-10 bg-white rounded-full w-8 h-8 flex items-center justify-center shadow-lg hover:bg-gray-100 transition-colors"
+              className="absolute top-4 right-4 z-10 w-10 h-10 flex items-center justify-center hover:opacity-80 transition-opacity"
             >
-              <div className="text-black font-bold"> x </div>
+              <SquareX className="w-10 h-10 text-black" />
             </button>
             
             {/* Profile Header */}
