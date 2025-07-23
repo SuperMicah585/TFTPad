@@ -159,7 +159,7 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
     const handleToggleStars = (index: number, starLevel: number) => {
         const unit = selectedChampions[index];
         if (!unit) return;
-        let newStars: { [unitName: string]: number } = { ...starredUnits };
+        const newStars: { [unitName: string]: number } = { ...starredUnits };
         if (starredUnits[unit.name] === starLevel) {
             delete newStars[unit.name];
         } else {
@@ -282,7 +282,7 @@ export function CompRow({ player, isSelected, onPlayerSelect }: CompRowProps) {
                             />
                             {/* Popup menu for actions */}
                             {popupIndex === index && selectedChampions[index] && (
-                                <div ref={popupRef} className="absolute z-50 top-1/2 left-full ml-2 -translate-y-1/2 bg-white border border-gray-300 rounded shadow-lg flex flex-col min-w-[120px]">
+                                <div ref={popupRef} className="absolute z-[9999] top-1/2 left-full ml-2 -translate-y-1/2 bg-white border border-gray-300 rounded shadow-lg flex flex-col min-w-[120px]">
                                     <button
                                         className="px-4 py-2 text-left hover:bg-gray-100 text-sm border-b border-gray-200"
                                         onClick={() => handleRemoveUnit(index)}

@@ -1,10 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useTFT } from '../contexts/TFTContext';
 import { TIER_COLORS, getTraitBreakpointInfo, decodeHtmlEntities, generateTeamPlannerCode } from '../services/tftService';
-import { HelpCircle, Copy } from 'lucide-react';
+import type { TFTComp } from '../services/tftService';
+import { HelpCircle, Copy, Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 interface CompWithContest {
-    comp: any; // Using any to match the actual TFTComp type
+    comp: TFTComp;
     contestRate: number;
     score: number;
     placementStats?: {
@@ -90,7 +92,7 @@ function RankDropdown({ selectedRank, onRankChange, rankOptions }: {
             </button>
             
             {isOpen && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg z-50 max-h-60 overflow-y-auto shadow-xl min-w-44">
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg z-[9999] max-h-60 overflow-y-auto shadow-xl min-w-44">
                     {rankOptions.map(rank => (
                         <button
                             key={rank}
@@ -186,6 +188,7 @@ function PlacementDistributionPlaceholder() {
 }
 
 export function CompsHolder() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const { 
         comps, 
         selectedUnits, 
@@ -203,6 +206,25 @@ export function CompsHolder() {
         playerStars
     } = useTFT();
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeSearchTerm, setActiveSearchTerm] = useState('');
+
+    // Initialize search from URL on component mount
+    useEffect(() => {
+        const urlQuery = searchParams.get('q');
+        if (urlQuery) {
+            setSearchTerm(urlQuery);
+            setActiveSearchTerm(urlQuery);
+        }
+    }, [searchParams]);
+
+    // Update URL when search changes
+    const updateSearchInURL = (query: string) => {
+        if (query) {
+            setSearchParams({ q: query });
+        } else {
+            setSearchParams({});
+        }
+    };
     const [hoveredTrait, setHoveredTrait] = useState<{ text: string; x: number; y: number } | null>(null);
     const [hoveredStar, setHoveredStar] = useState<{ x: number; y: number } | null>(null);
     const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -362,7 +384,7 @@ export function CompsHolder() {
                     if (unit) {
                         // Check if this unit is itemized in any comp
                         const isItemized = displayComps.some(comp => {
-                            const unitBuild = comp.builds.find((build: any) => build.unit === unit.name.replace(/^TFT14_/, ''));
+                            const unitBuild = comp.builds.find((build) => build.unit === unit.name.replace(/^TFT14_/, ''));
                             return unitBuild && unitBuild.num_items > 0;
                         });
                         
@@ -457,8 +479,8 @@ export function CompsHolder() {
         compsWithContest.sort((a, b) => a.score - b.score);
 
         // Apply search filter if search term exists
-        if (searchTerm.trim()) {
-            const query = searchTerm.toLowerCase();
+        if (activeSearchTerm.trim()) {
+            const query = activeSearchTerm.toLowerCase();
             
             // Debug: Log search query and sample trait data
             if (compsWithContest.length > 0) {
@@ -498,7 +520,7 @@ export function CompsHolder() {
         }
 
         return compsWithContest;
-    }, [displayComps, unitContestRates, weights.contestRate, weights.placement, searchTerm]);
+    }, [displayComps, unitContestRates, weights.contestRate, weights.placement, activeSearchTerm]);
 
     const getChampionIconUrl = (championName: string) => {
         // First, try to find the champion in our champions data
@@ -542,7 +564,7 @@ export function CompsHolder() {
     };
 
     // Calculate total cost of a comp
-    const calculateCompCost = (comp: any): number => {
+    const calculateCompCost = (comp: TFTComp): number => {
         let totalCost = 0;
         comp.units.forEach((unit: string) => {
             if (isValidTFT14Champion(unit)) {
@@ -769,21 +791,46 @@ export function CompsHolder() {
                 {/* Search Bar */}
                 <div className="mb-4">
                     <h3 className="text-gray-800 font-medium mb-2 text-left">Filter Comps</h3>
-                    <input
-                        type="text"
-                        placeholder="Search comps, units, or traits..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-transparent"
-                        onFocus={(e) => {
-                            e.target.style.borderColor = 'rgb(253, 186, 116)';
-                            e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
-                        }}
-                        onBlur={(e) => {
-                            e.target.style.borderColor = '#d1d5db'; // gray-300
-                            e.target.style.boxShadow = 'none';
-                        }}
-                    />
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            placeholder="Search comps, units, or traits..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    setActiveSearchTerm(searchTerm);
+                                    updateSearchInURL(searchTerm);
+                                }
+                            }}
+                            className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-transparent"
+                            onFocus={(e) => {
+                                e.target.style.borderColor = 'rgb(253, 186, 116)';
+                                e.target.style.boxShadow = '0 0 0 2px rgba(253, 186, 116, 0.2)';
+                            }}
+                            onBlur={(e) => {
+                                e.target.style.borderColor = '';
+                                e.target.style.boxShadow = '';
+                            }}
+                        />
+                        <button
+                            onClick={() => {
+                                setActiveSearchTerm(searchTerm);
+                                updateSearchInURL(searchTerm);
+                            }}
+                            className="px-4 py-2 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                            style={{ backgroundColor: '#964B00' }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#7c3a00'; // darker brown for hover
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#964B00';
+                            }}
+                        >
+                            <Search className="w-4 h-4" />
+                            Search
+                        </button>
+                    </div>
                 </div>
 
                 {/* Comps List */}
@@ -843,7 +890,7 @@ export function CompsHolder() {
                                                     .map((unit: string, index: number) => {
                                                         const tier = getChampionTier(unit);
                                                         const baseBorderColor = getTierBorderColor(tier);
-                                                        const unitBuild = compWithContest.comp.builds.find((build: any) => build.unit === unit);
+                                                        const unitBuild = compWithContest.comp.builds.find((build) => build.unit === unit);
                                                         // Check if this unit is in the stars array (with TFT14_ prefix)
                                                         const isStarred = compWithContest.comp.stars.includes(`TFT14_${unit}`);
                                                         
@@ -1015,8 +1062,8 @@ export function CompsHolder() {
                             {currentRankData && (
                                 <>
                                     <span className="text-yellow-600">(Rank: {selectedRank})</span>
-                                    <span>Total games: {currentRankData.totalGames.toLocaleString()}</span>
-                                    <span>Sample size: {currentRankData.sampleSize.toLocaleString()}</span>
+                                    <span>Total games: {currentRankData.totalGames?.toLocaleString() || '0'}</span>
+                                    <span>Sample size: {currentRankData.sampleSize?.toLocaleString() || '0'}</span>
                                 </>
                             )}
                         </div>
@@ -1027,7 +1074,7 @@ export function CompsHolder() {
             {/* Custom Tooltip */}
             {hoveredTrait && (
                 <div 
-                    className="fixed z-50 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs"
+                    className="fixed z-[9999] px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs"
                     style={{
                         left: hoveredTrait.x,
                         top: hoveredTrait.y,
@@ -1043,7 +1090,7 @@ export function CompsHolder() {
             {/* Star Tooltip */}
             {hoveredStar && (
                 <div 
-                    className="fixed z-50 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs"
+                    className="fixed z-[9999] px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs"
                     style={{
                         left: hoveredStar.x,
                         top: hoveredStar.y,

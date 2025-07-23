@@ -40,7 +40,7 @@ export interface TFTData {
                 score: number;
             }>;
             name_string: string;
-            top_headliner: any[];
+            top_headliner: string[];
             overall: {
                 count: number;
                 avg: number;
@@ -53,16 +53,16 @@ export interface TFTData {
                 avg: number;
                 unit: string;
                 buildName: string[];
-                build: any[];
+                build: string[];
                 num_items: number;
                 score: number;
                 place_change: number;
                 unit_numitems_count: number;
             }>;
-            build_items: any;
-            top_itemNames: any[];
-            top_items: any[];
-            trends: any[];
+            build_items: Record<string, unknown>;
+            top_itemNames: string[];
+            top_items: string[];
+            trends: string[];
             difficulty?: string;
             levelling?: string;
         };
@@ -269,8 +269,8 @@ export async function fetchTFTComps(): Promise<TFTComp[]> {
                 traits,
                 avgPlacement: cluster.overall.avg,
                 playCount: cluster.overall.count,
-                difficulty: (cluster as any).difficulty || 'Medium',
-                levelling: (cluster as any).levelling || 'Standard',
+                difficulty: cluster.difficulty || 'Medium',
+                levelling: cluster.levelling || 'Standard',
                 stars: (cluster.stars || []).map(star => star.replace('TFT14_', '')), // Add stars array from API data and remove TFT14_ prefix
                 topUnits: cluster.name
                     .filter(item => item.name.startsWith('TFT14_')) // Only include TFT14_ units in topUnits
@@ -522,7 +522,7 @@ export function getTopPerformingComps(placementStats: CompPlacementStats, limit:
 }
 
 // Helper function to analyze the provided placement data
-export function analyzeProvidedPlacementData(rawData: any): {
+export function analyzeProvidedPlacementData(rawData: CompPlacementStats): {
     topComps: Array<{
         clusterId: string;
         top4Rate: number;
@@ -534,7 +534,7 @@ export function analyzeProvidedPlacementData(rawData: any): {
     sampleSize: number;
     rankFilter: string;
 } {
-    const placementStats = rawData as CompPlacementStats;
+    const placementStats = rawData;
     
     const topComps = getTopPerformingComps(placementStats, 15);
     const totalGames = placementStats.results.reduce((sum, result) => sum + result.count, 0);
@@ -600,15 +600,15 @@ export function mergePlacementStatsWithComps(
         // Get the main name (usually the first trait or unit)
         const mainName = cluster.name[0]?.name.replace('TFT14_', '') || `Comp ${clusterId}`;
         
-        const comp: TFTComp = {
-            id: clusterId,
-            name: `${mainName} Comp`,
-            units,
-            traits,
-            avgPlacement: cluster.overall.avg,
-            playCount: cluster.overall.count,
-            difficulty: (cluster as any).difficulty || 'Medium',
-            levelling: (cluster as any).levelling || 'Standard',
+                    const comp: TFTComp = {
+                id: clusterId,
+                name: `${mainName} Comp`,
+                units,
+                traits,
+                avgPlacement: cluster.overall.avg,
+                playCount: cluster.overall.count,
+                difficulty: cluster.difficulty || 'Medium',
+                levelling: cluster.levelling || 'Standard',
             stars: cluster.stars || [], // Add stars array from API data
             topUnits: cluster.name
                 .filter(item => item.name.startsWith('TFT14_'))
@@ -955,7 +955,7 @@ const TFTSET14_CONFIG = {
 // Helper function to normalize champion names from comp data to team planner format
 function normalizeChampionName(name: string): string {
     // Remove TFT14_ prefix if present
-    let cleanName = name.replace(/^TFT14_/, '');
+    const cleanName = name.replace(/^TFT14_/, '');
     
     // Handle specific cases where comp data uses different naming than team planner codes
     const nameMappings: { [key: string]: string } = {
@@ -1060,11 +1060,11 @@ export interface MatchData {
 }
 
 export interface PlayerData {
-  companion: any;
+  companion: Record<string, unknown>;
   gold_left: number;
   last_round: number;
   level: number;
-  missions: any;
+  missions: Record<string, unknown>;
   placement: number;
   players_eliminated: number;
   puuid: string;
@@ -1072,7 +1072,13 @@ export interface PlayerData {
   riotIdTagline: string;
   time_eliminated: number;
   total_damage_to_players: number;
-  traits: any[];
+  traits: Array<{
+    name: string;
+    num_units: number;
+    style: number;
+    tier_current: number;
+    tier_total: number;
+  }>;
   units: UnitData[];
   win: boolean;
 }
@@ -1095,7 +1101,8 @@ export async function fetchMatchData(matchId: string): Promise<MatchData> {
     });
 
     // Create the fetch promise
-    const fetchPromise = fetch(`https://tftpad-phelpsm4.pythonanywhere.com/api/match/${matchId}`);
+    const apiUrl = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+    const fetchPromise = fetch(`${apiUrl}/api/match/${matchId}`);
     
     // Race between the fetch and timeout
     const response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
@@ -1135,4 +1142,40 @@ export function parseMatchDataForGameTab(matchData: MatchData) {
       champions: champions
     };
   });
+} 
+
+interface TftLeagueEntry {
+  puuid: string
+  leagueId: string
+  queueType: string
+  ratedTier?: string
+  ratedRating?: number
+  tier?: string
+  rank?: string
+  leaguePoints?: number
+  wins: number
+  losses: number
+  hotStreak?: boolean
+  veteran?: boolean
+  freshBlood?: boolean
+  inactive?: boolean
+  miniSeries?: {
+    losses: number;
+    progress: string;
+    target: number;
+    wins: number;
+  } | null
+}
+
+export const tftService = {
+  async getTftLeagueData(puuid: string, userId: number): Promise<TftLeagueEntry[]> {
+    const response = await fetch(`/api/tft-league/${puuid}?user_id=${userId}`)
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to fetch TFT league data')
+    }
+
+    return response.json()
+  }
 } 

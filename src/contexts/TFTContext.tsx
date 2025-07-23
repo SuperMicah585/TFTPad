@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { fetchTFTComps, fetchCurrentVersion, fetchChampionData, createChampionImageMappings, fetchCompsWithPlacementStats, fetchTraitData, fetchMatchData, parseMatchDataForGameTab, type ChampionData, type TraitData, type DetailedTraitData } from '../services/tftService';
 import type { TFTComp } from '../services/tftService';
+import { TIER_POOLS } from './constants';
 
 interface Champion {
     name: string;
@@ -240,8 +241,6 @@ export function TFTProvider({ children }: TFTProviderProps) {
 
     const getUnitContestRates = () => {
         const unitCounts: { [unitName: string]: number } = {};
-        // Pool sizes by tier
-        const TIER_POOLS = { 1: 30, 2: 25, 3: 18, 4: 10, 5: 9 };
         Object.entries(selectedUnits).forEach(([playerId, playerUnits]) => {
             if (playerUnits) {
                 const currentPlayerStars = playerStars[parseInt(playerId)] || {};
@@ -321,7 +320,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
                 return; // Use cached data
             }
 
-            let isMounted = true;
+            const isMounted = true;
             setRankLoading(true);
             setRankError(null);
             

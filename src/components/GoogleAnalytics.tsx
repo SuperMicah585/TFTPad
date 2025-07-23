@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
+import { DEFAULT_GA_ID } from './analytics-constants';
 
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void;
-    dataLayer: any[];
+    gtag: (...args: unknown[]) => void;
+    dataLayer: unknown[];
   }
 }
 
@@ -13,7 +14,7 @@ interface GoogleAnalyticsProps {
 
 export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
   // Use provided measurement ID or default to the TFTPad GA ID
-  const gaId = measurementId || 'G-2J0VEH6V5E';
+  const gaId = measurementId || DEFAULT_GA_ID;
 
   useEffect(() => {
     // Load Google Analytics script
@@ -24,21 +25,22 @@ export function GoogleAnalytics({ measurementId }: GoogleAnalyticsProps) {
 
     // Initialize gtag (matching the provided code exactly)
     window.dataLayer = window.dataLayer || [];
-    window.gtag = function() {
-      window.dataLayer.push(arguments);
+    window.gtag = function(...args: unknown[]) {
+      window.dataLayer.push(args);
     };
     window.gtag('js', new Date());
     window.gtag('config', gaId);
 
-    // Cleanup function
     return () => {
-      if (document.head.contains(script1)) {
-        document.head.removeChild(script1);
+      // Cleanup: remove the script when component unmounts
+      const existingScript = document.querySelector(`script[src*="${gaId}"]`);
+      if (existingScript) {
+        existingScript.remove();
       }
     };
   }, [gaId]);
 
-  return null; // This component doesn't render anything
+  return null;
 }
 
 // Helper function to track custom events

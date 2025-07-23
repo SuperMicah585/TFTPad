@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTFT } from '../contexts/TFTContext';
 import { TIER_COLORS, type UnitContestData } from '../services/tftService';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Search } from 'lucide-react';
+import { useSearchParams } from 'react-router-dom';
 
 // Tier pool data
 const TIER_POOLS = {
@@ -13,12 +14,32 @@ const TIER_POOLS = {
 };
 
 export function UnitsHolder() {
+    const [searchParams, setSearchParams] = useSearchParams();
     const { champions, championImageMappings, version, loading, getUnitContestRates, selectedUnits, playerStars } = useTFT();
     const [unitsData, setUnitsData] = useState<UnitContestData[]>([]);
     const [filteredUnits, setFilteredUnits] = useState<UnitContestData[]>([]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [activeSearchTerm, setActiveSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState<'contest' | 'name' | 'tier'>('contest');
     const [showDescription] = useState(false);
+
+    // Initialize search from URL on component mount
+    useEffect(() => {
+        const urlQuery = searchParams.get('q');
+        if (urlQuery) {
+            setSearchTerm(urlQuery);
+            setActiveSearchTerm(urlQuery);
+        }
+    }, [searchParams]);
+
+    // Update URL when search changes
+    const updateSearchInURL = (query: string) => {
+        if (query) {
+            setSearchParams({ q: query });
+        } else {
+            setSearchParams({});
+        }
+    };
 
     // Function to calculate tier usage statistics
     const getTierUsageStats = () => {
@@ -85,9 +106,9 @@ export function UnitsHolder() {
         let filtered = unitsData;
         
         // Apply search filter
-        if (searchTerm) {
+        if (activeSearchTerm) {
             filtered = filtered.filter(unit => 
-                unit.name.toLowerCase().includes(searchTerm.toLowerCase())
+                unit.name.toLowerCase().includes(activeSearchTerm.toLowerCase())
             );
         }
         
@@ -106,7 +127,7 @@ export function UnitsHolder() {
         });
         
         setFilteredUnits(filtered);
-    }, [unitsData, searchTerm, sortBy]);
+    }, [unitsData, activeSearchTerm, sortBy]);
 
     const getContestIndicator = (contestRate: number) => {
         if (contestRate >= 30) return { color: 'text-red-600', text: 'Highly Contested' };
@@ -217,21 +238,46 @@ export function UnitsHolder() {
                         {/* Search Bar */}
                         <div className="flex-1">
                             <h3 className="text-gray-800 font-medium mb-2 text-left">Filter Units</h3>
-                            <input
-                                type="text"
-                                placeholder="Search units..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-transparent"
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = 'rgb(253, 186, 116)';
-                                    e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = '#d1d5db'; // gray-300
-                                    e.target.style.boxShadow = 'none';
-                                }}
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Search units..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            setActiveSearchTerm(searchTerm);
+                                            updateSearchInURL(searchTerm);
+                                        }
+                                    }}
+                                    className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-transparent"
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = 'rgb(253, 186, 116)';
+                                        e.target.style.boxShadow = '0 0 0 2px rgba(253, 186, 116, 0.2)';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '';
+                                        e.target.style.boxShadow = '';
+                                    }}
+                                />
+                                <button
+                                    onClick={() => {
+                                        setActiveSearchTerm(searchTerm);
+                                        updateSearchInURL(searchTerm);
+                                    }}
+                                    className="px-4 py-2 text-white rounded-lg font-medium transition-colors flex items-center gap-2"
+                                    style={{ backgroundColor: '#964B00' }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#7c3a00'; // darker brown for hover
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#964B00';
+                                    }}
+                                >
+                                    <Search className="w-4 h-4" />
+                                    Search
+                                </button>
+                            </div>
                         </div>
                         
                         {/* Sort Dropdown */}

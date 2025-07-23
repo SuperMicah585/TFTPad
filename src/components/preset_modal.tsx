@@ -3,6 +3,7 @@ import { useState, useMemo, useEffect } from "react";
 import { SearchBar } from "./search_bar";
 import { useTFT } from "../contexts/TFTContext";
 import { TIER_COLORS, getTraitBreakpointInfo, decodeHtmlEntities } from "../services/tftService";
+import type { TFTComp } from '../services/tftService';
 
 interface PresetModalProps {
     isOpen: boolean;
@@ -224,7 +225,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
         return TIER_COLORS[tier as keyof typeof TIER_COLORS] || 'border-gray-400';
     };
 
-    const handleCompClick = (comp: any) => {
+    const handleCompClick = (comp: TFTComp) => {
         if (onCompSelect) {
             const validChampions = comp.units
                 .filter((unit: string) => isValidTFT14Champion(unit))
@@ -249,7 +250,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
 
     if (loading) {
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
                 <div className="bg-white rounded-xl p-6 w-[95%] min-w-96 min-h-96 max-h-[80vh] overflow-y-auto shadow-lg">
                     <div className="flex justify-center items-center h-full">
                         <div className="text-gray-600 text-lg">Loading TFT comps...</div>
@@ -261,7 +262,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
 
     if (error) {
         return (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
                 <div className="bg-white rounded-xl p-6 w-[95%] min-w-96 min-h-96 max-h-[80vh] overflow-y-auto shadow-lg">
                     <div className="flex justify-center items-center h-full">
                         <div className="text-red-600 text-lg">Error: {error}</div>
@@ -272,7 +273,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
             <div className="bg-white rounded-xl p-6 w-[95%] min-w-96 min-h-96 max-h-[80vh] overflow-y-auto shadow-lg">
                 <div className="flex justify-between items-center mb-4">
                     <div>
@@ -314,7 +315,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                                             .map((unit, index) => {
                                                 const tier = getChampionTier(unit);
                                                 const borderColor = getTierBorderColor(tier);
-                                                const unitBuild = comp.builds.find((build: any) => build.unit === unit);
+                                                const unitBuild = comp.builds.find((build) => build.unit === unit);
                                                 const isItemized = unitBuild && unitBuild.num_items > 0;
                                                 
                                                 return (
@@ -442,7 +443,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
             {/* Custom Tooltip */}
             {hoveredTrait && (
                 <div 
-                    className="fixed z-50 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs"
+                    className="fixed z-[9999] px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-lg max-w-xs"
                     style={{
                         left: hoveredTrait.x,
                         top: hoveredTrait.y,
