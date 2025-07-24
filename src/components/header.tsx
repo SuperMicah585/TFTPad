@@ -8,6 +8,7 @@ export function Header() {
    const location = useLocation();
    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
    const [showLoginModal, setShowLoginModal] = useState(false);
+   const [modalMode, setModalMode] = useState<'login' | 'signup'>('login');
    const { user, signOut } = useAuth();
    
    return(
@@ -67,16 +68,30 @@ export function Header() {
                </nav>
                
                {/* Desktop Authentication */}
-               <div className="hidden md:flex items-center">
+               <div className="hidden md:flex items-center gap-2">
                    {user ? (
                        <UserMenu />
                    ) : (
-                       <button
-                           onClick={() => setShowLoginModal(true)}
-                           className="bg-orange-300 text-white hover:bg-orange-400 rounded-full p-2 focus:outline-none focus:ring-0 border-0 text-xs"
-                       >
-                           Login
-                       </button>
+                       <>
+                           <button
+                               onClick={() => {
+                                   setModalMode('login');
+                                   setShowLoginModal(true);
+                               }}
+                               className="bg-transparent text-orange-200 hover:text-white hover:bg-orange-300/20 rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
+                           >
+                               Login
+                           </button>
+                           <button
+                               onClick={() => {
+                                   setModalMode('signup');
+                                   setShowLoginModal(true);
+                               }}
+                               className="bg-[#00c9ac] text-white hover:bg-[#00b89a] rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
+                           >
+                               Sign Up
+                           </button>
+                       </>
                    )}
                </div>
                
@@ -177,15 +192,28 @@ export function Header() {
                                Sign Out
                            </button>
                        ) : (
-                           <button
-                               onClick={() => {
-                                   setShowLoginModal(true)
-                                   setIsMobileMenuOpen(false)
-                               }}
-                               className="text-orange-300 hover:text-white hover:bg-orange-400/20 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent"
-                           >
-                               Login
-                           </button>
+                           <div className="flex flex-col gap-2">
+                               <button
+                                   onClick={() => {
+                                       setModalMode('login');
+                                       setShowLoginModal(true);
+                                       setIsMobileMenuOpen(false);
+                                   }}
+                                   className="text-orange-300 hover:text-white hover:bg-orange-400/20 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent"
+                               >
+                                   Login
+                               </button>
+                               <button
+                                   onClick={() => {
+                                       setModalMode('signup');
+                                       setShowLoginModal(true);
+                                       setIsMobileMenuOpen(false);
+                                   }}
+                                   className="text-[#00c9ac] hover:text-white hover:bg-[#00c9ac]/20 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent"
+                               >
+                                   Sign Up
+                               </button>
+                           </div>
                        )}
                    </nav>
                </div>
@@ -195,6 +223,7 @@ export function Header() {
            <OAuthLoginModal
                isOpen={showLoginModal}
                onClose={() => setShowLoginModal(false)}
+               mode={modalMode}
            />
        </div>
    )

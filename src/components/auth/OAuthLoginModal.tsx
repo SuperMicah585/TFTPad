@@ -4,9 +4,10 @@ import { SquareX } from 'lucide-react'
 interface OAuthLoginModalProps {
   isOpen: boolean
   onClose: () => void
+  mode?: 'login' | 'signup'
 }
 
-export function OAuthLoginModal({ isOpen, onClose }: OAuthLoginModalProps) {
+export function OAuthLoginModal({ isOpen, onClose, mode = 'login' }: OAuthLoginModalProps) {
   const { signInWithGoogle, signInWithDiscord } = useAuth()
 
   const handleGoogleSignIn = async () => {
@@ -25,7 +26,9 @@ export function OAuthLoginModal({ isOpen, onClose }: OAuthLoginModalProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Left side - Login form */}
           <div className="p-8 relative">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Login</h2>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">
+              {mode === 'signup' ? 'Sign Up' : 'Login'}
+            </h2>
             {/* Close button - absolute positioned */}
             <button
               onClick={onClose}
@@ -39,7 +42,10 @@ export function OAuthLoginModal({ isOpen, onClose }: OAuthLoginModalProps) {
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Welcome to TFTPad</h3>
                 <p className="text-gray-600 text-sm">
-                  Log in to your account or create a new one to access all features
+                  {mode === 'signup' 
+                    ? 'Create a new account to access all features and join study groups'
+                    : 'Log in to your account or create a new one to access all features'
+                  }
                 </p>
               </div>
 
@@ -69,7 +75,7 @@ export function OAuthLoginModal({ isOpen, onClose }: OAuthLoginModalProps) {
 
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
-                By logging in, you agree to our terms of service and privacy policy
+                By {mode === 'signup' ? 'signing up' : 'logging in'}, you agree to our terms of service and privacy policy
               </p>
             </div>
           </div>

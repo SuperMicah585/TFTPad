@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Globe, Calendar, ArrowRight, Zap, SquareX } from 'lucide-react'
+import { Users, Globe, Calendar, ArrowRight, Zap, SquareX, Award, Star, TrendingUp, TrendingDown, FileText, Clock } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { freeAgentService, type FreeAgent, type FreeAgentFilters } from '../services/freeAgentService'
 import { studyGroupService } from '../services/studyGroupService'
@@ -999,19 +999,31 @@ export function FreeAgentsTab({
                         </h5>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Rank</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <Award className="w-3 h-3 text-amber-600" />
+                              <p className="text-xs text-gray-600">Rank</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">LP</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                              <p className="text-xs text-gray-600">LP</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Wins</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <TrendingUp className="w-3 h-3 text-green-600" />
+                              <p className="text-xs text-gray-600">Wins</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Losses</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <TrendingDown className="w-3 h-3 text-red-600" />
+                              <p className="text-xs text-gray-600">Losses</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                           </div>
                         </div>
@@ -1038,19 +1050,31 @@ export function FreeAgentsTab({
                         </h5>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Tier</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <Award className="w-3 h-3 text-amber-600" />
+                              <p className="text-xs text-gray-600">Tier</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Rating</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                              <p className="text-xs text-gray-600">Rating</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Wins</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <TrendingUp className="w-3 h-3 text-green-600" />
+                              <p className="text-xs text-gray-600">Wins</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-xs text-gray-600 mb-1">Losses</p>
+                            <div className="flex items-center justify-center gap-1 mb-1">
+                              <TrendingDown className="w-3 h-3 text-red-600" />
+                              <p className="text-xs text-gray-600">Losses</p>
+                            </div>
                             <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                           </div>
                         </div>
@@ -1077,7 +1101,10 @@ export function FreeAgentsTab({
                 <div className="space-y-4">
                   {/* Description */}
                   <div className="w-full">
-                    <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
+                    <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-green-600" />
+                      Description
+                    </h4>
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                       <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                         {selectedAgentForDetails.looking_for || "No description provided"}
@@ -1088,10 +1115,12 @@ export function FreeAgentsTab({
                   {/* Availability */}
                   {selectedAgentForDetails.availability && selectedAgentForDetails.availability.length > 0 && (
                     <div className="w-full">
-                      <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
+                      <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                        <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                        Availability
+                      </h4>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <div className="flex items-center gap-2 text-gray-700 text-xs">
-                          <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
+                        <div className="text-gray-700 text-xs text-left">
                           <span>{Array.isArray(selectedAgentForDetails.availability) ? selectedAgentForDetails.availability.join(", ") : selectedAgentForDetails.availability}</span>
                         </div>
                       </div>
@@ -1101,12 +1130,14 @@ export function FreeAgentsTab({
                   {/* Time and Timezone */}
                   {selectedAgentForDetails.time && (
                     <div className="w-full">
-                      <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
+                      <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                        </svg>
+                        Preferred Time
+                      </h4>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <div className="flex items-center gap-2 text-gray-700 text-xs">
-                          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                          </svg>
+                        <div className="text-gray-700 text-xs text-left">
                           <span>
                             {selectedAgentForDetails.time.charAt(0).toUpperCase() + selectedAgentForDetails.time.slice(1)}
                             {selectedAgentForDetails.timezone && ` (${selectedAgentForDetails.timezone})`}
@@ -1205,7 +1236,10 @@ export function FreeAgentsTab({
             </div>
             <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <h4 className="font-bold text-gray-700 mb-2">Time Preference</h4>
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
+                  Time Preference
+                </h4>
                 <select
                   value={availabilityTimeFilter}
                   onChange={e => setAvailabilityTimeFilter(e.target.value)}
@@ -1219,7 +1253,10 @@ export function FreeAgentsTab({
                 </select>
               </div>
               <div>
-                <h4 className="font-bold text-gray-700 mb-2">Region</h4>
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-blue-500" />
+                  Region
+                </h4>
                 <select
                   value={regionFilter}
                   onChange={e => setRegionFilter(e.target.value)}

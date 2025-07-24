@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { UserCheck, Mail, Users, Zap, Crown, ArrowRight, Calendar, Upload, Eye, SquareX } from 'lucide-react'
+import { UserCheck, Mail, Users, Zap, Crown, ArrowRight, Calendar, Upload, Eye, SquareX, Award, Star, TrendingUp, TrendingDown, Clock, Globe, FileText, Image, Settings, AlertTriangle, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
@@ -241,6 +241,7 @@ export function MyGroupsTab() {
 
   // Authentication and Riot account state
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'login' | 'signup'>('login');
   const [showRiotModal, setShowRiotModal] = useState(false);
   const [riotAccount, setRiotAccount] = useState<any>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
@@ -314,6 +315,7 @@ export function MyGroupsTab() {
   const handleCreateGroup = async () => {
     // Check if user is logged in
     if (!userId) {
+      setModalMode('login');
       setShowLoginModal(true);
       return;
     }
@@ -690,6 +692,7 @@ export function MyGroupsTab() {
             <button
               onClick={() => {
                 if (!userId) {
+                  setModalMode('login');
                   setShowLoginModal(true);
                 } else if (!riotAccount) {
                   setShowRiotModal(true);
@@ -839,7 +842,8 @@ export function MyGroupsTab() {
               
               <form onSubmit={(e) => { e.preventDefault(); handleCreateGroup(); }} className="space-y-4">
                 <div>
-                  <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-600" />
                     Group Name *
                   </label>
                   <input
@@ -853,7 +857,8 @@ export function MyGroupsTab() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-green-600" />
                     Description
                   </label>
                   <textarea
@@ -867,10 +872,11 @@ export function MyGroupsTab() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
                     Meeting Schedule
                   </label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2 ml-4">
                     {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
                       <label key={day} className="flex items-center">
                         <input
@@ -887,7 +893,8 @@ export function MyGroupsTab() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
                       Preferred Time
                     </label>
                     <select
@@ -904,7 +911,8 @@ export function MyGroupsTab() {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-2">
+                    <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-purple-600" />
                       Timezone
                     </label>
                     <select
@@ -928,7 +936,8 @@ export function MyGroupsTab() {
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-orange-600" />
                     Application Instructions
                   </label>
                   <textarea
@@ -943,7 +952,8 @@ export function MyGroupsTab() {
 
                 {/* Group Icon Upload */}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                    <Image className="w-4 h-4 text-gray-600" />
                     Group Icon (Optional)
                   </label>
                   <div className="space-y-3">
@@ -1334,10 +1344,14 @@ export function MyGroupsTab() {
 
                 {activeSection === 'manage' && (
                   <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-purple-800 mb-3">Group Settings</h4>
+                    <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-purple-600" />
+                      Group Settings
+                    </h4>
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <Users className="w-4 h-4 text-blue-600" />
                           Group Name
                         </label>
                         <input
@@ -1350,32 +1364,34 @@ export function MyGroupsTab() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
                           Meeting Schedule
                         </label>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="grid grid-cols-2 gap-2 ml-4">
                           {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
-                            <label key={day} className="flex items-center">
-                              <input
-                                type="checkbox"
-                                checked={groupSettings.meeting_schedule.includes(day)}
-                                onChange={() => {
-                                  setGroupSettings(prev => ({
-                                    ...prev,
-                                    meeting_schedule: prev.meeting_schedule.includes(day)
-                                      ? prev.meeting_schedule.filter(d => d !== day)
-                                      : [...prev.meeting_schedule, day]
-                                  }));
-                                }}
-                                className="mr-2"
-                              />
-                              {day}
-                            </label>
+                                                          <label key={day} className="flex items-center">
+                                <input
+                                  type="checkbox"
+                                  checked={groupSettings.meeting_schedule.includes(day)}
+                                  onChange={() => {
+                                    setGroupSettings(prev => ({
+                                      ...prev,
+                                      meeting_schedule: prev.meeting_schedule.includes(day)
+                                        ? prev.meeting_schedule.filter(d => d !== day)
+                                        : [...prev.meeting_schedule, day]
+                                    }));
+                                  }}
+                                  className="mr-2"
+                                />
+                                {day}
+                              </label>
                           ))}
                         </div>
                       </div>
                       <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-green-600" />
                           Group Description
                         </label>
                         <textarea
@@ -1388,7 +1404,8 @@ export function MyGroupsTab() {
                         />
                       </div>
                       <div>
-                        <label htmlFor="applicationInstructions" className="block text-sm font-medium text-gray-700 mb-2">
+                        <label htmlFor="applicationInstructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-orange-600" />
                           Application Instructions
                         </label>
                         <textarea
@@ -1424,6 +1441,7 @@ export function MyGroupsTab() {
       <OAuthLoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
+        mode={modalMode}
       />
       
       <RiotConnectModal
@@ -1609,7 +1627,10 @@ export function MyGroupsTab() {
                 <div className="space-y-4 w-full">
                   <div className="space-y-4 w-full">
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Description</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-green-600" />
+                        Description
+                      </h5>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                           {selectedGroup.description || "No description provided"}
@@ -1617,7 +1638,10 @@ export function MyGroupsTab() {
                       </div>
                     </div>
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Application Instructions</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-orange-600" />
+                        Application Instructions
+                      </h5>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                           {selectedGroup.application_instructions || "No application instructions provided"}
@@ -1637,7 +1661,10 @@ export function MyGroupsTab() {
                       <>
                         {/* Switch Captain Section */}
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Switch Captain</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <Crown className="w-4 h-4 text-yellow-500" />
+                        Switch Captain
+                      </h5>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <p className="text-gray-700 text-sm mb-3">Promote another member to captain:</p>
                         <div className="space-y-2">
@@ -1705,10 +1732,14 @@ export function MyGroupsTab() {
 
                     {/* Group Settings Section */}
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Group Settings</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <Settings className="w-4 h-4 text-purple-600" />
+                        Group Settings
+                      </h5>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full space-y-4">
                         <div>
-                          <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2">
+                          <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-blue-600" />
                             Group Name
                           </label>
                           <input
@@ -1721,10 +1752,11 @@ export function MyGroupsTab() {
                           />
                         </div>
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
                             Meeting Schedule
                           </label>
-                          <div className="grid grid-cols-2 gap-2">
+                          <div className="grid grid-cols-2 gap-2 ml-4">
                             {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
                               <label key={day} className="flex items-center text-sm">
                                 <input
@@ -1744,7 +1776,8 @@ export function MyGroupsTab() {
                           </div>
                         </div>
                         <div>
-                          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+                          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-600" />
                             Description
                           </label>
                           <textarea
@@ -1757,7 +1790,8 @@ export function MyGroupsTab() {
                           />
                         </div>
                         <div>
-                          <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2">
+                          <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-orange-600" />
                             Application Instructions
                           </label>
                           <textarea
@@ -1772,7 +1806,8 @@ export function MyGroupsTab() {
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
-                            <label htmlFor="manageTime" className="block text-sm font-medium text-gray-700 mb-2">
+                            <label htmlFor="manageTime" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                              <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
                               Preferred Time
                             </label>
                             <select
@@ -1789,7 +1824,8 @@ export function MyGroupsTab() {
                             </select>
                           </div>
                           <div>
-                            <label htmlFor="manageTimezone" className="block text-sm font-medium text-gray-700 mb-2">
+                            <label htmlFor="manageTimezone" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                              <Globe className="w-4 h-4 text-purple-600" />
                               Timezone
                             </label>
                             <select
@@ -1815,7 +1851,8 @@ export function MyGroupsTab() {
 
                         {/* Group Icon Upload */}
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Image className="w-4 h-4 text-gray-600" />
                             Group Icon (Optional)
                           </label>
                           <div className="space-y-3">
@@ -1913,7 +1950,10 @@ export function MyGroupsTab() {
 
                     {/* Captain Leave Group Info */}
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Leave Group</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <LogOut className="w-4 h-4 text-blue-600" />
+                        Leave Group
+                      </h5>
                       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
                         <div className="flex items-start gap-3">
                           <div className="flex-shrink-0 mt-0.5">
@@ -1935,7 +1975,10 @@ export function MyGroupsTab() {
 
                     {/* Delete Group Section */}
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Danger Zone</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-600" />
+                        Danger Zone
+                      </h5>
                       <div className="bg-red-50 border border-red-200 rounded-lg p-4 w-full">
                         <div>
                           <h6 className="font-medium text-red-800">Delete Study Group</h6>
@@ -1959,7 +2002,10 @@ export function MyGroupsTab() {
                     {/* Member-only content */}
                     {selectedGroup.role === 'member' && (
                       <div className="w-full">
-                        <h5 className="font-medium text-gray-800 mb-2 text-left">Leave Group</h5>
+                        <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                          <LogOut className="w-4 h-4 text-orange-600" />
+                          Leave Group
+                        </h5>
                         <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 w-full">
                           <div>
                             <h6 className="font-medium text-orange-800">Leave Study Group</h6>
@@ -2109,19 +2155,31 @@ export function MyGroupsTab() {
                             </h5>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Rank</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Award className="w-3 h-3 text-amber-600" />
+                                  <p className="text-xs text-gray-600">Rank</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">LP</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                  <p className="text-xs text-gray-600">LP</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Wins</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingUp className="w-3 h-3 text-green-600" />
+                                  <p className="text-xs text-gray-600">Wins</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Losses</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingDown className="w-3 h-3 text-red-600" />
+                                  <p className="text-xs text-gray-600">Losses</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                               </div>
                             </div>
@@ -2148,19 +2206,31 @@ export function MyGroupsTab() {
                             </h5>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Tier</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Award className="w-3 h-3 text-amber-600" />
+                                  <p className="text-xs text-gray-600">Tier</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Rating</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                  <p className="text-xs text-gray-600">Rating</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Wins</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingUp className="w-3 h-3 text-green-600" />
+                                  <p className="text-xs text-gray-600">Wins</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Losses</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingDown className="w-3 h-3 text-red-600" />
+                                  <p className="text-xs text-gray-600">Losses</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                               </div>
                             </div>
@@ -2200,7 +2270,10 @@ export function MyGroupsTab() {
                       <div className="space-y-4">
                         {/* Description */}
                         <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
+                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            Description
+                          </h4>
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                             <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {playerProfile.description || "No description provided"}
@@ -2211,12 +2284,14 @@ export function MyGroupsTab() {
                         {/* Availability */}
                         {playerProfile.days && playerProfile.days.length > 0 && (
                           <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
+                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                              <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                              Availability
+                            </h4>
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                              <div className="flex items-center gap-2 text-gray-700 text-xs">
-                                <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-                                <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
-                              </div>
+                                                        <div className="text-gray-700 text-xs text-left">
+                            <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
+                          </div>
                             </div>
                           </div>
                         )}
@@ -2224,17 +2299,19 @@ export function MyGroupsTab() {
                         {/* Time and Timezone */}
                         {playerProfile.time && (
                           <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
+                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                              </svg>
+                              Preferred Time
+                            </h4>
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                              <div className="flex items-center gap-2 text-gray-700 text-xs">
-                                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                                </svg>
-                                <span>
-                                  {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                  {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                                </span>
-                              </div>
+                                                        <div className="text-gray-700 text-xs text-left">
+                            <span>
+                              {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
+                              {playerProfile.timezone && ` (${playerProfile.timezone})`}
+                            </span>
+                          </div>
                             </div>
                           </div>
                         )}
@@ -2818,7 +2895,10 @@ function InvitationCard({
 
                   {/* Group Description */}
                   <div className="w-full">
-                    <h5 className="font-medium text-gray-800 mb-2 text-left">Description</h5>
+                    <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-green-600" />
+                      Description
+                    </h5>
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                       <p className="text-gray-700 whitespace-pre-wrap text-left">
                         {groupDetails?.description || invitation.study_group?.description || "No description provided"}
@@ -2829,7 +2909,10 @@ function InvitationCard({
                   {/* Application Instructions */}
                   {groupDetails?.application_instructions && (
                     <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Application Instructions</h5>
+                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-orange-600" />
+                        Application Instructions
+                      </h5>
                       <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                         <p className="text-gray-700 whitespace-pre-wrap text-left">
                           {groupDetails.application_instructions}
@@ -2995,19 +3078,31 @@ function InvitationCard({
                           </h5>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Rank</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Award className="w-3 h-3 text-amber-600" />
+                                <p className="text-xs text-gray-600">Rank</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">LP</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                <p className="text-xs text-gray-600">LP</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Wins</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                <p className="text-xs text-gray-600">Wins</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Losses</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingDown className="w-3 h-3 text-red-600" />
+                                <p className="text-xs text-gray-600">Losses</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                             </div>
                           </div>
@@ -3034,19 +3129,31 @@ function InvitationCard({
                           </h5>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Tier</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Award className="w-3 h-3 text-amber-600" />
+                                <p className="text-xs text-gray-600">Tier</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Rating</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                <p className="text-xs text-gray-600">Rating</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Wins</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                <p className="text-xs text-gray-600">Wins</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-gray-600 mb-1">Losses</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingDown className="w-3 h-3 text-red-600" />
+                                <p className="text-xs text-gray-600">Losses</p>
+                              </div>
                               <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                             </div>
                           </div>
@@ -3086,7 +3193,10 @@ function InvitationCard({
                     <div className="space-y-4">
                       {/* Description */}
                       <div className="w-full">
-                        <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
+                        <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-green-600" />
+                          Description
+                        </h4>
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                           <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                             {playerProfile.description || "No description provided"}
@@ -3097,10 +3207,12 @@ function InvitationCard({
                       {/* Availability */}
                       {playerProfile.days && playerProfile.days.length > 0 && (
                         <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
+                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                            Availability
+                          </h4>
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <div className="flex items-center gap-2 text-gray-700 text-xs">
-                              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
+                            <div className="text-gray-700 text-xs text-left">
                               <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
                             </div>
                           </div>
@@ -3110,12 +3222,14 @@ function InvitationCard({
                       {/* Time and Timezone */}
                       {playerProfile.time && (
                         <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
+                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            </svg>
+                            Preferred Time
+                          </h4>
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <div className="flex items-center gap-2 text-gray-700 text-xs">
-                              <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                              </svg>
+                            <div className="text-gray-700 text-xs text-left">
                               <span>
                                 {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
                                 {playerProfile.timezone && ` (${playerProfile.timezone})`}

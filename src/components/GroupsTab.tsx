@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
-import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX } from 'lucide-react'
+import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, Award, Star, TrendingUp, TrendingDown, FileText } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
@@ -555,7 +555,10 @@ export function GroupsTab({
                     ) : (
                       <div className="space-y-4 w-full">
                         <div className="w-full">
-                          <h5 className="font-medium text-gray-800 mb-2 text-left">Description</h5>
+                          <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            Description
+                          </h5>
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                             <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {groupInfo.description || "No description provided"}
@@ -563,7 +566,10 @@ export function GroupsTab({
                           </div>
                         </div>
                         <div className="w-full">
-                          <h5 className="font-medium text-gray-800 mb-2 text-left">Application Instructions</h5>
+                          <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-orange-600" />
+                            Application Instructions
+                          </h5>
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                             <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {groupInfo.instructions || "No application instructions provided"}
@@ -700,19 +706,31 @@ export function GroupsTab({
                             </h5>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Rank</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Award className="w-3 h-3 text-amber-600" />
+                                  <p className="text-xs text-gray-600">Rank</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">LP</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                  <p className="text-xs text-gray-600">LP</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Wins</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingUp className="w-3 h-3 text-green-600" />
+                                  <p className="text-xs text-gray-600">Wins</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Losses</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingDown className="w-3 h-3 text-red-600" />
+                                  <p className="text-xs text-gray-600">Losses</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
                               </div>
                             </div>
@@ -739,19 +757,31 @@ export function GroupsTab({
                             </h5>
                             <div className="grid grid-cols-2 gap-4">
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Tier</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Award className="w-3 h-3 text-amber-600" />
+                                  <p className="text-xs text-gray-600">Tier</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Rating</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                  <p className="text-xs text-gray-600">Rating</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Wins</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingUp className="w-3 h-3 text-green-600" />
+                                  <p className="text-xs text-gray-600">Wins</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
                               </div>
                               <div className="text-center">
-                                <p className="text-xs text-gray-600 mb-1">Losses</p>
+                                <div className="flex items-center justify-center gap-1 mb-1">
+                                  <TrendingDown className="w-3 h-3 text-red-600" />
+                                  <p className="text-xs text-gray-600">Losses</p>
+                                </div>
                                 <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
                               </div>
                             </div>
@@ -791,7 +821,10 @@ export function GroupsTab({
                       <div className="space-y-4">
                         {/* Description */}
                         <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left">Description</h4>
+                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            Description
+                          </h4>
                           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                             <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
                               {playerProfile.description || "No description provided"}
@@ -802,12 +835,14 @@ export function GroupsTab({
                         {/* Availability */}
                         {playerProfile.days && playerProfile.days.length > 0 && (
                           <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left">Availability</h4>
+                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                              <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                              Availability
+                            </h4>
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                              <div className="flex items-center gap-2 text-gray-700 text-xs">
-                                <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-                                <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
-                              </div>
+                                                          <div className="text-gray-700 text-xs text-left">
+                              <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
+                            </div>
                             </div>
                           </div>
                         )}
@@ -815,17 +850,19 @@ export function GroupsTab({
                         {/* Time and Timezone */}
                         {playerProfile.time && (
                           <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left">Preferred Time</h4>
+                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                              </svg>
+                              Preferred Time
+                            </h4>
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                              <div className="flex items-center gap-2 text-gray-700 text-xs">
-                                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                                </svg>
-                                <span>
-                                  {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                  {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                                </span>
-                              </div>
+                                                          <div className="text-gray-700 text-xs text-left">
+                              <span>
+                                {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
+                                {playerProfile.timezone && ` (${playerProfile.timezone})`}
+                              </span>
+                            </div>
                             </div>
                           </div>
                         )}

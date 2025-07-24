@@ -8,6 +8,7 @@ import { Footer } from './Footer'
 import { LoadingSpinner } from './auth/LoadingSpinner'
 import { userService } from '../services/userService'
 import { tftService } from '../services/tftService'
+import { Calendar, User, Clock, Star, Award, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface RiotAccount {
   id: number
@@ -299,7 +300,30 @@ function ProfileContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <>
+      <div className="min-h-screen bg-white text-gray-800 relative flex flex-col">
+      {/* Notebook Lines Background - Full Viewport */}
+      <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
+        <div className="absolute inset-0 opacity-15 dark:opacity-20">
+          <svg width="100%" height="100%">
+            <pattern id="notebook-lines-profile" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
+              <line
+                x1="0"
+                y1="23"
+                x2="100%"
+                y2="23"
+                stroke="currentColor"
+                strokeWidth="1"
+                className="text-blue-500 dark:text-blue-400"
+              />
+            </pattern>
+            <rect width="100%" height="100%" fill="url(#notebook-lines-profile)" />
+          </svg>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="relative z-10">
       <div className="container mx-auto px-4 py-8 relative z-10 max-w-7xl">
         {/* Header Section */}
         <div className="mb-8">
@@ -545,10 +569,8 @@ function ProfileContent() {
               ) : leagueData.length > 0 && (
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                      <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                      </svg>
+                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <Star className="w-5 h-5 text-yellow-600" fill="currentColor" />
                     </div>
                     TFT League Stats
                   </h2>
@@ -556,30 +578,37 @@ function ProfileContent() {
                     {/* Ranked TFT */}
                     {getRankedTftData() && (
                       <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                        <h3 className="font-bold text-black mb-3 flex items-center gap-2">
-                          <div className="w-5 h-5 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <svg className="w-3 h-3 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
+                        <h3 className="font-bold text-black mb-3">
                           Ranked TFT
                         </h3>
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-6">
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Rank</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Award className="w-3 h-3 text-amber-600" />
+                                <p className="text-xs text-black">Rank</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">LP</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                <p className="text-xs text-black">LP</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getRankedTftData()?.leaguePoints}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Wins</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                <p className="text-xs text-black">Wins</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getRankedTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Losses</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingDown className="w-3 h-3 text-red-600" />
+                                <p className="text-xs text-black">Losses</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getRankedTftData()?.losses}</p>
                             </div>
                           </div>
@@ -608,19 +637,31 @@ function ProfileContent() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-6">
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Tier</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Award className="w-3 h-3 text-amber-600" />
+                                <p className="text-xs text-black">Tier</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getTurboTftData()?.ratedTier}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Rating</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                <p className="text-xs text-black">Rating</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getTurboTftData()?.ratedRating}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Wins</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                <p className="text-xs text-black">Wins</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getTurboTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
-                              <p className="text-xs text-black mb-1">Losses</p>
+                              <div className="flex items-center justify-center gap-1 mb-1">
+                                <TrendingDown className="w-3 h-3 text-red-600" />
+                                <p className="text-xs text-black">Losses</p>
+                              </div>
                               <p className="font-bold text-black text-lg">{getTurboTftData()?.losses}</p>
                             </div>
                           </div>
@@ -644,10 +685,8 @@ function ProfileContent() {
               {/* User Profile Description */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                 <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
+                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <User className="w-4 h-4 text-blue-600" />
                   </div>
                   Profile Description
                 </h2>
@@ -720,14 +759,6 @@ function ProfileContent() {
 
               {/* Availability */}
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  Availability
-                </h2>
                 {profileError && (
                   <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
                     <p className="text-red-800 text-sm">{profileError}</p>
@@ -744,7 +775,10 @@ function ProfileContent() {
                       <>
                         {/* Days Section */}
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-black">Available Days</h3>
+                          <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                            <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+                            Available Days
+                          </h3>
                           <div className="bg-gray-50 rounded-xl p-4 min-h-[60px]">
                             {userProfile?.days && userProfile.days.length > 0 ? (
                               <div className="flex flex-wrap gap-2">
@@ -762,7 +796,10 @@ function ProfileContent() {
 
                         {/* Time Section */}
                         <div className="space-y-4 border-t border-gray-200 pt-6">
-                          <h3 className="text-lg font-semibold text-black">Preferred Time</h3>
+                          <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                            <Clock className="w-5 h-5" style={{ color: '#00c9ac' }} />
+                            Preferred Time
+                          </h3>
                           <div className="bg-gray-50 rounded-xl p-4 min-h-[60px]">
                             {timeDraft ? (
                               <div className="space-y-2">
@@ -812,7 +849,10 @@ function ProfileContent() {
                     {isEditingDays && (
                       <div className="space-y-6">
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-black">Edit Available Days</h3>
+                          <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                            <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+                            Edit Available Days
+                          </h3>
                           <p className="text-black text-sm">
                             Select the days you're typically available for study groups.
                           </p>
@@ -832,7 +872,10 @@ function ProfileContent() {
                         </div>
 
                         <div className="space-y-4">
-                          <h3 className="text-lg font-semibold text-black">Edit Preferred Time</h3>
+                          <h3 className="text-lg font-semibold text-black flex items-center gap-2">
+                            <Clock className="w-5 h-5" style={{ color: '#00c9ac' }} />
+                            Edit Preferred Time
+                          </h3>
                           <p className="text-black text-sm">
                             Select your preferred time of day for study group activities.
                           </p>
@@ -988,8 +1031,11 @@ function ProfileContent() {
         </div>
       )}
       
+        </div>
+      </div>
+      
       <Footer />
-    </div>
+    </>
   )
 }
 

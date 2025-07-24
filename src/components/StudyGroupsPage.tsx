@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { HelpCircle, Users, SquareX } from 'lucide-react'
+import { HelpCircle, Users, SquareX, FileText } from 'lucide-react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { Footer } from './Footer'
 import { GroupsTab } from './GroupsTab'
@@ -544,11 +544,17 @@ export function StudyGroupsPage() {
                           ) : (
                             <div className="space-y-4">
                               <div>
-                                <h4 className="font-medium text-gray-800 mb-2">Description</h4>
+                                <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-green-600" />
+                                  Description
+                                </h4>
                                 <p className="text-gray-700 text-sm">{infoDescription}</p>
                               </div>
                               <div>
-                                <h4 className="font-medium text-gray-800 mb-2">Application Instructions</h4>
+                                <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
+                                  <FileText className="w-4 h-4 text-orange-600" />
+                                  Application Instructions
+                                </h4>
                                 <p className="text-gray-700 text-sm">{infoInstructions}</p>
                               </div>
                             </div>
