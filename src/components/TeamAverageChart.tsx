@@ -74,7 +74,7 @@ export function TeamAverageChart({
     if (foundLiveData) {
       const livePoint = foundLiveData;
       chartPoints.push({
-        x: livePoint.created_at.split('T')[0],
+        x: 'Current',
         y: livePoint.elo,
         wins: livePoint.wins,
         losses: livePoint.losses,

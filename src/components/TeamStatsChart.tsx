@@ -87,7 +87,7 @@ export function TeamStatsChart({
     if (liveData && liveData[summonerName]) {
       const livePoint = liveData[summonerName];
       chartPoints.push({
-        x: livePoint.created_at.split('T')[0],
+        x: 'Current',
         y: livePoint.elo,
         wins: livePoint.wins,
         losses: livePoint.losses,

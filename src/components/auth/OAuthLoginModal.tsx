@@ -24,7 +24,16 @@ export function OAuthLoginModal({ isOpen, onClose, mode = 'login' }: OAuthLoginM
     <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 max-w-4xl w-full overflow-hidden max-h-[90vh]">
         <div className="grid grid-cols-1 lg:grid-cols-2">
-          {/* Left side - Login form */}
+          {/* Left side - Image */}
+          <div className="hidden lg:block bg-gray-100">
+            <img 
+              src="/surfing_chonc.png" 
+              alt="TFTPad" 
+              className="w-full h-full object-cover"
+            />
+          </div>
+
+          {/* Right side - Login form */}
           <div className="p-4 sm:p-8 relative">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 sm:mb-6">
               {mode === 'signup' ? 'Sign Up' : 'Login'}
@@ -78,15 +87,6 @@ export function OAuthLoginModal({ isOpen, onClose, mode = 'login' }: OAuthLoginM
                 By {mode === 'signup' ? 'signing up' : 'logging in'}, you agree to our terms of service and privacy policy
               </p>
             </div>
-          </div>
-
-          {/* Right side - Image */}
-          <div className="hidden lg:block bg-gray-100">
-            <img 
-              src="/surfing_chonc.png" 
-              alt="TFTPad" 
-              className="w-full h-full object-cover"
-            />
           </div>
         </div>
       </div>

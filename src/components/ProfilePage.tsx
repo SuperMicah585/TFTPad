@@ -581,40 +581,40 @@ function ProfileContent() {
                         <h3 className="font-bold text-black mb-3">
                           Ranked TFT
                         </h3>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-6">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <Award className="w-3 h-3 text-amber-600" />
                                 <p className="text-xs text-black">Rank</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
                                 <p className="text-xs text-black">LP</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getRankedTftData()?.leaguePoints}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.leaguePoints}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <TrendingUp className="w-3 h-3 text-green-600" />
                                 <p className="text-xs text-black">Wins</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getRankedTftData()?.wins}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <TrendingDown className="w-3 h-3 text-red-600" />
                                 <p className="text-xs text-black">Losses</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getRankedTftData()?.losses}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center border-l border-gray-200 pl-6">
+                          <div className="text-center sm:border-l sm:border-gray-200 sm:pl-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-200">
                             <p className="text-xs text-black mb-1">Win Rate</p>
-                            <p className="font-bold text-black text-xl">
+                            <p className="font-bold text-black text-lg sm:text-xl">
                               {getRankedTftData() ? 
                                 `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
                             </p>
@@ -634,40 +634,40 @@ function ProfileContent() {
                           </div>
                           Turbo TFT
                         </h3>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-6">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <Award className="w-3 h-3 text-amber-600" />
                                 <p className="text-xs text-black">Tier</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getTurboTftData()?.ratedTier}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.ratedTier}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
                                 <p className="text-xs text-black">Rating</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getTurboTftData()?.ratedRating}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.ratedRating}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <TrendingUp className="w-3 h-3 text-green-600" />
                                 <p className="text-xs text-black">Wins</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getTurboTftData()?.wins}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
                                 <TrendingDown className="w-3 h-3 text-red-600" />
                                 <p className="text-xs text-black">Losses</p>
                               </div>
-                              <p className="font-bold text-black text-lg">{getTurboTftData()?.losses}</p>
+                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center border-l border-gray-200 pl-6">
+                          <div className="text-center sm:border-l sm:border-gray-200 sm:pl-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-200">
                             <p className="text-xs text-black mb-1">Win Rate</p>
-                            <p className="font-bold text-black text-xl">
+                            <p className="font-bold text-black text-lg sm:text-xl">
                               {getTurboTftData() ? 
                                 `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
                             </p>

@@ -73,34 +73,34 @@ export function TFTStatsContent({
             </div>
             Ranked TFT
           </h5>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Award className="w-3 h-3 text-amber-600" />
                 <p className="text-xs text-gray-600">Rank</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
                 <p className="text-xs text-gray-600">LP</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getRankedTftData()?.leaguePoints}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <TrendingUp className="w-3 h-3 text-green-600" />
                 <p className="text-xs text-gray-600">Wins</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getRankedTftData()?.wins}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <TrendingDown className="w-3 h-3 text-red-600" />
                 <p className="text-xs text-gray-600">Losses</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getRankedTftData()?.losses}</p>
             </div>
           </div>
           <div className="text-center mt-4 pt-4 border-t border-gray-200">
@@ -124,34 +124,34 @@ export function TFTStatsContent({
             </div>
             Turbo TFT
           </h5>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Award className="w-3 h-3 text-amber-600" />
                 <p className="text-xs text-gray-600">Tier</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getTurboTftData()?.ratedTier}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
                 <p className="text-xs text-gray-600">Rating</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getTurboTftData()?.ratedRating}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <TrendingUp className="w-3 h-3 text-green-600" />
                 <p className="text-xs text-gray-600">Wins</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getTurboTftData()?.wins}</p>
             </div>
             <div className="text-center">
               <div className="flex items-center justify-center gap-1 mb-1">
                 <TrendingDown className="w-3 h-3 text-red-600" />
                 <p className="text-xs text-gray-600">Losses</p>
               </div>
-              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
+              <p className="font-bold text-gray-800 text-sm sm:text-lg">{getTurboTftData()?.losses}</p>
             </div>
           </div>
           <div className="text-center mt-4 pt-4 border-t border-gray-200">

@@ -40,6 +40,129 @@ function getRankTier(rank: string): string {
 
 
 
+// Custom Sort Dropdown Component
+function SortDropdown({ 
+    sortBy, 
+    sortOrder, 
+    onSortByChange, 
+    onSortOrderChange 
+}: { 
+    sortBy: 'created_at' | 'elo'; 
+    sortOrder: 'asc' | 'desc'; 
+    onSortByChange: (sortBy: 'created_at' | 'elo') => void; 
+    onSortOrderChange: (sortOrder: 'asc' | 'desc') => void; 
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    // Close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            const target = event.target as Element;
+            if (!target.closest('.sort-dropdown')) {
+                setIsOpen(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
+
+    const getSortByLabel = (sortBy: string) => {
+        switch (sortBy) {
+            case 'created_at': return 'Date Created';
+            case 'elo': return 'ELO Rating';
+            default: return 'Date Created';
+        }
+    };
+
+    const getSortOrderIcon = (order: string) => {
+        return order === 'asc' ? '↑' : '↓';
+    };
+
+    return (
+        <div className="relative sort-dropdown">
+            <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm min-w-40 flex items-center justify-between shadow-lg"
+            >
+                <div className="flex items-center gap-2">
+                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                    </svg>
+                    <span>{getSortByLabel(sortBy)} {getSortOrderIcon(sortOrder)}</span>
+                </div>
+                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            {isOpen && (
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
+                    <div className="p-2">
+                        <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Sort By</div>
+                        <div className="space-y-1">
+                            <button
+                                onClick={() => {
+                                    onSortByChange('created_at');
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                    sortBy === 'created_at' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                }`}
+                            >
+                                Date Created
+                            </button>
+                            <button
+                                onClick={() => {
+                                    onSortByChange('elo');
+                                    setIsOpen(false);
+                                }}
+                                className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                    sortBy === 'elo' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                }`}
+                            >
+                                ELO Rating
+                            </button>
+                        </div>
+                        <div className="border-t border-gray-200 mt-2 pt-2">
+                            <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Order</div>
+                            <div className="space-y-1">
+                                <button
+                                    onClick={() => {
+                                        onSortOrderChange('desc');
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                        sortOrder === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                    }`}
+                                >
+                                    ↓ Descending
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        onSortOrderChange('asc');
+                                        setIsOpen(false);
+                                    }}
+                                    className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                        sortOrder === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                    }`}
+                                >
+                                    ↑ Ascending
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // Custom Rank Range Dropdown Component
 function RankRangeDropdown({ 
     minRank, 
@@ -524,6 +647,10 @@ export function FreeAgentsTab({
   const regionFilter = propRegionFilter ?? localRegionFilter;
   const setRegionFilter = propSetRegionFilter ?? setLocalRegionFilter;
 
+  // Sort state
+  const [sortBy, setSortBy] = useState<'created_at' | 'elo'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
   // Rank options for dropdown
   const rankOptions = [
     'iron+', 'bronze+', 'silver+', 'gold+', 'platinum+', 'emerald+', 'diamond+', 'master+', 'grandmaster+', 'challenger'
@@ -543,7 +670,7 @@ export function FreeAgentsTab({
 
   // Initialize search from URL on component mount
   useEffect(() => {
-    const urlQuery = searchParams.get('q');
+    const urlQuery = searchParams.get('free_agents_q');
     if (urlQuery) {
       setSearchQuery(urlQuery);
       setActiveSearchQuery(urlQuery);
@@ -553,7 +680,7 @@ export function FreeAgentsTab({
   // Update URL when search changes
   const updateSearchInURL = (query: string) => {
     if (query) {
-      setSearchParams({ q: query });
+      setSearchParams({ free_agents_q: query });
     } else {
       setSearchParams({});
     }
@@ -571,8 +698,8 @@ export function FreeAgentsTab({
       availabilityTime: availabilityTimeFilter || undefined,
       availabilityTimezone: availabilityTimezoneFilter || undefined,
       region: regionFilter || undefined,
-      sort_by: 'created_at',
-      sort_order: 'desc'
+      sort_by: sortBy,
+      sort_order: sortOrder
     };
     
     await fetchFreeAgents(filters);
@@ -586,6 +713,8 @@ export function FreeAgentsTab({
     setAvailabilityTimeFilter("");
     setAvailabilityTimezoneFilter("");
     setRegionFilter("");
+    setSortBy('created_at');
+    setSortOrder('desc');
   };
 
   // Single effect to handle all data fetching - initial load and filter changes
@@ -593,7 +722,7 @@ export function FreeAgentsTab({
     if (hasInitialized) {
       applyFilters();
     }
-  }, [hasInitialized, activeSearchQuery, minRankFilter, maxRankFilter, availabilityDaysFilter, availabilityTimeFilter, availabilityTimezoneFilter, regionFilter]);
+  }, [hasInitialized, activeSearchQuery, minRankFilter, maxRankFilter, availabilityDaysFilter, availabilityTimeFilter, availabilityTimezoneFilter, regionFilter, sortBy, sortOrder]);
 
   // Mark as initialized after first load - allow non-logged in users to browse
   useEffect(() => {
@@ -651,56 +780,69 @@ export function FreeAgentsTab({
             <div className="flex flex-col items-center mb-2">
       
             </div>
-            <div className="flex flex-row gap-2 items-center w-full">
-              <input
-                type="text"
-                placeholder="Search by name, interests, or message..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter') {
+            <div className="space-y-3">
+              {/* Sort and Filter Controls */}
+              <div className="flex flex-row gap-2 items-center w-full">
+                <SortDropdown
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortByChange={setSortBy}
+                  onSortOrderChange={setSortOrder}
+                />
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className={`p-2 rounded-lg shadow border border-gray-200 bg-white flex items-center justify-center transition-all duration-200 relative ${showFilters ? 'ring-2 ring-[#007460] border-[#007460]' : ''}`}
+                  style={{ color: showFilters ? '#007460' : '#222', minWidth: '40px', minHeight: '40px' }}
+                  aria-label="Filter Options"
+                >
+                  <HiOutlineAdjustmentsHorizontal size={22} />
+                  {/* Filter count indicator */}
+                  {(() => {
+                    const activeFilters = [
+                      minRankFilter !== "iron+",
+                      maxRankFilter !== "challenger", 
+                      availabilityDaysFilter.length > 0,
+                      availabilityTimeFilter !== "",
+                      availabilityTimezoneFilter !== "",
+                      regionFilter !== ""
+                    ].filter(Boolean).length;
+                    
+                    return activeFilters > 0 ? (
+                      <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                        {activeFilters}
+                      </div>
+                    ) : null;
+                  })()}
+                </button>
+              </div>
+              
+              {/* Search Input */}
+              <div className="flex flex-row gap-2 items-center w-full">
+                <input
+                  type="text"
+                  placeholder="Search by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      setActiveSearchQuery(searchQuery);
+                      updateSearchInURL(searchQuery);
+                    }
+                  }}
+                  className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                />
+                <button
+                  onClick={() => {
                     setActiveSearchQuery(searchQuery);
                     updateSearchInURL(searchQuery);
-                  }
-                }}
-                className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
-              />
-              <button
-                onClick={() => {
-                  setActiveSearchQuery(searchQuery);
-                  updateSearchInURL(searchQuery);
-                }}
-                className="p-2 rounded-lg bg-[#964B00] hover:bg-[#7c3a00] text-white flex items-center justify-center transition-colors font-semibold"
-                style={{ minWidth: '40px', minHeight: '40px' }}
-                aria-label="Search"
-              >
-                <FaSearch size={18} />
-              </button>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className={`p-2 rounded-lg shadow border border-gray-200 bg-white flex items-center justify-center transition-all duration-200 relative ${showFilters ? 'ring-2 ring-[#007460] border-[#007460]' : ''}`}
-                style={{ color: showFilters ? '#007460' : '#222', minWidth: '40px', minHeight: '40px' }}
-                aria-label="Filter Options"
-              >
-                <HiOutlineAdjustmentsHorizontal size={22} />
-                {/* Filter count indicator */}
-                {(() => {
-                  const activeFilters = [
-                    minRankFilter !== "iron+",
-                    maxRankFilter !== "challenger", 
-                    availabilityDaysFilter.length > 0,
-                    availabilityTimeFilter !== "",
-                    availabilityTimezoneFilter !== "",
-                    regionFilter !== ""
-                  ].filter(Boolean).length;
-                  
-                  return activeFilters > 0 ? (
-                    <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
-                      {activeFilters}
-                    </div>
-                  ) : null;
-                })()}
-              </button>
+                  }}
+                  className="p-2 rounded-lg bg-[#964B00] hover:bg-[#7c3a00] text-white flex items-center justify-center transition-colors font-semibold"
+                  style={{ minWidth: '40px', minHeight: '40px' }}
+                  aria-label="Search"
+                >
+                  <FaSearch size={18} />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1078,7 +1220,7 @@ export function FreeAgentsTab({
       {/* Mobile-Friendly Filter Modal */}
       {showFilters && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-xl animate-fadeIn relative max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-sm sm:max-w-md md:max-w-lg lg:max-w-2xl xl:max-w-3xl animate-fadeIn relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowFilters(false)}
               className="absolute top-3 right-3 sm:top-4 sm:right-4 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"

@@ -25,4 +25,6 @@ dist-ssr
 
 # Python files
 app.py
+rank_audit_processor.log
+rank_audit_processor.py
 .env

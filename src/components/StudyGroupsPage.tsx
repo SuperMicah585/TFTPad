@@ -8,6 +8,7 @@ import { FreeAgentsTab } from './FreeAgentsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSpinner } from './auth/LoadingSpinner';
+import { OAuthLoginModal } from './auth/OAuthLoginModal';
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -93,6 +94,20 @@ export function StudyGroupsPage() {
     'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Flexible'
   ];
 
+  // Login modal state
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [modalMode, setModalMode] = useState<'login' | 'signup'>('login');
+
+  // Sort state
+  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  // Track previous sort values to detect changes
+  const [prevSortBy, setPrevSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
+  const [prevSortOrder, setPrevSortOrder] = useState<'asc' | 'desc'>('desc');
+  
+  console.log('StudyGroupsPage sort state:', { sortBy, sortOrder, prevSortBy, prevSortOrder });
+
   // Function to fetch group info and open modal
   const handleOpenInfoModal = async (groupId: number) => {
     setShowInfoPopup(true)
@@ -114,7 +129,7 @@ export function StudyGroupsPage() {
 
   // Initialize search from URL on component mount
   useEffect(() => {
-    const urlQuery = searchParams.get('q');
+    const urlQuery = searchParams.get('groups_q');
     if (urlQuery) {
       setSearchQuery(urlQuery);
       setActiveSearchQuery(urlQuery);
@@ -151,11 +166,14 @@ export function StudyGroupsPage() {
       const isCacheValid = lastFetched && (Date.now() - lastFetched < CACHE_DURATION);
       const hasActiveFilters = activeSearchQuery || meetingDayFilter || debouncedMinEloFilter > 0 || debouncedMaxEloFilter < 5000 || timezoneFilter;
       
+      // Check if sorting has actually changed from previous values
+      const hasSortingChanged = sortBy !== prevSortBy || sortOrder !== prevSortOrder;
+      
   
       
-      // Always fetch if any filter is applied
+      // Always fetch if any filter is applied or if sorting has changed
       // This ensures we get fresh data whenever filters change, even if they're empty
-      if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !isRetry) {
+      if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !hasSortingChanged && !isRetry) {
         console.log('Using cached data, skipping fetch');
         return;
       }
@@ -167,7 +185,10 @@ export function StudyGroupsPage() {
         debouncedMinEloFilter,
         debouncedMaxEloFilter,
         timezoneFilter,
+        sortBy,
+        sortOrder,
         hasActiveFilters,
+        hasSortingChanged,
         isCacheValid
       });
       
@@ -185,8 +206,8 @@ export function StudyGroupsPage() {
           minEloFilter: debouncedMinEloFilter > 0 ? debouncedMinEloFilter : undefined,
           maxEloFilter: debouncedMaxEloFilter < 5000 ? debouncedMaxEloFilter : undefined,
           timezone: timezoneFilter || undefined,
-          sort_by: 'created_at',
-          sort_order: 'desc' as const
+          sort_by: sortBy,
+          sort_order: sortOrder
         };
 
     
@@ -196,6 +217,10 @@ export function StudyGroupsPage() {
         setStudyGroups(response.groups);
         setHasMore(response.pagination.has_next);
         setLastFetched(Date.now());
+        
+        // Update previous sort values after successful fetch
+        setPrevSortBy(sortBy);
+        setPrevSortOrder(sortOrder);
 
         setRetryCount(0); // Reset retry count on success
         
@@ -221,9 +246,18 @@ export function StudyGroupsPage() {
 
     // Only fetch if we have initialized (to prevent double fetching on mount)
     if (hasInitialized) {
+      console.log('StudyGroupsPage useEffect triggered with dependencies:', { 
+        activeSearchQuery, 
+        meetingDayFilter, 
+        debouncedMinEloFilter, 
+        debouncedMaxEloFilter, 
+        timezoneFilter, 
+        sortBy, 
+        sortOrder 
+      });
       fetchStudyGroups();
     }
-  }, [activeSearchQuery, meetingDayFilter, debouncedMinEloFilter, debouncedMaxEloFilter, timezoneFilter, hasInitialized]);
+  }, [activeSearchQuery, meetingDayFilter, debouncedMinEloFilter, debouncedMaxEloFilter, timezoneFilter, sortBy, sortOrder, hasInitialized]);
 
   // Load more groups when scrolling
   const loadMoreGroups = async () => {
@@ -240,8 +274,8 @@ export function StudyGroupsPage() {
         minEloFilter: debouncedMinEloFilter > 0 ? debouncedMinEloFilter : undefined,
         maxEloFilter: debouncedMaxEloFilter < 5000 ? debouncedMaxEloFilter : undefined,
         timezone: timezoneFilter || undefined,
-        sort_by: 'created_at',
-        sort_order: 'desc' as const
+        sort_by: sortBy,
+        sort_order: sortOrder
       };
 
       const response = await studyGroupService.getStudyGroups(params);
@@ -318,23 +352,34 @@ export function StudyGroupsPage() {
   // Update URL when search changes
   const updateSearchInURL = (query: string) => {
     if (query) {
-      setSearchParams({ q: query });
+      setSearchParams({ groups_q: query });
     } else {
       setSearchParams({});
     }
   };
 
   const handleTabChange = (tab: 'groups' | 'my-groups' | 'free-agents') => {
+    // If trying to access my-groups and not logged in, redirect to groups and show login modal
+    if (tab === 'my-groups' && !userId) {
+      setActiveTab('groups');
+      navigate('/study-groups/groups');
+      setModalMode('login');
+      setShowLoginModal(true);
+      return;
+    }
+    
     setActiveTab(tab);
     // Navigate to the sub-route
     navigate(`/study-groups/${tab}`);
   };
 
-  // Redirect non-logged-in users away from my-groups tab
+  // Redirect non-logged-in users away from my-groups tab if they navigate directly to the URL
   useEffect(() => {
     if (activeTab === 'my-groups' && !userId) {
       setActiveTab('groups');
       navigate('/study-groups/groups');
+      setModalMode('login');
+      setShowLoginModal(true);
     }
   }, [activeTab, userId, navigate]);
 
@@ -458,34 +503,38 @@ export function StudyGroupsPage() {
                 </div>
               </div>
               
-              {userId && (
-                <div className="flex-1 relative group">
-                  <button
-                    onClick={() => handleTabChange('my-groups')}
-                    className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
-                      activeTab === 'my-groups'
-                        ? 'bg-white text-gray-800 shadow-sm'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                    onMouseEnter={(e) => {
+              <div className="flex-1 relative group">
+                <button
+                  onClick={() => handleTabChange('my-groups')}
+                  className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
+                    activeTab === 'my-groups'
+                      ? 'bg-white text-gray-800 shadow-sm'
+                      : userId 
+                        ? 'text-gray-600 hover:text-gray-800'
+                        : 'text-gray-400 cursor-pointer'
+                  }`}
+                  onMouseEnter={(e) => {
+                    if (userId) {
                       e.currentTarget.style.border = '2px solid rgb(253, 186, 116)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.border = '2px solid transparent';
-                    }}
-                  >
-                    My Groups
-                  </button>
-                  <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-                    <HelpCircle size={16} className="text-gray-400" />
-                  </div>
-                  {/* My Groups Tab Tooltip - Hidden on mobile */}
-                  <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
-                    <div className="text-center">Manage groups you're part of</div>
-                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
-                  </div>
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.border = '2px solid transparent';
+                  }}
+                >
+                  My Groups
+                </button>
+                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+                  <HelpCircle size={16} className="text-gray-400" />
                 </div>
-              )}
+                {/* My Groups Tab Tooltip - Hidden on mobile */}
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
+                  <div className="text-center">
+                    {userId ? 'Manage groups you\'re part of' : 'Login to manage your groups'}
+                  </div>
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
+                </div>
+              </div>
             </div>
 
             {/* Tab Content */}
@@ -520,6 +569,10 @@ export function StudyGroupsPage() {
                     loadingMore={loadingMore}
                     onRetry={handleRetry}
                     handleOpenInfoModal={handleOpenInfoModal}
+                    sortBy={sortBy}
+                    setSortBy={setSortBy}
+                    sortOrder={sortOrder}
+                    setSortOrder={setSortOrder}
                   />
                   {showInfoPopup && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
@@ -597,6 +650,13 @@ export function StudyGroupsPage() {
           </div>
         </div>
       </div>
+
+      {/* Authentication Modal */}
+      <OAuthLoginModal
+        isOpen={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        mode={modalMode}
+      />
     </>
   )
 } 
