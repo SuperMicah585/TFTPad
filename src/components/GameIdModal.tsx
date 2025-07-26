@@ -10,7 +10,7 @@ export function GameIdModal({ isOpen, onClose }: GameIdModalProps) {
 
     return (
         <div 
-            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4"
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4"
             onClick={onClose}
         >
             <div 
@@ -18,13 +18,13 @@ export function GameIdModal({ isOpen, onClose }: GameIdModalProps) {
                 onClick={(e) => e.stopPropagation()}
             >
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <h2 className="text-2xl font-bold text-gray-800">How to Find Your Game ID</h2>
+                <div className="flex items-center justify-between p-4 sm:p-6 border-b border-gray-200">
+                    <h2 className="text-lg sm:text-2xl font-bold text-gray-800">How to Find Your Game ID</h2>
                     <button
                         onClick={onClose}
                         className="text-gray-400 hover:text-gray-600 transition-colors"
                     >
-                        <X size={24} />
+                        <X size={20} className="sm:w-6 sm:h-6" />
                     </button>
                 </div>
 

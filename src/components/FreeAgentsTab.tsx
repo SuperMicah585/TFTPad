@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, Globe, Calendar, ArrowRight, Zap, SquareX, Award, Star, TrendingUp, TrendingDown, FileText, Clock } from 'lucide-react'
+import { Users, Globe, Calendar, ArrowRight, Zap, SquareX, FileText, Clock } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { freeAgentService, type FreeAgent, type FreeAgentFilters } from '../services/freeAgentService'
 import { studyGroupService } from '../services/studyGroupService'
@@ -9,6 +9,8 @@ import { riotService } from '../services/riotService'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
 import { LoadingSpinner } from './auth/LoadingSpinner'
+import { playerStatsService } from '../services/playerStatsService'
+import { TFTStatsContent } from './TFTStatsContent'
 
 // Function to get TFT rank icon URL
 function getRankIconUrl(rank: string): string {
@@ -346,6 +348,10 @@ export function FreeAgentsTab({
   const [activeTab, setActiveTab] = useState<'about' | 'stats'>('stats');
   const [hasInitialized, setHasInitialized] = useState(false);
 
+  // Player stats state
+  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
+  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
+  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -447,8 +453,12 @@ export function FreeAgentsTab({
         return;
       }
       
-      // Fetch TFT league data using the same API as Profile tab
-      const leagueResponse = await fetch(`${API_BASE_URL}/api/tft-league/${agentRiotAccount.riot_id}?user_id=${agentId}`);
+      // Fetch TFT league data and player stats in parallel
+      const [leagueResponse] = await Promise.all([
+        fetch(`${API_BASE_URL}/api/tft-league/${agentRiotAccount.riot_id}?user_id=${agentId}`),
+        fetchPlayerStats(agentRiotAccount.riot_id)
+      ]);
+      
       const leagueData = await leagueResponse.json();
       
       if (leagueResponse.ok) {
@@ -474,7 +484,21 @@ export function FreeAgentsTab({
     return leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT_TURBO');
   };
 
-
+  const fetchPlayerStats = async (riotId: string) => {
+    try {
+      setPlayerStatsLoading(true);
+      setPlayerStatsError(null);
+      
+      const stats = await playerStatsService.getPlayerStats(riotId);
+      setPlayerStatsData(stats.events);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+      setPlayerStatsError('Failed to load player stats');
+      setPlayerStatsData([]);
+    } finally {
+      setPlayerStatsLoading(false);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
@@ -972,128 +996,17 @@ export function FreeAgentsTab({
             <div className="flex-1 p-6">
               {/* TFT Stats Section */}
               {activeTab === 'stats' && (
-                <div className="space-y-4">
-                {leagueDataLoading ? (
-                  <div className="flex justify-center items-center py-8">
-                    <div className="text-center">
-                      <LoadingSpinner size="md" className="mx-auto mb-2" />
-                      <p className="text-gray-500">Loading league data...</p>
-                    </div>
-                  </div>
-                ) : leagueDataError ? (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <p className="text-red-600">{leagueDataError}</p>
-                  </div>
-                ) : leagueData.length > 0 ? (
-                  <div className="space-y-4">
-                    {/* Ranked TFT */}
-                    {getRankedTftData() && (
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                          <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
-                            <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          Ranked TFT
-                        </h5>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Award className="w-3 h-3 text-amber-600" />
-                              <p className="text-xs text-gray-600">Rank</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                              <p className="text-xs text-gray-600">LP</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <TrendingUp className="w-3 h-3 text-green-600" />
-                              <p className="text-xs text-gray-600">Wins</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <TrendingDown className="w-3 h-3 text-red-600" />
-                              <p className="text-xs text-gray-600">Losses</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
-                          </div>
-                        </div>
-                        <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                          <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                          <p className="font-bold text-gray-800 text-xl">
-                            {getRankedTftData() ? 
-                              `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Turbo TFT */}
-                    {getTurboTftData() && (
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                        <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                          <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
-                            <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                            </svg>
-                          </div>
-                          Turbo TFT
-                        </h5>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Award className="w-3 h-3 text-amber-600" />
-                              <p className="text-xs text-gray-600">Tier</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                              <p className="text-xs text-gray-600">Rating</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <TrendingUp className="w-3 h-3 text-green-600" />
-                              <p className="text-xs text-gray-600">Wins</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
-                          </div>
-                          <div className="text-center">
-                            <div className="flex items-center justify-center gap-1 mb-1">
-                              <TrendingDown className="w-3 h-3 text-red-600" />
-                              <p className="text-xs text-gray-600">Losses</p>
-                            </div>
-                            <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
-                          </div>
-                        </div>
-                        <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                          <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                          <p className="font-bold text-gray-800 text-xl">
-                            {getTurboTftData() ? 
-                              `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                    <p className="text-gray-600">No league data available</p>
-                  </div>
-                )}
-              </div>
+                <TFTStatsContent
+                  leagueDataLoading={leagueDataLoading}
+                  leagueDataError={leagueDataError}
+                  playerLeagueData={leagueData}
+                  playerStatsLoading={playerStatsLoading}
+                  playerStatsError={playerStatsError}
+                  playerStatsData={playerStatsData}
+                  getRankedTftData={getRankedTftData}
+                  getTurboTftData={getTurboTftData}
+                  className="w-full"
+                />
               )}
               
               {/* About Me Section */}
@@ -1162,21 +1075,21 @@ export function FreeAgentsTab({
         </div>
       )}
 
-      {/* Fixed Filter Modal */}
+      {/* Mobile-Friendly Filter Modal */}
       {showFilters && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-full max-w-xl animate-fadeIn relative" style={{ minWidth: '480px', maxWidth: '600px' }}>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-xl animate-fadeIn relative max-h-[90vh] overflow-y-auto">
             <button
               onClick={() => setShowFilters(false)}
-              className="absolute top-4 right-4 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
               aria-label="Close"
               style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+              <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
-            <div className="mb-4 mt-6">
-              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+            <div className="mb-4 mt-2 sm:mt-6">
+              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#ff8889' }} />
                 Meeting Days
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -1191,15 +1104,15 @@ export function FreeAgentsTab({
                       }}
                       className="mr-1 accent-[#007460]"
                     />
-                    <span className="text-sm text-gray-700 whitespace-nowrap">{day}</span>
+                    <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">{day}</span>
                   </label>
                 ))}
               </div>
             </div>
             <hr className="my-4 border-gray-200" />
             <div className="mb-4">
-              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                <Zap className="w-5 h-5" style={{ color: '#facc15' }} />
+              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#facc15' }} />
                 Rank Range
               </h4>
               <RankRangeDropdown
@@ -1212,14 +1125,14 @@ export function FreeAgentsTab({
             </div>
             <hr className="my-4 border-gray-200" />
             <div className="mb-4">
-              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                <Globe className="w-5 h-5" style={{ color: '#00c9ac' }} />
+              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                <Globe className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#00c9ac' }} />
                 Timezone
               </h4>
               <select
                 value={availabilityTimezoneFilter}
                 onChange={e => setAvailabilityTimezoneFilter(e.target.value)}
-                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
               >
                 <option value="">Any Timezone</option>
                 <option value="UTC-8">Pacific Time (UTC-8)</option>
@@ -1234,16 +1147,16 @@ export function FreeAgentsTab({
                 <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
               </select>
             </div>
-            <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
                   <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
                   Time Preference
                 </h4>
                 <select
                   value={availabilityTimeFilter}
                   onChange={e => setAvailabilityTimeFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
                 >
                   <option value="">Any Time</option>
                   <option value="mornings">Mornings</option>
@@ -1253,14 +1166,14 @@ export function FreeAgentsTab({
                 </select>
               </div>
               <div>
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
                   <Globe className="w-4 h-4 text-blue-500" />
                   Region
                 </h4>
                 <select
                   value={regionFilter}
                   onChange={e => setRegionFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
                 >
                   <option value="">All Regions</option>
                   {availableRegions.map(region => (
@@ -1269,16 +1182,16 @@ export function FreeAgentsTab({
                 </select>
               </div>
             </div>
-            <div className="flex justify-between mt-6">
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-between mt-6">
               <button
                 onClick={clearFilters}
-                className="bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+                className="bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition px-4 py-2 sm:py-1.5 text-sm order-2 sm:order-1"
               >
                 Clear Filters
               </button>
               <button
                 onClick={() => setShowFilters(false)}
-                className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+                className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-2 sm:py-1.5 text-sm order-1 sm:order-2"
               >
                 Apply Filters
               </button>

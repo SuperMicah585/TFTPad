@@ -273,19 +273,19 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
     }
 
     return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
-            <div className="bg-white rounded-xl p-6 w-[95%] min-w-96 min-h-96 max-h-[80vh] overflow-y-auto shadow-lg">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
+            <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-4xl min-h-96 max-h-[90vh] overflow-y-auto shadow-lg">
                 <div className="flex justify-between items-center mb-4">
                     <div>
-                        <h2 className="text-gray-800 text-xl font-bold">
+                        <h2 className="text-gray-800 text-lg sm:text-xl font-bold">
                             Preset Comps - Player {playerNumber + 1}
                         </h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-500 bg-gray-100 rounded-full p-2 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+                        className="text-gray-500 bg-gray-100 rounded-full p-1.5 sm:p-2 hover:text-gray-700 hover:bg-gray-200 transition-colors"
                     >
-                        <X size={24} />
+                        <X size={20} className="sm:w-6 sm:h-6" />
                     </button>
                 </div>
 

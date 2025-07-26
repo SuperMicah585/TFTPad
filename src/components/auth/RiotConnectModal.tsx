@@ -59,24 +59,24 @@ export function RiotConnectModal({ isOpen, onClose, userId, onSuccess }: RiotCon
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999] p-4 animate-fadeIn">
-      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full px-8 py-8 transition-all duration-300">
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-[9999] p-2 sm:p-4 animate-fadeIn">
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 max-w-md w-full px-4 sm:px-8 py-6 sm:py-8 transition-all duration-300">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
+          className="absolute top-2 right-2 sm:top-4 sm:right-4 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none"
           aria-label="Close"
         >
-          <X size={28} />
+          <X size={24} className="sm:w-7 sm:h-7" />
         </button>
         {/* Riot icon and title */}
-        <div className="flex flex-col items-center mb-6">
-          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-2">
+        <div className="flex flex-col items-center mb-4 sm:mb-6">
+          <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className="mb-2 sm:w-12 sm:h-12">
             <rect width="48" height="48" rx="12" fill="#E84057"/>
             <path d="M14 34L34 14M14 14h20v20H14V14z" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
           </svg>
-          <h2 className="text-2xl font-extrabold text-gray-800 mb-1">Connect Riot Account</h2>
-          <p className="text-gray-500 text-sm">Link your Riot Games account to unlock personalized features.</p>
+          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-800 mb-1 text-center">Connect Riot Account</h2>
+          <p className="text-gray-500 text-xs sm:text-sm text-center">Link your Riot Games account to unlock personalized features.</p>
         </div>
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>

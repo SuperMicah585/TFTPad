@@ -4,6 +4,12 @@ import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
 import { studyGroupInviteService, type StudyGroupInvite } from '../services/studyGroupInviteService'
+import { teamStatsService } from '../services/teamStatsService'
+import { livePlayerService } from '../services/livePlayerService'
+import { playerStatsService } from '../services/playerStatsService'
+import { TeamStatsContent } from './TeamStatsContent'
+import { TFTStatsContent } from './TFTStatsContent'
+import { PlayerEloChart } from './PlayerEloChart'
 import { OAuthLoginModal } from './auth/OAuthLoginModal'
 import { RiotConnectModal } from './auth/RiotConnectModal'
 import { useImageUpload } from '../hooks/useImageUpload'
@@ -213,7 +219,7 @@ export function MyGroupsTab() {
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [newMemberName, setNewMemberName] = useState("");
   const [captain, setCaptain] = useState("");
-  const [activeSection, setActiveSection] = useState<'members' | 'info' | 'manage'>('members');
+  const [activeSection, setActiveSection] = useState<'members' | 'info' | 'manage' | 'team-stats'>('members');
 
   const [groupSettings, setGroupSettings] = useState<GroupSettings>({
     name: "",
@@ -238,6 +244,27 @@ export function MyGroupsTab() {
   const [playerProfile, setPlayerProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Player stats state
+  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
+  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
+  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
+
+  // Team stats state
+  const [teamStatsData, setTeamStatsData] = useState<any[]>([]);
+  const [teamStatsLoading, setTeamStatsLoading] = useState(false);
+  const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
+  const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
+  const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
+  const [liveDataLoading, setLiveDataLoading] = useState(false);
+  
+  // Auto-fetch team stats when group changes and team-stats tab is active
+  useEffect(() => {
+    if (selectedGroup && activeSection === 'team-stats' && teamStatsData.length === 0) {
+      console.log('🔄 Auto-fetching team stats for group:', selectedGroup.id);
+      fetchTeamStats(selectedGroup.id, selectedGroup.created_date);
+    }
+  }, [selectedGroup, activeSection, teamStatsData.length]);
 
   // Authentication and Riot account state
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -645,6 +672,90 @@ export function MyGroupsTab() {
     }
   };
 
+  const fetchPlayerStats = async (riotId: string) => {
+    try {
+      setPlayerStatsLoading(true);
+      setPlayerStatsError(null);
+      
+      console.log('🔍 Fetching player stats for riot_id:', riotId);
+      const stats = await playerStatsService.getPlayerStats(riotId);
+      console.log('📊 Player stats received:', stats);
+      console.log('📊 Number of events:', stats.events.length);
+      
+      setPlayerStatsData(stats.events);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+      setPlayerStatsError('Failed to load player stats');
+      setPlayerStatsData([]);
+    } finally {
+      setPlayerStatsLoading(false);
+    }
+  };
+
+  const fetchTeamStats = async (groupId: number, startDate: string) => {
+    try {
+      setTeamStatsLoading(true);
+      setTeamStatsError(null);
+      
+      console.log('🚀 Starting to fetch team stats for group:', groupId, 'from date:', startDate);
+      
+      // Get member stats for the group
+      const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
+      
+      console.log('📊 Received member stats:', memberStats);
+      console.log('📊 Member stats type:', typeof memberStats);
+      console.log('📊 Member stats keys:', Object.keys(memberStats || {}));
+      
+      if (!memberStats || Object.keys(memberStats).length === 0) {
+        console.log('⚠️ No member stats received');
+        setTeamStatsData([]);
+        setMemberNames({});
+        return;
+      }
+      
+      // Flatten the data for the chart
+      const allEvents = Object.values(memberStats).flat();
+      console.log('📈 Flattened events for chart:', allEvents);
+      console.log('📈 Number of events:', allEvents.length);
+      
+      setTeamStatsData(allEvents);
+      
+      // Create member names mapping from the API response
+      // The API now returns summoner_name as keys
+      const names: { [riotId: string]: string } = {};
+      
+      // Map summoner names to themselves (since the API now returns summoner names as keys)
+      Object.keys(memberStats).forEach(summonerName => {
+        names[summonerName] = summonerName;
+      });
+      
+      console.log('👥 Member names mapping:', names);
+      setMemberNames(names);
+      
+      // Fetch live data for all members
+      try {
+        setLiveDataLoading(true);
+        console.log('🔄 Fetching live data for group:', groupId);
+        const liveStats = await livePlayerService.getLivePlayerStats(groupId);
+        console.log('🎯 Live stats received:', liveStats);
+        setLiveData(liveStats);
+      } catch (liveError) {
+        console.error('❌ Error fetching live data:', liveError);
+        setLiveData({});
+      } finally {
+        setLiveDataLoading(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching team stats:', error);
+              setTeamStatsError('Not enough historic data to graph');
+      setTeamStatsData([]);
+      setMemberNames({});
+    } finally {
+      setTeamStatsLoading(false);
+    }
+  };
+
   const handlePlayerClick = async (member: any) => {
     if (!member.user_id) {
       console.error('No user_id found for member:', member);
@@ -656,10 +767,23 @@ export function MyGroupsTab() {
     setShowPlayerModal(true);
     setActivePlayerTab('stats');
     
-    // Fetch league data and profile data for the player
+    // Get the riot account for this user to fetch player stats
+    let riotId = null;
+    try {
+      console.log('👤 Fetching riot account for user_id:', member.user_id);
+      const riotAccount = await userService.getUserRiotAccount(member.user_id);
+      riotId = riotAccount?.riot_id;
+      console.log('🎯 Riot account found:', riotAccount);
+      console.log('🎯 Riot ID:', riotId);
+    } catch (error) {
+      console.error('Error fetching riot account for player stats:', error);
+    }
+    
+    // Fetch league data, profile data, and player stats for the player
     await Promise.all([
       fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id)
+      fetchPlayerProfile(member.user_id),
+      ...(riotId ? [fetchPlayerStats(riotId)] : [])
     ]);
   };
 
@@ -778,6 +902,11 @@ export function MyGroupsTab() {
                     timezone: group.timezone || ""
                   });
                   setShowCombinedModal(true);
+                  
+                  // Clear team stats data when a new group is selected
+                  setTeamStatsData([]);
+                  setTeamStatsError(null);
+                  setMemberNames({});
                 }}
               />
             ))}
@@ -1462,15 +1591,15 @@ export function MyGroupsTab() {
 
       {/* Combined Modal with Tabs */}
       {showCombinedModal && selectedGroup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
           <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
             {/* Close button - absolute positioned */}
             <button
               onClick={() => setShowCombinedModal(false)}
-              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
               style={{ lineHeight: 0 }}
             >
-              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+              <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
             
             {/* Profile Header */}
@@ -1519,11 +1648,11 @@ export function MyGroupsTab() {
             </div>
             
             {/* Navigation Tabs */}
-            <div className="px-6 border-b border-gray-200">
-              <div className="flex space-x-6">
+            <div className="px-4 sm:px-6 border-b border-gray-200">
+              <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
                 <button 
                   onClick={() => setActiveSection('members')}
-                  className={`transition-colors pb-2 border-b-2 ${
+                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                     activeSection === 'members' 
                       ? 'text-[#564ec7] border-[#564ec7]' 
                       : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
@@ -1533,7 +1662,7 @@ export function MyGroupsTab() {
                 </button>
                 <button 
                   onClick={() => setActiveSection('info')}
-                  className={`transition-colors pb-2 border-b-2 ${
+                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                     activeSection === 'info' 
                       ? 'text-[#564ec7] border-[#564ec7]' 
                       : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
@@ -1544,7 +1673,7 @@ export function MyGroupsTab() {
                 {(selectedGroup.role === 'captain' || selectedGroup.role === 'member') && (
                   <button 
                     onClick={() => setActiveSection('manage')}
-                    className={`transition-colors pb-2 border-b-2 ${
+                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                       activeSection === 'manage' 
                         ? 'text-[#564ec7] border-[#564ec7]' 
                         : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
@@ -1553,11 +1682,26 @@ export function MyGroupsTab() {
                     Manage
                   </button>
                 )}
+                <button 
+                  onClick={() => {
+                    setActiveSection('team-stats');
+                    if (selectedGroup) {
+                      fetchTeamStats(selectedGroup.id, selectedGroup.created_date);
+                    }
+                  }}
+                  className={`transition-colors pb-2 border-b-2 ${
+                    activeSection === 'team-stats' 
+                      ? 'text-[#564ec7] border-[#564ec7]' 
+                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
+                  }`}
+                >
+                  Team Stats
+                </button>
               </div>
             </div>
             
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 sm:p-6">
               {/* Members Tab */}
               {activeSection === 'members' && (
                 <div className="space-y-4">
@@ -2027,6 +2171,30 @@ export function MyGroupsTab() {
                   </div>
                 </div>
               )}
+
+              {/* Team Stats Tab */}
+              {activeSection === 'team-stats' && (
+                <div className="space-y-4 w-full">
+                  {teamStatsLoading ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="text-center">
+                        <LoadingSpinner size="md" className="mx-auto mb-2" />
+                        <p className="text-gray-500">Loading team stats...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <TeamStatsContent
+                      teamStatsData={teamStatsData}
+                      teamStatsLoading={teamStatsLoading}
+                      teamStatsError={teamStatsError}
+                      memberNames={memberNames}
+                      liveData={liveData}
+                      liveDataLoading={liveDataLoading}
+                      className="w-full"
+                    />
+                  )}
+                </div>
+              )}
             </div>
 
 
@@ -2125,131 +2293,20 @@ export function MyGroupsTab() {
               </div>
               
               {/* Content */}
-              <div className="flex-1 p-6">
+              <div className="flex-1 p-4 sm:p-6">
                 {/* TFT Stats Section */}
                 {activePlayerTab === 'stats' && (
-                  <div className="space-y-4">
-                    {leagueDataLoading ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="text-center">
-                          <LoadingSpinner size="md" className="mx-auto mb-2" />
-                          <p className="text-gray-500">Loading league data...</p>
-                        </div>
-                      </div>
-                    ) : leagueDataError ? (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-600">{leagueDataError}</p>
-                      </div>
-                    ) : playerLeagueData.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Ranked TFT */}
-                        {getRankedTftData() && (
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                              <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
-                                <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                              Ranked TFT
-                            </h5>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Award className="w-3 h-3 text-amber-600" />
-                                  <p className="text-xs text-gray-600">Rank</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                                  <p className="text-xs text-gray-600">LP</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingUp className="w-3 h-3 text-green-600" />
-                                  <p className="text-xs text-gray-600">Wins</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingDown className="w-3 h-3 text-red-600" />
-                                  <p className="text-xs text-gray-600">Losses</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
-                              </div>
-                            </div>
-                            <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                              <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                              <p className="font-bold text-gray-800 text-xl">
-                                {getRankedTftData() ? 
-                                  `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Turbo TFT */}
-                        {getTurboTftData() && (
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                              <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
-                                <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                              Turbo TFT
-                            </h5>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Award className="w-3 h-3 text-amber-600" />
-                                  <p className="text-xs text-gray-600">Tier</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                                  <p className="text-xs text-gray-600">Rating</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingUp className="w-3 h-3 text-green-600" />
-                                  <p className="text-xs text-gray-600">Wins</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingDown className="w-3 h-3 text-red-600" />
-                                  <p className="text-xs text-gray-600">Losses</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
-                              </div>
-                            </div>
-                            <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                              <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                              <p className="font-bold text-gray-800 text-xl">
-                                {getTurboTftData() ? 
-                                  `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                        <p className="text-gray-600">No league data available</p>
-                      </div>
-                    )}
-                  </div>
+                  <TFTStatsContent
+                    leagueDataLoading={leagueDataLoading}
+                    leagueDataError={leagueDataError}
+                    playerLeagueData={playerLeagueData}
+                    playerStatsLoading={playerStatsLoading}
+                    playerStatsError={playerStatsError}
+                    playerStatsData={playerStatsData}
+                    getRankedTftData={getRankedTftData}
+                    getTurboTftData={getTurboTftData}
+                    className="w-full"
+                  />
                 )}
                 
                 {/* About Me Section */}
@@ -2323,6 +2380,8 @@ export function MyGroupsTab() {
                     )}
                   </div>
                 )}
+                
+
               </div>
             </div>
           </div>
@@ -2572,6 +2631,19 @@ function InvitationCard({
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
 
+  // Player stats state
+  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
+  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
+  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
+
+  // Team stats state
+  const [teamStatsData, setTeamStatsData] = useState<any[]>([]);
+  const [teamStatsLoading, setTeamStatsLoading] = useState(false);
+  const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
+  const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
+  const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
+  const [liveDataLoading, setLiveDataLoading] = useState(false);
+
   const fetchGroupDetails = async () => {
     if (!invitation.study_group_id) return;
     
@@ -2592,7 +2664,22 @@ function InvitationCard({
     
     try {
       setMembersLoading(true);
-      const members = await studyGroupService.getStudyGroupUsers(invitation.study_group_id);
+      const groupUsers = await studyGroupService.getStudyGroupUsers(invitation.study_group_id);
+      
+      console.log('Raw group users data:', groupUsers);
+      
+      // Transform members to ensure all fields are properly mapped
+      const members = groupUsers.map(member => ({
+        summoner_name: member.summoner_name || 'Unknown User',
+        elo: member.elo || 0,
+        rank: member.rank || 'UNRANKED',
+        owner: member.owner,
+        icon_id: member.icon_id || undefined,
+        user_id: member.user_id || undefined
+      }));
+      
+      console.log('Transformed members data:', members);
+      
       setGroupMembers(members);
     } catch (error) {
       console.error('Error fetching group members:', error);
@@ -2607,6 +2694,13 @@ function InvitationCard({
     fetchGroupDetails();
     fetchGroupMembers();
   }, [invitation.study_group_id]);
+
+  // Fetch team stats when group details are loaded
+  useEffect(() => {
+    if (groupDetails && invitation.study_group_id) {
+      fetchTeamStats(invitation.study_group_id, groupDetails.created_at);
+    }
+  }, [groupDetails, invitation.study_group_id]);
 
   const handleShowDetails = () => {
     setShowDetails(true);
@@ -2655,6 +2749,71 @@ function InvitationCard({
     }
   };
 
+  const fetchPlayerStats = async (riotId: string) => {
+    try {
+      setPlayerStatsLoading(true);
+      setPlayerStatsError(null);
+      
+      const stats = await playerStatsService.getPlayerStats(riotId);
+      setPlayerStatsData(stats.events);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+      setPlayerStatsError('Failed to load player stats');
+      setPlayerStatsData([]);
+    } finally {
+      setPlayerStatsLoading(false);
+    }
+  };
+
+  const fetchTeamStats = async (groupId: number, startDate: string) => {
+    try {
+      setTeamStatsLoading(true);
+      setTeamStatsError(null);
+      
+      // Get member stats for the group
+      const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
+      
+      if (!memberStats || Object.keys(memberStats).length === 0) {
+        setTeamStatsData([]);
+        setMemberNames({});
+        return;
+      }
+      
+      // Flatten the data for the chart
+      const allEvents = Object.values(memberStats).flat();
+      setTeamStatsData(allEvents);
+      
+      // Create member names mapping from the API response
+      const names: { [riotId: string]: string } = {};
+      Object.keys(memberStats).forEach(summonerName => {
+        names[summonerName] = summonerName;
+      });
+      
+      setMemberNames(names);
+      
+      // Fetch live data for all members
+      try {
+        setLiveDataLoading(true);
+        console.log('🔄 Fetching live data for group:', groupId);
+        const liveStats = await livePlayerService.getLivePlayerStats(groupId);
+        console.log('🎯 Live stats received:', liveStats);
+        setLiveData(liveStats);
+      } catch (liveError) {
+        console.error('❌ Error fetching live data:', liveError);
+        setLiveData({});
+      } finally {
+        setLiveDataLoading(false);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching team stats:', error);
+      setTeamStatsError('Failed to load team stats');
+      setTeamStatsData([]);
+    } finally {
+      setTeamStatsLoading(false);
+    }
+  };
+
   const handlePlayerClick = async (member: any) => {
     if (!member.user_id) {
       console.error('No user_id found for member:', member);
@@ -2665,10 +2824,20 @@ function InvitationCard({
     setShowPlayerModal(true);
     setActivePlayerTab('stats');
     
-    // Fetch league data and profile data for the player
+    // Get the riot account for this user to fetch player stats
+    let riotId = null;
+    try {
+      const riotAccount = await userService.getUserRiotAccount(member.user_id);
+      riotId = riotAccount?.riot_id;
+    } catch (error) {
+      console.error('Error fetching riot account for player stats:', error);
+    }
+    
+    // Fetch league data, profile data, and player stats for the player
     await Promise.all([
       fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id)
+      fetchPlayerProfile(member.user_id),
+      ...(riotId ? [fetchPlayerStats(riotId)] : [])
     ]);
   };
 
@@ -2766,7 +2935,7 @@ function InvitationCard({
       {/* Group Details Modal */}
       {showDetails && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
+          <div className="bg-white rounded-lg max-w-2xl w-full h-[800px] overflow-y-auto flex flex-col relative">
             {/* Close button */}
             <button
               onClick={() => setShowDetails(false)}
@@ -2821,7 +2990,7 @@ function InvitationCard({
             </div>
             
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 sm:p-6">
               {detailsLoading ? (
                 <div className="flex justify-center items-center py-8">
                   <div className="text-left">
@@ -2951,6 +3120,23 @@ function InvitationCard({
                       </div>
                     </div>
                   )}
+
+                  {/* Team Stats */}
+                  <div className="w-full">
+                    <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-blue-600" />
+                      Team Performance
+                    </h5>
+                    <TeamStatsContent
+                      teamStatsData={teamStatsData}
+                      teamStatsLoading={teamStatsLoading}
+                      teamStatsError={teamStatsError}
+                      memberNames={memberNames}
+                      liveData={liveData}
+                      liveDataLoading={liveDataLoading}
+                      className="w-full"
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -2961,7 +3147,7 @@ function InvitationCard({
       {/* Player Modal */}
       {showPlayerModal && selectedPlayer && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
+          <div className="bg-white rounded-lg max-w-2xl w-full h-[800px] overflow-y-auto flex flex-col relative">
             {/* Close button - absolute positioned */}
             <button
                               onClick={() => {
@@ -3022,11 +3208,11 @@ function InvitationCard({
             </div>
             
             {/* Navigation Tabs */}
-            <div className="px-6 border-b border-gray-200">
-              <div className="flex space-x-6">
+            <div className="px-4 sm:px-6 border-b border-gray-200">
+              <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
                 <button 
                   onClick={() => setActivePlayerTab('about')}
-                  className={`transition-colors pb-2 border-b-2 ${
+                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                     activePlayerTab === 'about' 
                       ? 'text-[#00c9ac] border-[#00c9ac]' 
                       : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
@@ -3036,7 +3222,7 @@ function InvitationCard({
                 </button>
                 <button 
                   onClick={() => setActivePlayerTab('stats')}
-                  className={`transition-colors pb-2 border-b-2 ${
+                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                     activePlayerTab === 'stats' 
                       ? 'text-[#00c9ac] border-[#00c9ac]' 
                       : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
@@ -3048,7 +3234,7 @@ function InvitationCard({
             </div>
             
             {/* Content */}
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 sm:p-6">
               {/* TFT Stats Section */}
               {activePlayerTab === 'stats' && (
                 <div className="space-y-4">
@@ -3075,6 +3261,7 @@ function InvitationCard({
                               </svg>
                             </div>
                             Ranked TFT
+                            
                           </h5>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="text-center">
@@ -3172,6 +3359,27 @@ function InvitationCard({
                       <p className="text-gray-600">No league data available</p>
                     </div>
                   )}
+
+                  {/* Player ELO Chart */}
+                  {playerStatsLoading ? (
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex justify-center items-center py-8">
+                        <LoadingSpinner size="md" className="mx-auto mb-2" />
+                        <p className="text-gray-500">Loading ELO progression...</p>
+                      </div>
+                    </div>
+                  ) : playerStatsError ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                      <p className="text-red-600">{playerStatsError}</p>
+                    </div>
+                  ) : playerStatsData.length > 0 ? (
+                    <PlayerEloChart 
+                      data={playerStatsData}
+                      liveData={getRankedTftData()}
+                      height={500}
+                      className="w-full"
+                    />
+                  ) : null}
                 </div>
               )}
               
@@ -3280,14 +3488,17 @@ function ProfileIcon({
 
   const fetchProfileIcon = async () => {
     if (!iconId) {
+      console.log('ProfileIcon: No iconId provided for', summonerName)
       setIconError(true)
       return
     }
 
+    console.log('ProfileIcon: Fetching icon for', summonerName, 'with iconId:', iconId)
     setLoading(true)
     try {
       const version = await riotService.getCurrentVersion()
       const iconUrl = riotService.getProfileIconUrl(iconId, version)
+      console.log('ProfileIcon: Generated URL for', summonerName, ':', iconUrl)
       setProfileIconUrl(iconUrl)
       setIconError(false)
     } catch (error) {

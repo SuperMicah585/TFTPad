@@ -1,8 +1,13 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
-import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, Award, Star, TrendingUp, TrendingDown, FileText } from 'lucide-react'
+import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, FileText } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
+import { teamStatsService } from '../services/teamStatsService'
+import { livePlayerService } from '../services/livePlayerService'
+import { TeamStatsContent } from './TeamStatsContent'
+import { TFTStatsContent } from './TFTStatsContent'
+import { playerStatsService } from '../services/playerStatsService'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
 import { LoadingSpinner } from './auth/LoadingSpinner'
@@ -82,7 +87,7 @@ export function GroupsTab({
   const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
   const [groupInfo, setGroupInfo] = useState({ description: '', instructions: '' });
   const [infoLoading, setInfoLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'members' | 'info'>('members');
+  const [activeTab, setActiveTab] = useState<'members' | 'info' | 'team-stats'>('members');
   const [showFilters, setShowFilters] = useState(false);
   
   // Player modal state
@@ -96,6 +101,28 @@ export function GroupsTab({
   const [playerProfile, setPlayerProfile] = useState<any>(null);
   const [profileLoading, setProfileLoading] = useState(false);
   const [profileError, setProfileError] = useState<string | null>(null);
+
+  // Player stats state
+  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
+  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
+  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
+  
+  // Team stats state
+  const [teamStatsData, setTeamStatsData] = useState<any[]>([]);
+  const [teamStatsLoading, setTeamStatsLoading] = useState(false);
+  const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
+  const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
+  const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
+  const [liveDataLoading, setLiveDataLoading] = useState(false);
+  
+  // Auto-fetch team stats when group changes and team-stats tab is active
+  useEffect(() => {
+    if (selectedGroup && activeTab === 'team-stats' && teamStatsData.length === 0) {
+      console.log('🔄 Auto-fetching team stats for group:', selectedGroup.id);
+      fetchTeamStats(selectedGroup.id, selectedGroup.created_at);
+    }
+  }, [selectedGroup, activeTab, teamStatsData.length]);
+  
   // Intersection Observer for infinite scroll
   const observerRef = useRef<IntersectionObserver | null>(null);
   const lastGroupRef = useCallback((node: HTMLDivElement) => {
@@ -118,6 +145,12 @@ export function GroupsTab({
     setShowCombinedModal(true);
     setInfoLoading(true);
     setGroupInfo({ description: '', instructions: '' });
+    
+    // Clear team stats data when a new group is selected
+    setTeamStatsData([]);
+    setTeamStatsError(null);
+    setMemberNames({});
+    setLiveData({});
     
     try {
       // Fetch both members and group info
@@ -188,6 +221,70 @@ export function GroupsTab({
     }
   };
 
+  const fetchTeamStats = async (groupId: number, startDate: string) => {
+    try {
+      setTeamStatsLoading(true);
+      setTeamStatsError(null);
+      
+      console.log('🚀 Starting to fetch team stats for group:', groupId, 'from date:', startDate);
+      
+      // Get member stats for the group
+      const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
+      
+      console.log('📊 Received member stats:', memberStats);
+      console.log('📊 Member stats type:', typeof memberStats);
+      console.log('📊 Member stats keys:', Object.keys(memberStats || {}));
+      
+      if (!memberStats || Object.keys(memberStats).length === 0) {
+        console.log('⚠️ No member stats received');
+        setTeamStatsData([]);
+        setMemberNames({});
+        return;
+      }
+      
+      // Flatten the data for the chart
+      const allEvents = Object.values(memberStats).flat();
+      console.log('📈 Flattened events for chart:', allEvents);
+      console.log('📈 Number of events:', allEvents.length);
+      
+      setTeamStatsData(allEvents);
+      
+      // Create member names mapping from the API response
+      // The API now returns summoner_name as keys
+      const names: { [riotId: string]: string } = {};
+      
+      // Map summoner names to themselves (since the API now returns summoner names as keys)
+      Object.keys(memberStats).forEach(summonerName => {
+        names[summonerName] = summonerName;
+      });
+      
+      console.log('👥 Member names mapping:', names);
+      setMemberNames(names);
+      
+      // Fetch live data for all members
+      try {
+        setLiveDataLoading(true);
+        console.log('🔄 Fetching live data for group:', groupId);
+        const liveStats = await livePlayerService.getLivePlayerStats(groupId);
+        console.log('🎯 Live stats received:', liveStats);
+        setLiveData(liveStats);
+      } catch (liveError) {
+        console.error('❌ Error fetching live data:', liveError);
+        setLiveData({});
+      } finally {
+        setLiveDataLoading(false);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching team stats:', error);
+              setTeamStatsError('Not enough historic data to graph');
+      setTeamStatsData([]);
+      setMemberNames({});
+    } finally {
+      setTeamStatsLoading(false);
+    }
+  };
+
   const handlePlayerClick = async (member: any) => {
     if (!member.user_id) {
       console.error('No user_id found for member:', member);
@@ -199,10 +296,20 @@ export function GroupsTab({
     setShowPlayerModal(true);
     setActivePlayerTab('stats');
     
-    // Fetch league data and profile data for the player
+    // Get the riot account for this user to fetch player stats
+    let riotId = null;
+    try {
+      const riotAccount = await userService.getUserRiotAccount(member.user_id);
+      riotId = riotAccount?.riot_id;
+    } catch (error) {
+      console.error('Error fetching riot account for player stats:', error);
+    }
+    
+    // Fetch league data, profile data, and player stats for the player
     await Promise.all([
       fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id)
+      fetchPlayerProfile(member.user_id),
+      ...(riotId ? [fetchPlayerStats(riotId)] : [])
     ]);
   };
 
@@ -212,6 +319,22 @@ export function GroupsTab({
 
   const getTurboTftData = () => {
     return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
+  };
+
+  const fetchPlayerStats = async (riotId: string) => {
+    try {
+      setPlayerStatsLoading(true);
+      setPlayerStatsError(null);
+      
+      const stats = await playerStatsService.getPlayerStats(riotId);
+      setPlayerStatsData(stats.events);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+      setPlayerStatsError('Failed to load player stats');
+      setPlayerStatsData([]);
+    } finally {
+      setPlayerStatsLoading(false);
+    }
   };
 
   // Clear all filters
@@ -385,15 +508,15 @@ export function GroupsTab({
         
         {/* Combined Modal */}
         {showCombinedModal && selectedGroup && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
             <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
               {/* Close button - absolute positioned */}
               <button
                 onClick={() => setShowCombinedModal(false)}
-                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
                 style={{ lineHeight: 0 }}
               >
-                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+                <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
               </button>
               
               {/* Profile Header */}
@@ -442,11 +565,11 @@ export function GroupsTab({
               </div>
               
               {/* Navigation Tabs */}
-              <div className="px-6 border-b border-gray-200">
-                <div className="flex space-x-6">
+              <div className="px-4 sm:px-6 border-b border-gray-200">
+                <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
                   <button 
                     onClick={() => setActiveTab('members')}
-                    className={`transition-colors pb-2 border-b-2 ${
+                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                       activeTab === 'members' 
                         ? 'text-[#564ec7] border-[#564ec7]' 
                         : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
@@ -456,7 +579,7 @@ export function GroupsTab({
                   </button>
                   <button 
                     onClick={() => setActiveTab('info')}
-                    className={`transition-colors pb-2 border-b-2 ${
+                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                       activeTab === 'info' 
                         ? 'text-[#564ec7] border-[#564ec7]' 
                         : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
@@ -464,11 +587,26 @@ export function GroupsTab({
                   >
                     Group Info
                   </button>
+                  <button 
+                    onClick={() => {
+                      setActiveTab('team-stats');
+                      if (selectedGroup) {
+                        fetchTeamStats(selectedGroup.id, selectedGroup.created_at);
+                      }
+                    }}
+                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
+                      activeTab === 'team-stats' 
+                        ? 'text-[#564ec7] border-[#564ec7]' 
+                        : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
+                    }`}
+                  >
+                    Team Stats
+                  </button>
                 </div>
               </div>
               
               {/* Content */}
-              <div className="flex-1 p-6">
+              <div className="flex-1 p-4 sm:p-6">
                 {/* Members Tab */}
                 {activeTab === 'members' && (
                   <div className="space-y-4">
@@ -580,6 +718,30 @@ export function GroupsTab({
                     )}
                   </div>
                 )}
+                
+                {/* Team Stats Tab */}
+                {activeTab === 'team-stats' && (
+                  <div className="space-y-4 w-full">
+                    {teamStatsLoading ? (
+                      <div className="flex justify-center items-center py-8">
+                        <div className="text-center">
+                          <LoadingSpinner size="md" className="mx-auto mb-2" />
+                          <p className="text-gray-500">Loading team stats...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <TeamStatsContent
+                        teamStatsData={teamStatsData}
+                        teamStatsLoading={teamStatsLoading}
+                        teamStatsError={teamStatsError}
+                        memberNames={memberNames}
+                        liveData={liveData}
+                        liveDataLoading={liveDataLoading}
+                        className="w-full"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -587,7 +749,7 @@ export function GroupsTab({
 
         {/* Player Modal */}
         {showPlayerModal && selectedPlayer && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-2 sm:p-4">
             <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
               {/* Close button - absolute positioned */}
               <button
@@ -598,10 +760,10 @@ export function GroupsTab({
                   setPlayerLeagueData([]);
                   setPlayerProfile(null);
                 }}
-                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
                 style={{ lineHeight: 0 }}
               >
-                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+                <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
               </button>
               
               {/* Profile Header */}
@@ -650,11 +812,11 @@ export function GroupsTab({
               </div>
               
               {/* Navigation Tabs */}
-              <div className="px-6 border-b border-gray-200">
-                <div className="flex space-x-6">
+              <div className="px-4 sm:px-6 border-b border-gray-200">
+                <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
                   <button 
                     onClick={() => setActivePlayerTab('about')}
-                    className={`transition-colors pb-2 border-b-2 ${
+                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                       activePlayerTab === 'about' 
                         ? 'text-[#00c9ac] border-[#00c9ac]' 
                         : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
@@ -664,7 +826,7 @@ export function GroupsTab({
                   </button>
                   <button 
                     onClick={() => setActivePlayerTab('stats')}
-                    className={`transition-colors pb-2 border-b-2 ${
+                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                       activePlayerTab === 'stats' 
                         ? 'text-[#00c9ac] border-[#00c9ac]' 
                         : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
@@ -676,131 +838,20 @@ export function GroupsTab({
               </div>
               
               {/* Content */}
-              <div className="flex-1 p-6">
+              <div className="flex-1 p-4 sm:p-6">
                 {/* TFT Stats Section */}
                 {activePlayerTab === 'stats' && (
-                  <div className="space-y-4">
-                    {leagueDataLoading ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="text-center">
-                          <LoadingSpinner size="md" className="mx-auto mb-2" />
-                          <p className="text-gray-500">Loading league data...</p>
-                        </div>
-                      </div>
-                    ) : leagueDataError ? (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-600">{leagueDataError}</p>
-                      </div>
-                    ) : playerLeagueData.length > 0 ? (
-                      <div className="space-y-4">
-                        {/* Ranked TFT */}
-                        {getRankedTftData() && (
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-xs">
-                              <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
-                                <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                              Ranked TFT
-                            </h5>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Award className="w-3 h-3 text-amber-600" />
-                                  <p className="text-xs text-gray-600">Rank</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                                  <p className="text-xs text-gray-600">LP</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingUp className="w-3 h-3 text-green-600" />
-                                  <p className="text-xs text-gray-600">Wins</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingDown className="w-3 h-3 text-red-600" />
-                                  <p className="text-xs text-gray-600">Losses</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
-                              </div>
-                            </div>
-                            <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                              <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                              <p className="font-bold text-gray-800 text-xl">
-                                {getRankedTftData() ? 
-                                  `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Turbo TFT */}
-                        {getTurboTftData() && (
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                            <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-xs">
-                              <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
-                                <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
-                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                                </svg>
-                              </div>
-                              Turbo TFT
-                            </h5>
-                            <div className="grid grid-cols-2 gap-4">
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Award className="w-3 h-3 text-amber-600" />
-                                  <p className="text-xs text-gray-600">Tier</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                                  <p className="text-xs text-gray-600">Rating</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingUp className="w-3 h-3 text-green-600" />
-                                  <p className="text-xs text-gray-600">Wins</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
-                              </div>
-                              <div className="text-center">
-                                <div className="flex items-center justify-center gap-1 mb-1">
-                                  <TrendingDown className="w-3 h-3 text-red-600" />
-                                  <p className="text-xs text-gray-600">Losses</p>
-                                </div>
-                                <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
-                              </div>
-                            </div>
-                            <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                              <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                              <p className="font-bold text-gray-800 text-xl">
-                                {getTurboTftData() ? 
-                                  `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-[#fff6ea] border border-[#e6d7c3] rounded-lg p-4 text-center">
-                        <p className="text-gray-600">No league data available</p>
-                      </div>
-                    )}
-                  </div>
+                  <TFTStatsContent
+                    leagueDataLoading={leagueDataLoading}
+                    leagueDataError={leagueDataError}
+                    playerLeagueData={playerLeagueData}
+                    playerStatsLoading={playerStatsLoading}
+                    playerStatsError={playerStatsError}
+                    playerStatsData={playerStatsData}
+                    getRankedTftData={getRankedTftData}
+                    getTurboTftData={getTurboTftData}
+                    className="w-full"
+                  />
                 )}
                 
                 {/* About Me Section */}
@@ -879,21 +930,21 @@ export function GroupsTab({
           </div>
         )}
 
-        {/* Fixed Filter Modal */}
+        {/* Mobile-Friendly Filter Modal */}
         {showFilters && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-full max-w-xl animate-fadeIn relative" style={{ minWidth: '480px', maxWidth: '600px' }}>
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
+            <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 sm:p-6 w-full max-w-xl animate-fadeIn relative max-h-[90vh] overflow-y-auto">
               <button
                 onClick={() => setShowFilters(false)}
-                className="absolute top-4 right-4 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
                 aria-label="Close"
                 style={{ lineHeight: 0 }}
               >
-                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+                <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
               </button>
-              <div className="mb-4 mt-6">
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                  <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+              <div className="mb-4 mt-2 sm:mt-6">
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#ff8889' }} />
                   Meeting Days
                 </h4>
                 <div className="flex flex-wrap gap-2">
@@ -904,7 +955,7 @@ export function GroupsTab({
                       onChange={(e) => { if (e.target.checked) setMeetingDayFilter(''); }}
                       className="mr-1 accent-[#007460]"
                     />
-                    <span className="text-sm text-gray-700 whitespace-nowrap">Any Meeting Day</span>
+                    <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Any Meeting Day</span>
                   </label>
                   {meetingDays.map(day => (
                     <label key={day} className="flex items-center">
@@ -914,18 +965,18 @@ export function GroupsTab({
                         onChange={(e) => { if (e.target.checked) setMeetingDayFilter(day); else setMeetingDayFilter(''); }}
                         className="mr-1 accent-[#007460]"
                       />
-                      <span className="text-sm text-gray-700 whitespace-nowrap">{day}</span>
+                      <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">{day}</span>
                     </label>
                   ))}
                 </div>
               </div>
               <hr className="my-4 border-gray-200" />
               <div className="mb-4">
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                  <Zap className="w-5 h-5" style={{ color: '#facc15' }} />
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                  <Zap className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#facc15' }} />
                   ELO Range
                 </h4>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="number"
                     min="0"
@@ -933,10 +984,11 @@ export function GroupsTab({
                     step="100"
                     value={minEloFilter || ''}
                     onChange={e => setMinEloFilter(e.target.value === '' ? 0 : Number(e.target.value))}
-                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
                     placeholder="0"
                   />
-                  <span className="flex items-center text-gray-500">to</span>
+                  <span className="flex items-center justify-center text-gray-500 text-sm sm:hidden">to</span>
+                  <span className="hidden sm:flex items-center text-gray-500 text-sm">to</span>
                   <input
                     type="number"
                     min="0"
@@ -944,21 +996,21 @@ export function GroupsTab({
                     step="100"
                     value={maxEloFilter || ''}
                     onChange={e => setMaxEloFilter(e.target.value === '' ? 5000 : Number(e.target.value))}
-                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                    className="flex-1 px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
                     placeholder="5000"
                   />
                 </div>
               </div>
               <hr className="my-4 border-gray-200" />
               <div className="mb-4">
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2">
-                  <Globe className="w-5 h-5" style={{ color: '#00c9ac' }} />
+                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
+                  <Globe className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#00c9ac' }} />
                   Timezone
                 </h4>
                 <select
                   value={timezoneFilter}
                   onChange={e => setTimezoneFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
                 >
                   <option value="">Any Timezone</option>
                   <option value="UTC-8">Pacific Time (UTC-8)</option>
@@ -973,16 +1025,16 @@ export function GroupsTab({
                   <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
                 </select>
               </div>
-              <div className="flex justify-between mt-6">
+              <div className="flex flex-col sm:flex-row gap-2 sm:justify-between mt-6">
                 <button
                   onClick={clearFilters}
-                  className="bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+                  className="bg-gray-500 hover:bg-gray-600 text-white rounded-lg font-semibold shadow transition px-4 py-2 sm:py-1.5 text-sm order-2 sm:order-1"
                 >
                   Clear Filters
                 </button>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-1.5 text-sm"
+                  className="bg-[#00c9ac] hover:bg-[#00b89a] text-white rounded-lg font-semibold shadow transition px-4 py-2 sm:py-1.5 text-sm order-1 sm:order-2"
                 >
                   Apply Filters
                 </button>
