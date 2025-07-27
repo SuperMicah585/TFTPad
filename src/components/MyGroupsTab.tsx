@@ -3011,7 +3011,7 @@ function InvitationCard({
                       ) : groupMembers.length > 0 ? (
                         <div className="space-y-3">
                           {groupMembers.map((member, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div key={index} className="flex items-center gap-3 p-3">
                               {/* Member Icon */}
                               <ProfileIcon 
                                 memberId={member.user_id || index}
