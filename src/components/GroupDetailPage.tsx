@@ -384,28 +384,30 @@ export function GroupDetailPage() {
                 <span>Back to Groups</span>
               </button>
               
-              {/* Group Icon */}
-              {group.image_url ? (
-                <img
-                  src={group.image_url}
-                  alt={`${group.group_name} icon`}
-                  className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div 
-                  className="w-12 h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-lg"
-                  style={{ 
-                    backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                  }}
-                >
-                  {group.group_name.charAt(0).toUpperCase()}
-                </div>
-              )}
+              {/* Group Icon - Hidden on small screens */}
+              <div className="hidden sm:block">
+                {group.image_url ? (
+                  <img
+                    src={group.image_url}
+                    alt={`${group.group_name} icon`}
+                    className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className="w-12 h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-lg"
+                    style={{ 
+                      backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                      color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                    }}
+                  >
+                    {group.group_name.charAt(0).toUpperCase()}
+                  </div>
+                )}
+              </div>
               
               {/* Group Name and Date */}
               <div className="flex-1 min-w-0">
@@ -486,11 +488,12 @@ export function GroupDetailPage() {
                   {members.map((member, index) => (
                     <div 
                       key={index} 
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ${
+                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
                         clickedMemberId === member.user_id 
                           ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
                           : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                       }`}
+                      onClick={() => handlePlayerClick(member)}
                     >
                       {/* Member Icon */}
                       <ProfileIcon 
@@ -505,12 +508,11 @@ export function GroupDetailPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
                           <span 
-                            className={`font-medium truncate cursor-pointer transition-all duration-300 ${
+                            className={`font-medium transition-all duration-300 ${
                               clickedMemberId === member.user_id 
                                 ? 'text-blue-600 scale-105' 
                                 : 'text-gray-800 hover:text-blue-600'
                             }`}
-                            onClick={() => handlePlayerClick(member)}
                           >
                             {member.summoner_name}
                           </span>
@@ -518,27 +520,54 @@ export function GroupDetailPage() {
                             <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
                           )}
                         </div>
+                        
+                        {/* Rank and ELO - Below name on mobile, hidden on larger screens */}
+                        <div className="flex flex-row gap-2 text-xs sm:text-sm text-gray-600 sm:hidden">
+                          {/* Rank */}
+                          <div className="flex items-center gap-1">
+                            <img 
+                              src={getRankIconUrl(member.rank || 'UNRANKED')} 
+                              alt={member.rank || 'UNRANKED'} 
+                              className="w-3 h-3 sm:w-4 sm:h-4"
+                              onError={(e) => {
+                                console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                            <span className="font-medium">{member.rank || 'UNRANKED'}</span>
+                          </div>
+                          
+                          {/* ELO */}
+                          <div className="flex items-center gap-1">
+                            <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+                            <span className="font-bold">{member.elo.toLocaleString()}</span>
+                          </div>
+                        </div>
                       </div>
                       
-                      {/* Rank */}
-                      <div className="flex items-center gap-2 text-sm text-gray-600">
-                        <img 
-                          src={getRankIconUrl(member.rank || 'UNRANKED')} 
-                          alt={member.rank || 'UNRANKED'} 
-                          className="w-4 h-4"
-                          onError={(e) => {
-                            console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                          }}
-                        />
-                        <span className="font-medium">{member.rank || 'UNRANKED'}</span>
-                      </div>
-                      
-                      {/* ELO */}
-                      <div className="flex items-center gap-1 text-sm text-gray-600">
-                        <Zap className="w-4 h-4 text-yellow-500" />
-                        <span className="font-bold">{member.elo.toLocaleString()}</span>
+                      {/* Rank and ELO - To the right on larger screens, hidden on mobile */}
+                      <div className="hidden sm:flex sm:flex-row sm:items-center sm:gap-2">
+                        {/* Rank */}
+                        <div className="flex items-center gap-2 text-sm text-gray-600">
+                          <img 
+                            src={getRankIconUrl(member.rank || 'UNRANKED')} 
+                            alt={member.rank || 'UNRANKED'} 
+                            className="w-4 h-4"
+                            onError={(e) => {
+                              console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
+                              const target = e.target as HTMLImageElement;
+                              target.style.display = 'none';
+                            }}
+                          />
+                          <span className="font-medium">{member.rank || 'UNRANKED'}</span>
+                        </div>
+                        
+                        {/* ELO */}
+                        <div className="flex items-center gap-1 text-sm text-gray-600">
+                          <Zap className="w-4 h-4 text-yellow-500" />
+                          <span className="font-bold">{member.elo.toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
                   ))}

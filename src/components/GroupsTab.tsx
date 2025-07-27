@@ -76,21 +76,21 @@ function SortDropdown({
         <div className="relative sort-dropdown">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm min-w-40 flex items-center justify-between shadow-lg"
+                className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-2 sm:px-3 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-xs sm:text-sm min-w-32 sm:min-w-40 flex items-center justify-between shadow-lg"
             >
-                <div className="flex items-center gap-2">
-                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="flex items-center gap-1 sm:gap-2">
+                    <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                     </svg>
-                    <span>{getSortByLabel(sortBy)} {getSortOrderIcon(sortOrder)}</span>
+                    <span className="truncate">{getSortByLabel(sortBy)} {getSortOrderIcon(sortOrder)}</span>
                 </div>
-                <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                 </svg>
             </button>
 
             {isOpen && (
-                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
+                <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-40 sm:min-w-48 max-w-64">
                     <div className="p-2">
                         <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Sort By</div>
                         <div className="space-y-1">
@@ -100,7 +100,7 @@ function SortDropdown({
                                     onSortByChange('created_at');
                                     setIsOpen(false);
                                 }}
-                                className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
                                     sortBy === 'created_at' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                 }`}
                             >
@@ -112,7 +112,7 @@ function SortDropdown({
                                     onSortByChange('avg_elo');
                                     setIsOpen(false);
                                 }}
-                                className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
                                     sortBy === 'avg_elo' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                 }`}
                             >
@@ -127,22 +127,22 @@ function SortDropdown({
                                         onSortOrderChange('desc');
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                    className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
                                         sortOrder === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                     }`}
                                 >
-                                    ↓ Descending
+                                    Descending ↓
                                 </button>
                                 <button
                                     onClick={() => {
                                         onSortOrderChange('asc');
                                         setIsOpen(false);
                                     }}
-                                    className={`w-full text-left px-2 py-1 rounded text-sm hover:bg-gray-100 ${
+                                    className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
                                         sortOrder === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                     }`}
                                 >
-                                    ↑ Ascending
+                                    Ascending ↑
                                 </button>
                             </div>
                         </div>
@@ -518,7 +518,7 @@ export function GroupsTab({
           <div className="flex flex-row gap-2 items-center w-full">
             <input
               type="text"
-              placeholder="Search by group name or player name..."
+              placeholder="Search groups or players..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => {
@@ -527,7 +527,7 @@ export function GroupsTab({
                   updateSearchInURL(searchQuery);
                 }
               }}
-              className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+              className="flex-1 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
               onFocus={(e) => {
                 e.target.style.borderColor = 'rgb(253, 186, 116)';
                 e.target.style.boxShadow = '0 0 0 2px rgba(253, 186, 116, 0.2)';
@@ -546,7 +546,7 @@ export function GroupsTab({
               style={{ minWidth: '40px', minHeight: '40px' }}
               aria-label="Search"
             >
-              <FaSearch size={18} />
+              <FaSearch size={16} className="sm:w-[18px] sm:h-[18px]" />
             </button>
           </div>
         </div>
@@ -1262,13 +1262,13 @@ function StudyGroupCard({
       <div className="md:hidden text-left">
         {/* Group header with icon and name */}
         <div className="mb-3 text-left">
-          <div className="flex items-center gap-3 mb-2">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
             {/* Group Icon */}
             {group.image_url ? (
               <img
                 src={group.image_url}
                 alt={`${group.group_name} icon`}
-                className="w-10 h-10 rounded-lg object-cover border-2 border-gray-200"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border-2 border-gray-200 flex-shrink-0"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
                   target.style.display = 'none';
@@ -1276,7 +1276,7 @@ function StudyGroupCard({
               />
             ) : (
               <div 
-                className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-base"
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-base flex-shrink-0"
                 style={{ 
                   backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
                   color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
@@ -1286,37 +1286,37 @@ function StudyGroupCard({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-gray-800">{group.group_name}</h3>
-              <p className="text-xs text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
+              <h3 className="text-base sm:text-lg font-bold text-gray-800 truncate">{group.group_name}</h3>
+              <p className="text-xs text-gray-500 truncate">Created: {new Date(group.created_at).toLocaleDateString()}</p>
             </div>
           </div>
         </div>
         
         {/* Group details */}
-        <div className="space-y-3 text-left">
-          <div className="flex gap-2">
-            <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
-              <Users className="w-4 h-4" />
+        <div className="space-y-2 sm:space-y-3 text-left">
+          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
+            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 font-semibold text-xs sm:text-sm">
+              <Users className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>Members: {memberCounts?.[group.id] || 0}</span>
             </div>
-            <div className="flex items-center gap-1 text-gray-400 text-sm">
-              <Zap className="w-4 h-4 text-yellow-500" />
+            <div className="flex items-center gap-1 text-gray-400 text-xs sm:text-sm">
+              <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
               <span className="font-semibold">{group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'}</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 text-gray-600 text-sm">
-            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-            <span>{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
+          <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
+            <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
+            <span className="truncate">{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
           </div>
           
           {/* Time and timezone */}
           {group.time && (
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
+              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
-              <span>
+              <span className="truncate">
                 {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
                 {group.timezone && ` (${group.timezone})`}
               </span>
