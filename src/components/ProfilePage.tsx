@@ -327,19 +327,19 @@ function ProfileContent() {
       <div className="container mx-auto px-4 py-8 relative z-10 max-w-7xl">
         {/* Header Section */}
         <div className="mb-8">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold text-black mb-2">Player Dashboard</h1>
-                <p className="text-black text-lg">Track your TFT performance and manage your account</p>
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
+              <div className="flex-1 min-w-0">
+                <h1 className="text-2xl sm:text-4xl font-bold text-black mb-2">Player Dashboard</h1>
+                <p className="text-black text-base sm:text-lg">Track your TFT performance and manage your account</p>
               </div>
-              <div className="text-right">
+              <div className="flex flex-col items-start sm:items-end sm:text-right min-w-0">
                 <p className="text-sm text-black mb-1">Signed in as</p>
-                <p className="font-semibold text-black mb-4">{user?.email || 'User'}</p>
+                <p className="font-semibold text-black mb-4 break-all">{user?.email || 'User'}</p>
                 <button
                   onClick={handleDeleteButtonClick}
                   disabled={!userId || deletingAccount}
-                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 disabled:cursor-not-allowed text-sm"
+                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 disabled:cursor-not-allowed text-sm whitespace-nowrap"
                 >
                   {deletingAccount ? (
                     <div className="flex items-center justify-center gap-2">

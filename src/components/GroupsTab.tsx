@@ -1,5 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
-import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, FileText } from 'lucide-react'
+import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, ChevronsLeft, FileText } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
@@ -912,7 +912,7 @@ export function GroupsTab({
                 className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
                 style={{ lineHeight: 0 }}
               >
-                <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
+                <ChevronsLeft className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
               </button>
               
               {/* Profile Header */}

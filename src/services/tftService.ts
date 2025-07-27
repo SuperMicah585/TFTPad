@@ -1144,6 +1144,45 @@ export function parseMatchDataForGameTab(matchData: MatchData) {
   });
 } 
 
+export interface MatchHistoryEntry {
+  matchId: string;
+  gameCreation: number;
+  gameLength: number;
+  placement: number;
+  playerName: string;
+  champions: Array<{
+    name: string;
+    stars: number;
+    items: string[];
+  }>;
+  traits: Array<{
+    name: string;
+    num_units: number;
+    tier_current: number;
+    tier_total: number;
+  }>;
+}
+
+export async function fetchMatchHistory(puuid: string, region: string): Promise<MatchHistoryEntry[]> {
+  try {
+    const apiUrl = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+    const response = await fetch(`${apiUrl}/api/match-history/${puuid}?region=${region}`);
+    
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('No match history found for this account.');
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data.matches || [];
+  } catch (error) {
+    console.error('Error fetching match history:', error);
+    throw error;
+  }
+}
+
 interface TftLeagueEntry {
   puuid: string
   leagueId: string

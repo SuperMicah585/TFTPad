@@ -3,18 +3,21 @@ import { useState, useRef } from "react"
 import { HelpCircle } from "lucide-react"
 import { createPortal } from "react-dom"
 import { useTFT } from "../contexts/TFTContext"
+import { useAuth } from "../contexts/AuthContext"
+import { MatchHistoryModal } from "./MatchHistoryModal"
 
 interface CompHolderProps {
     onShowGameIdModal: () => void;
 }
 
-export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
+export function CompHolder({ onShowGameIdModal: _ }: CompHolderProps) {
     const [selectedPlayer, setSelectedPlayer] = useState<number | null>(null);
     const [showTooltip, setShowTooltip] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-    const [matchId, setMatchId] = useState("");
+    const [showMatchHistoryModal, setShowMatchHistoryModal] = useState(false);
     const iconRef = useRef<HTMLDivElement>(null);
-    const { loadMatchData, matchLoading, matchError } = useTFT();
+    const { loadMatchData } = useTFT();
+    const { userId } = useAuth();
 
     const handlePlayerSelect = (playerIndex: number) => {
         if (playerIndex === -1) {
@@ -41,13 +44,12 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
         setShowTooltip(false);
     };
 
-    const handleLoadMatch = async () => {
-        if (!matchId.trim()) {
-            return;
-        }
 
+
+    const handleSelectMatchFromHistory = async (matchId: string) => {
         try {
-            await loadMatchData(matchId.trim());
+            await loadMatchData(matchId);
+            setShowMatchHistoryModal(false);
         } catch (err) {
             console.error("Failed to load match data:", err);
         }
@@ -69,56 +71,26 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                     </div>
                 </div>
 
-                {/* Match ID Input Section */}
+                {/* Match History Button */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                    <div className="flex flex-col gap-4">
-                        <div className="flex items-center justify-start">
-                            <div className="flex items-center gap-2">
-                                <label htmlFor="matchId" className="block text-sm font-medium text-gray-700">
-                                    Load Game Data
-                                </label>
-                                <button
-                                    onClick={onShowGameIdModal}
-                                    className="text-xs text-orange-300 underline font-medium hover:text-orange-400"
-                                >
-                                    How to find Game ID?
-                                </button>
-                            </div>
-                        </div>
-                        <div className="flex items-end gap-4">
-                            <div className="flex-1">
-                                <input
-                                    type="text"
-                                    id="matchId"
-                                    value={matchId}
-                                    onChange={(e) => setMatchId(e.target.value)}
-                                    placeholder="Enter game ID (e.g., NA1_5320285575)"
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:border-transparent"
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = 'rgb(253, 186, 116)';
-                                        e.target.style.boxShadow = '0 0 0 2px rgb(253, 186, 116)';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#d1d5db'; // gray-300
-                                        e.target.style.boxShadow = 'none';
-                                    }}
-                                />
-                            </div>
-                            <button
-                                onClick={handleLoadMatch}
-                                disabled={matchLoading}
-                                className="px-4 py-2 text-white rounded-md hover:opacity-90 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                                style={{ backgroundColor: '#964B00' }}
-                            >
-                                {matchLoading ? "Loading..." : "Load Game"}
-                            </button>
-                        </div>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setShowMatchHistoryModal(true)}
+                            disabled={!userId}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Load Game from Match History
+                        </button>
+                        
+                        {!userId && (
+                            <span className="text-sm text-gray-500">
+                                Login and connect your Riot account to use this feature
+                            </span>
+                        )}
                     </div>
-                    {matchError && (
-                        <div className="mt-2 text-red-600 text-sm">
-                            {matchError}
-                        </div>
-                    )}
                 </div>
                 <div className="flex flex-col gap-2">
                 {Array.from({ length: 8 }).map((_, index) => (
@@ -146,7 +118,7 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                     <div>
                         <div className="font-medium mb-1 text-left">Game Analysis Tool:</div>
                         <div className="text-xs mb-2 text-left pl-2">
-                            <span className="text-orange-300 font-medium">Option 1:</span> Provide a game ID to populate rows with actual match data for reviewing previous games and analyzing optimal comps.<br/>
+                            <span className="text-orange-300 font-medium">Option 1:</span> Load games from your match history to analyze historical matches and review your previous comps and performance.<br/>
                             <span className="text-green-300 font-medium">Option 2:</span> Manually input comps you think players will go for live note-taking and real-time guidance during your game.
                         </div>
                         <div className="font-medium mb-1 text-left">How to edit:</div>
@@ -173,6 +145,15 @@ export function CompHolder({ onShowGameIdModal }: CompHolderProps) {
                 </div>,
                 document.body
             )}
+
+
+
+            {/* Match History Modal */}
+            <MatchHistoryModal
+                isOpen={showMatchHistoryModal}
+                onClose={() => setShowMatchHistoryModal(false)}
+                onSelectMatch={handleSelectMatchFromHistory}
+            />
         </div>
     )
 }
