@@ -1,4 +1,5 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, ChevronsLeft, FileText } from 'lucide-react'
 
 import { userService } from '../services/userService'
@@ -173,7 +174,6 @@ export function GroupsTab({
   loading,
   error,
   memberCounts,
-  fetchGroupMembers,
   loadMoreGroups,
   hasMore,
   loadingMore,
@@ -197,14 +197,11 @@ export function GroupsTab({
   timezoneFilter: string
   setTimezoneFilter: (filter: string) => void
   meetingDays: string[]
-  selectedGroupMembers: GroupMember[]
-  showMembersPopup: boolean
-  setShowMembersPopup: (show: boolean) => void
-  membersLoading: boolean
+  selectedGroupMembers?: GroupMember[]
+  membersLoading?: boolean
   loading?: boolean
   error?: string | null
   memberCounts?: MemberCounts
-  fetchGroupMembers?: (groupId: number) => Promise<void>
   loadMoreGroups?: () => Promise<void>
   hasMore?: boolean
   loadingMore?: boolean
@@ -215,11 +212,13 @@ export function GroupsTab({
   sortOrder?: 'asc' | 'desc'
   setSortOrder?: (sortOrder: 'asc' | 'desc') => void
 }) {
+  const navigate = useNavigate();
+  
   // New state for combined modal
   const [showCombinedModal, setShowCombinedModal] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState<StudyGroup | null>(null);
-  const [groupInfo, setGroupInfo] = useState({ description: '', instructions: '' });
-  const [infoLoading, setInfoLoading] = useState(false);
+  const [selectedGroup] = useState<StudyGroup | null>(null);
+  const [groupInfo] = useState({ description: '', instructions: '' });
+  const [infoLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'members' | 'info' | 'team-stats'>('members');
   const [showFilters, setShowFilters] = useState(false);
   
@@ -272,45 +271,9 @@ export function GroupsTab({
     if (node) observerRef.current.observe(node);
   }, [loadingMore, hasMore, loadMoreGroups]);
 
-  // Handler for tile click - opens combined modal
-  const handleTileClick = async (groupId: number) => {
-    const group = studyGroups.find(g => g.id === groupId);
-    if (!group) return;
-    
-    setSelectedGroup(group);
-    setShowCombinedModal(true);
-    setInfoLoading(true);
-    setGroupInfo({ description: '', instructions: '' });
-    
-    // Clear team stats data when a new group is selected
-    setTeamStatsData([]);
-    setTeamStatsError(null);
-    setMemberNames({});
-    setLiveData({});
-    
-    try {
-      // Fetch both members and group info
-      if (fetchGroupMembers) {
-        await fetchGroupMembers(groupId);
-      }
-      
-      // Fetch group info
-      const groupDetails = await import('../services/studyGroupService').then(module => 
-        module.studyGroupService.getStudyGroup(groupId)
-      );
-      setGroupInfo({
-        description: groupDetails.description || '',
-        instructions: groupDetails.application_instructions || ''
-      });
-    } catch (err) {
-      console.error('Error fetching group data:', err);
-      setGroupInfo({
-        description: 'Error loading group description.',
-        instructions: 'Error loading application instructions.'
-      });
-    } finally {
-      setInfoLoading(false);
-    }
+  // Handler for tile click - navigates to group detail page
+  const handleTileClick = (groupId: number) => {
+    navigate(`/study-groups/groups/${groupId}`);
   };
 
   // Player modal functions
@@ -768,7 +731,7 @@ export function GroupsTab({
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        {selectedGroupMembers.map((member, index) => (
+                        {selectedGroupMembers?.map((member, index) => (
                           <div 
                             key={index} 
                             className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ${

@@ -38,9 +38,6 @@ export function StudyGroupsPage() {
   const pathSegments = location.pathname.split('/');
   const currentTab = pathSegments[pathSegments.length - 1] as 'groups' | 'my-groups' | 'free-agents';
   const [activeTab, setActiveTab] = useState<'groups' | 'my-groups' | 'free-agents'>(currentTab || 'groups')
-  const [selectedGroupMembers, setSelectedGroupMembers] = useState<{ summoner_name: string, elo: number, owner: number }[]>([])
-  const [showMembersPopup, setShowMembersPopup] = useState(false)
-  const [membersLoading, setMembersLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>('')
   const [meetingDayFilter, setMeetingDayFilter] = useState<string>('');
@@ -83,11 +80,11 @@ export function StudyGroupsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // State for info modal (open/close, loading, description, instructions, groupId)
-  const [showInfoPopup, setShowInfoPopup] = useState(false)
-  const [infoLoading, setInfoLoading] = useState(false)
-  const [infoDescription, setInfoDescription] = useState('')
-  const [infoInstructions, setInfoInstructions] = useState('')
+  // Group info modal state
+  const [showInfoPopup, setShowInfoPopup] = useState(false);
+  const [infoDescription, setInfoDescription] = useState('');
+  const [infoInstructions, setInfoInstructions] = useState('');
+  const [infoLoading, setInfoLoading] = useState(false);
 
   // Available meeting days for filtering (matching free agents page)
   const meetingDays = [
@@ -321,34 +318,6 @@ export function StudyGroupsPage() {
     fetchUserData();
   }, []); // Only run on mount
 
-  // Function to fetch members for a specific study group
-  const fetchGroupMembers = async (groupId: number) => {
-    // Show modal immediately with loading state
-    setSelectedGroupMembers([]);
-    setShowMembersPopup(true);
-    setMembersLoading(true);
-    
-    try {
-      const groupUsers = await studyGroupService.getStudyGroupUsers(groupId);
-      const members = groupUsers.map(relationship => ({
-        summoner_name: relationship.summoner_name || 'Unknown User',
-        elo: relationship.elo || 0, // Use actual ELO from backend
-        rank: relationship.rank || 'UNRANKED', // Use actual rank from backend
-        owner: relationship.owner, // Include owner field to identify captain
-        icon_id: relationship.icon_id, // Include icon_id for profile images
-        user_id: relationship.user_id // Include user_id for profile icon generation
-      }));
-      
-
-      setSelectedGroupMembers(members);
-    } catch (err) {
-      console.error('Failed to fetch group members:', err);
-      setSelectedGroupMembers([{ summoner_name: 'Error loading members', elo: 0, owner: 0 }]);
-    } finally {
-      setMembersLoading(false);
-    }
-  };
-
   // Update URL when search changes
   const updateSearchInURL = (query: string) => {
     if (query) {
@@ -556,14 +525,9 @@ export function StudyGroupsPage() {
                     timezoneFilter={timezoneFilter}
                     setTimezoneFilter={setTimezoneFilter}
                     meetingDays={meetingDays}
-                    showMembersPopup={showMembersPopup}
-                    setShowMembersPopup={setShowMembersPopup}
-                    selectedGroupMembers={selectedGroupMembers}
-                    membersLoading={membersLoading}
                     loading={loading}
                     error={error}
                     memberCounts={memberCounts}
-                    fetchGroupMembers={fetchGroupMembers}
                     loadMoreGroups={loadMoreGroups}
                     hasMore={hasMore}
                     loadingMore={loadingMore}

@@ -100,7 +100,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
       <div style={{ height: height }}>
         <ResponsiveLine
           data={chartData}
-          margin={{ top: 80, right: 80, bottom: 100, left: 80 }}
+          margin={{ top: 120, right: 80, bottom: 100, left: 80 }}
         xScale={{ type: 'point' }}
         yScale={{ 
           type: 'linear', 
@@ -129,7 +129,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
         }}
         pointSize={8}
         pointBorderWidth={1}
-        pointLabelYOffset={-12}
+        pointLabelYOffset={-20}
         useMesh={true}
         legends={[
           {
@@ -137,7 +137,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
             direction: 'row',
             justify: false,
             translateX: 0,
-            translateY: -20,
+            translateY: -40,
             itemsSpacing: 0,
             itemDirection: 'left-to-right',
             itemWidth: 120,

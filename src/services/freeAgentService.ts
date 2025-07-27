@@ -12,6 +12,7 @@ export interface FreeAgent {
   region: string;
   date_updated: string;
   icon_id?: number;
+  riot_id?: string;
 }
 
 export interface FreeAgentFilters {
@@ -120,6 +121,25 @@ export const freeAgentService = {
       return data;
     } catch (error) {
       console.error('Error fetching free agents:', error);
+      throw error;
+    }
+  },
+
+  async getFreeAgentById(id: number): Promise<FreeAgent> {
+    try {
+      const url = `${API_BASE_URL}/api/free-agents/${id}`;
+      
+      const response = await retryWithBackoff(() => fetch(url));
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to fetch free agent');
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching free agent:', error);
       throw error;
     }
   }

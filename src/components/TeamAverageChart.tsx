@@ -170,7 +170,7 @@ export function TeamAverageChart({
           curve="monotoneX"
           
           data={averageChartData}
-          margin={{ top: 50, right: 80, bottom: 100, left: 80 }}
+          margin={{ top: 120, right: 80, bottom: 100, left: 80 }}
           xScale={{ 
             type: 'point'
           }}
@@ -195,7 +195,7 @@ export function TeamAverageChart({
           }}
           pointSize={8}
           pointBorderWidth={1}
-          pointLabelYOffset={-12}
+          pointLabelYOffset={-20}
           enableTouchCrosshair={true}
           useMesh={true}
           legends={[
@@ -204,7 +204,7 @@ export function TeamAverageChart({
               direction: 'row',
               justify: false,
               translateX: 0,
-              translateY: -20,
+              translateY: -40,
               itemWidth: 120,
               itemHeight: 20,
               symbolShape: 'circle',

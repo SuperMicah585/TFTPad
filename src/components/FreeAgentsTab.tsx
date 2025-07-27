@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Users, Globe, Calendar, ArrowRight, Zap, SquareX, FileText, Clock } from 'lucide-react'
-import { useSearchParams } from 'react-router-dom'
+import { Users, Globe, Calendar, ArrowRight, Zap, SquareX, Clock } from 'lucide-react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import { freeAgentService, type FreeAgent, type FreeAgentFilters } from '../services/freeAgentService'
 import { studyGroupService } from '../services/studyGroupService'
 import { studyGroupInviteService } from '../services/studyGroupInviteService'
@@ -9,8 +9,8 @@ import { riotService } from '../services/riotService'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
 import { LoadingSpinner } from './auth/LoadingSpinner'
-import { playerStatsService } from '../services/playerStatsService'
-import { TFTStatsContent } from './TFTStatsContent'
+
+
 
 // Function to get TFT rank icon URL
 function getRankIconUrl(rank: string): string {
@@ -409,7 +409,7 @@ function ProfileIcon({
 
 
 
-const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+
 
 interface FreeAgentsTabProps {
   minRankFilter?: string;
@@ -462,19 +462,9 @@ export function FreeAgentsTab({
   } | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   
-  // Modal state for agent details
-  const [showAgentModal, setShowAgentModal] = useState(false);
-  const [selectedAgentForDetails, setSelectedAgentForDetails] = useState<FreeAgent | null>(null);
-  const [leagueData, setLeagueData] = useState<any[]>([]);
-  const [leagueDataLoading, setLeagueDataLoading] = useState(false);
-  const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'about' | 'stats'>('stats');
   const [hasInitialized, setHasInitialized] = useState(false);
 
-  // Player stats state
-  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
-  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
-  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
+
 
   const [showFilters, setShowFilters] = useState(false);
 
@@ -561,67 +551,9 @@ export function FreeAgentsTab({
     }
   };
 
-  // Fetch agent's TFT league data
-  const fetchAgentLeagueData = async (agentId: number) => {
-    setLeagueDataLoading(true);
-    setLeagueDataError(null);
-    
-    try {
-      // Get the agent's Riot account to get their puuid
-      const agentRiotAccount = await fetch(`${API_BASE_URL}/api/user-riot-account/${agentId}`).then(res => res.json());
-      
-      if (agentRiotAccount.error) {
-        setLeagueDataError('No Riot account found for this player');
-        setLeagueData([]);
-        return;
-      }
-      
-      // Fetch TFT league data and player stats in parallel
-      const [leagueResponse] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/tft-league/${agentRiotAccount.riot_id}?user_id=${agentId}`),
-        fetchPlayerStats(agentRiotAccount.riot_id)
-      ]);
-      
-      const leagueData = await leagueResponse.json();
-      
-      if (leagueResponse.ok) {
-        setLeagueData(leagueData);
-      } else {
-        setLeagueDataError('Failed to load TFT league data');
-        setLeagueData([]);
-      }
-    } catch (error) {
-      console.error('Error fetching agent league data:', error);
-      setLeagueDataError('Failed to load TFT league data');
-      setLeagueData([]);
-    } finally {
-      setLeagueDataLoading(false);
-    }
-  };
 
-  const getRankedTftData = () => {
-    return leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT');
-  };
 
-  const getTurboTftData = () => {
-    return leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT_TURBO');
-  };
 
-  const fetchPlayerStats = async (riotId: string) => {
-    try {
-      setPlayerStatsLoading(true);
-      setPlayerStatsError(null);
-      
-      const stats = await playerStatsService.getPlayerStats(riotId);
-      setPlayerStatsData(stats.events);
-    } catch (error) {
-      console.error('Error fetching player stats:', error);
-      setPlayerStatsError('Failed to load player stats');
-      setPlayerStatsData([]);
-    } finally {
-      setPlayerStatsLoading(false);
-    }
-  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
@@ -876,11 +808,6 @@ export function FreeAgentsTab({
                 <FreeAgentCard 
                   key={agent.id} 
                   agent={agent} 
-                  onTileClick={(agent) => {
-                    setSelectedAgentForDetails(agent);
-                    setShowAgentModal(true);
-                    fetchAgentLeagueData(agent.id);
-                  }} 
                 />
               ))}
             </div>
@@ -1026,191 +953,7 @@ export function FreeAgentsTab({
         </div>
       )}
 
-      {/* Agent Details Modal - Discord Style */}
-      {showAgentModal && selectedAgentForDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
-            {/* Close button - absolute positioned */}
-            <button
-              onClick={() => {
-                setShowAgentModal(false);
-                setSelectedAgentForDetails(null);
-                setLeagueData([]);
-              }}
-              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
-              style={{ lineHeight: 0 }}
-            >
-              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
-            </button>
-            
-            {/* Profile Header */}
-            <div className="relative">
-              {/* Banner - starts at top */}
-              <div className="h-32 bg-[#ff8889] relative">
-                {/* Profile Picture */}
-                <div className="absolute -bottom-12 left-6">
-                  <div className="relative">
-                    <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
-                      {selectedAgentForDetails.icon_id ? (
-                        <img
-                          src={`https://ddragon.leagueoflegends.com/cdn/14.14.1/img/profileicon/${selectedAgentForDetails.icon_id}.png`}
-                          alt={`${selectedAgentForDetails.summoner_name} profile icon`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            // Show placeholder instead
-                            const placeholder = target.parentElement?.querySelector('.profile-placeholder') as HTMLElement;
-                            if (placeholder) {
-                              placeholder.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div 
-                        className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${selectedAgentForDetails.icon_id ? 'hidden' : 'flex'}`}
-                        style={{ 
-                          backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][selectedAgentForDetails.id % 5],
-                          color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][selectedAgentForDetails.id % 5])
-                        }}
-                      >
-                        {selectedAgentForDetails.summoner_name.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Username and Tag */}
-              <div className="pt-16 pb-4 px-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-1 text-left">{selectedAgentForDetails.summoner_name}</h3>
-                <p className="text-gray-500 text-sm text-left">{selectedAgentForDetails.region}</p>
-                
-                {/* Message button */}
-                {userId && (
-                  <div className="mt-4">
-                    <button
-                      onClick={() => {
-                        setSelectedAgent(selectedAgentForDetails);
-                        setShowAgentModal(false);
-                        setShowInviteModal(true);
-                      }}
-                      className="bg-[#00c9ac] hover:bg-[#00b89a] text-white px-4 py-2 rounded font-medium transition-colors flex items-center gap-2"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM9 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                      </svg>
-                      Send Invitation
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Navigation Tabs */}
-            <div className="px-6 border-b border-gray-200">
-              <div className="flex space-x-6">
-                <button 
-                  onClick={() => setActiveTab('about')}
-                  className={`transition-colors pb-2 border-b-2 ${
-                    activeTab === 'about' 
-                      ? 'text-[#00c9ac] border-[#00c9ac]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                  }`}
-                >
-                  About Me
-                </button>
-                <button 
-                  onClick={() => setActiveTab('stats')}
-                  className={`transition-colors pb-2 border-b-2 ${
-                    activeTab === 'stats' 
-                      ? 'text-[#00c9ac] border-[#00c9ac]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                  }`}
-                >
-                  TFT Stats
-                </button>
 
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 p-6">
-              {/* TFT Stats Section */}
-              {activeTab === 'stats' && (
-                <TFTStatsContent
-                  leagueDataLoading={leagueDataLoading}
-                  leagueDataError={leagueDataError}
-                  playerLeagueData={leagueData}
-                  playerStatsLoading={playerStatsLoading}
-                  playerStatsError={playerStatsError}
-                  playerStatsData={playerStatsData}
-                  getRankedTftData={getRankedTftData}
-                  getTurboTftData={getTurboTftData}
-                  className="w-full"
-                />
-              )}
-              
-              {/* About Me Section */}
-              {activeTab === 'about' && (
-                <div className="space-y-4">
-                  {/* Description */}
-                  <div className="w-full">
-                    <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-green-600" />
-                      Description
-                    </h4>
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                        {selectedAgentForDetails.looking_for || "No description provided"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Availability */}
-                  {selectedAgentForDetails.availability && selectedAgentForDetails.availability.length > 0 && (
-                    <div className="w-full">
-                      <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                        <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                        Availability
-                      </h4>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <div className="text-gray-700 text-xs text-left">
-                          <span>{Array.isArray(selectedAgentForDetails.availability) ? selectedAgentForDetails.availability.join(", ") : selectedAgentForDetails.availability}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Time and Timezone */}
-                  {selectedAgentForDetails.time && (
-                    <div className="w-full">
-                      <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>
-                        Preferred Time
-                      </h4>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <div className="text-gray-700 text-xs text-left">
-                          <span>
-                            {selectedAgentForDetails.time.charAt(0).toUpperCase() + selectedAgentForDetails.time.slice(1)}
-                            {selectedAgentForDetails.timezone && ` (${selectedAgentForDetails.timezone})`}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-              
-
-              
-
-            </div>
-          </div>
-        </div>
-      )}
       {!loading && !error && !hasMore && freeAgents.length > 0 && (
         <div className="text-center py-8 mt-8 w-full">
           <p className="text-gray-500 text-sm">No more players to load</p>
@@ -1347,16 +1090,16 @@ export function FreeAgentsTab({
 
 // Free Agent Card Component
 function FreeAgentCard({ 
-  agent, 
-  onTileClick 
+  agent
 }: { 
-  agent: FreeAgent, 
-  onTileClick: (agent: FreeAgent) => void 
+  agent: FreeAgent
 }) {
+  const navigate = useNavigate();
+  
   return (
     <div 
       className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative h-full bg-gray-50 border-gray-200" 
-      onClick={() => onTileClick(agent)}
+      onClick={() => navigate(`/study-groups/free-agents/${agent.id}`)}
     >
       {/* Hover arrow */}
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

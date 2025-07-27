@@ -1,0 +1,581 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { ChevronsLeft, Calendar, FileText, SquareX, Globe, ChevronDown } from 'lucide-react';
+import { LoadingSpinner } from './auth/LoadingSpinner';
+import { freeAgentService, type FreeAgent } from '../services/freeAgentService';
+import { studyGroupService } from '../services/studyGroupService';
+import { studyGroupInviteService } from '../services/studyGroupInviteService';
+import { useAuth } from '../contexts/AuthContext';
+import { userService } from '../services/userService';
+import { playerStatsService } from '../services/playerStatsService';
+import { TFTStatsContent } from './TFTStatsContent';
+import { Footer } from './Footer';
+
+interface FreeAgentProfilePageProps {}
+
+export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
+  const { user_id } = useParams<{ user_id: string }>();
+  const navigate = useNavigate();
+  const { userId } = useAuth();
+  
+  // Agent data state
+  const [agent, setAgent] = useState<FreeAgent | null>(null);
+  const [agentLoading, setAgentLoading] = useState(true);
+  const [agentError, setAgentError] = useState<string | null>(null);
+  
+  // League data state
+  const [leagueData, setLeagueData] = useState<any[]>([]);
+  const [leagueDataLoading, setLeagueDataLoading] = useState(false);
+  const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
+  
+  // Player stats state
+  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
+  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
+  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
+  
+  // Invitation modal state
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteMessage, setInviteMessage] = useState("");
+  const [selectedStudyGroupId, setSelectedStudyGroupId] = useState<number | null>(null);
+  const [userStudyGroups, setUserStudyGroups] = useState<any[]>([]);
+  const [inviteLoading, setInviteLoading] = useState(false);
+  
+  // Overflow detection state
+  const [descriptionOverflow, setDescriptionOverflow] = useState(false);
+  const [descriptionScrolled, setDescriptionScrolled] = useState(false);
+  
+
+
+  // Fetch agent data on mount
+  useEffect(() => {
+    if (user_id) {
+      // Scroll to top when navigating to this page
+      window.scrollTo(0, 0);
+      fetchAgentData(parseInt(user_id));
+    }
+  }, [user_id]);
+
+  // Fetch user's study groups for the dropdown
+  useEffect(() => {
+    if (userId) {
+      fetchUserStudyGroups();
+    }
+  }, [userId]);
+
+  // Retry helper function with exponential backoff
+  const retryWithBackoff = async <T,>(
+    fn: () => Promise<T>,
+    maxRetries: number = 3,
+    baseDelay: number = 1000
+  ): Promise<T> => {
+    let lastError: Error;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error as Error;
+        
+        if (attempt === maxRetries) {
+          throw lastError;
+        }
+        
+        // Don't retry on 4xx errors (client errors)
+        if (error instanceof Error && error.message.includes('4')) {
+          throw lastError;
+        }
+        
+        // Exponential backoff: 1s, 2s, 4s
+        const delay = baseDelay * Math.pow(2, attempt);
+        console.log(`Attempt ${attempt + 1} failed, retrying in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw lastError!;
+  };
+
+  const fetchAgentData = async (id: number) => {
+    setAgentLoading(true);
+    setAgentError(null);
+    
+    try {
+      // Get the agent's free agent profile with retry
+      const agentData = await retryWithBackoff(() => freeAgentService.getFreeAgentById(id));
+      setAgent(agentData);
+      
+      // Fetch league data and player stats
+      await Promise.all([
+        fetchAgentLeagueData(id),
+        // Only fetch player stats if we have a riot_id
+        ...(agentData.riot_id ? [fetchPlayerStats(agentData.riot_id)] : [])
+      ]);
+    } catch (err) {
+      console.error('Error fetching agent data:', err);
+      setAgentError('Failed to load agent data after multiple attempts. Please try refreshing the page.');
+    } finally {
+      setAgentLoading(false);
+    }
+  };
+
+  const fetchUserStudyGroups = async () => {
+    if (!userId) return;
+    
+    try {
+      const userGroups = await retryWithBackoff(() => studyGroupService.getUserStudyGroupsByUser(userId));
+      setUserStudyGroups(userGroups);
+    } catch (error) {
+      console.error('Error fetching user study groups:', error);
+    }
+  };
+
+  const fetchAgentLeagueData = async (agentId: number) => {
+    setLeagueDataLoading(true);
+    setLeagueDataError(null);
+    
+    try {
+      // Get the agent's Riot account to get their puuid with retry
+      const riotAccount = await retryWithBackoff(() => userService.getUserRiotAccount(agentId));
+      if (!riotAccount || !riotAccount.riot_id) {
+        setLeagueDataError('No Riot account found for this user');
+        return;
+      }
+
+      // Fetch league data using the riot_id (which contains the PUUID) with retry
+      const fetchLeagueData = async () => {
+        const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+        const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${agentId}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch league data: ${response.status}`);
+        }
+        return response.json();
+      };
+      
+      const data = await retryWithBackoff(fetchLeagueData);
+      setLeagueData(data);
+    } catch (error) {
+      console.error('Error fetching agent league data:', error);
+      setLeagueDataError('Failed to load league data after multiple attempts');
+      setLeagueData([]);
+    } finally {
+      setLeagueDataLoading(false);
+    }
+  };
+
+  const fetchPlayerStats = async (riotId: string) => {
+    setPlayerStatsLoading(true);
+    setPlayerStatsError(null);
+    
+    try {
+      const stats = await retryWithBackoff(() => playerStatsService.getPlayerStats(riotId));
+      console.log('📊 Player stats received:', stats);
+      // Extract the events array from the PlayerStatsData object
+      setPlayerStatsData(stats?.events || []);
+    } catch (error) {
+      console.error('Error fetching player stats:', error);
+      setPlayerStatsError('Failed to load player stats after multiple attempts');
+      setPlayerStatsData([]);
+    } finally {
+      setPlayerStatsLoading(false);
+    }
+  };
+
+  const handleSendInvite = async () => {
+    if (!userId || !selectedStudyGroupId || !agent) return;
+    
+    setInviteLoading(true);
+    try {
+      await studyGroupInviteService.createInvite({
+        user_one: userId,
+        user_two: agent.id,
+        study_group_id: selectedStudyGroupId,
+        message: inviteMessage
+      });
+      
+      // Close modal and reset form
+      setShowInviteModal(false);
+      setInviteMessage("");
+      setSelectedStudyGroupId(null);
+      
+      // Show success message (you could add a toast notification here)
+      alert('Invitation sent successfully!');
+    } catch (error) {
+      console.error('Error sending invitation:', error);
+      
+      // Extract the specific error message from the server response
+      let errorMessage = 'Failed to send invitation. Please try again.';
+      
+      if (error instanceof Error) {
+        // Try to parse the error message from the response
+        try {
+          const errorData = JSON.parse(error.message);
+          if (errorData.error) {
+            errorMessage = errorData.error;
+          }
+        } catch {
+          // If parsing fails, use the error message as is
+          if (error.message) {
+            errorMessage = error.message;
+          }
+        }
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  const getRankedTftData = () => {
+    return leagueData.find(data => data.queueType === 'RANKED_TFT');
+  };
+
+  const getTurboTftData = () => {
+    return leagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
+  };
+
+  // Function to get text color based on background color
+  const getTextColor = (backgroundColor: string): string => {
+    // Simple contrast calculation
+    const hex = backgroundColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+    
+    if (brightness > 128) {
+      return '#333333';
+    }
+    return '#ffffff';
+  };
+
+  // Overflow detection functions
+  const checkOverflow = (element: HTMLElement) => {
+    return element.scrollHeight > element.clientHeight;
+  };
+
+  const handleDescriptionScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    console.log('🖱️ Scroll event:', target.scrollTop);
+    if (target.scrollTop > 0) {
+      console.log('✅ Setting scrolled to true');
+      setDescriptionScrolled(true);
+    }
+  };
+
+  // Check overflow when agent data is loaded
+  useEffect(() => {
+    if (agent && !agentLoading) {
+      // Add a small delay to ensure content is rendered
+      const timeoutId = setTimeout(() => {
+        const descriptionElement = document.getElementById('description-container');
+        if (descriptionElement) {
+          setDescriptionOverflow(checkOverflow(descriptionElement));
+        }
+      }, 100);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [agent, agentLoading]);
+
+  if (agentLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="lg" className="mx-auto mb-4" />
+          <p className="text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (agentError || !agent) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{agentError || 'Profile not found'}</p>
+          <button 
+            onClick={() => navigate('/study-groups/free-agents')}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            Back to Free Agents
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  console.log('🎨 Component rendering, agent:', agent?.id);
+  return (
+    <div className="min-h-screen bg-white">
+      {/* Header - Back button */}
+      <div className="bg-white border-b border-gray-200 absolute top-0 left-0 right-0 z-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between py-4">
+            <button
+              onClick={() => navigate('/study-groups/free-agents')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              <ChevronsLeft className="w-5 h-5" />
+              <span>Back to Free Agents</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+        {/* Profile Header - Matching old player modal style */}
+        <div className="relative">
+          {/* Banner */}
+          <div className="h-32 bg-[#2f4858] relative rounded-t-lg">
+            {/* Agent Icon */}
+            <div className="absolute -bottom-12 left-6">
+              <div className="relative">
+                <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
+                  {agent.icon_id ? (
+                    <img
+                      src={`https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${agent.icon_id}.png`}
+                      alt={`${agent.summoner_name} profile icon`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        const placeholder = target.parentElement?.querySelector('.profile-placeholder') as HTMLElement;
+                        if (placeholder) {
+                          placeholder.style.display = 'flex';
+                        }
+                      }}
+                    />
+                  ) : null}
+                  <div 
+                    className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${agent.icon_id ? 'hidden' : 'flex'}`}
+                    style={{ 
+                      backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][agent.id % 5],
+                      color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][agent.id % 5])
+                    }}
+                  >
+                    {agent.summoner_name.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Username and Tag */}
+          <div className="pt-16 pb-4 px-6 bg-white rounded-b-lg border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-xl font-bold text-gray-800 mb-1 text-left">{agent.summoner_name}</h3>
+                <p className="text-gray-500 text-sm text-left">Free Agent</p>
+              </div>
+              {userId && (
+                <button
+                  onClick={() => setShowInviteModal(true)}
+                  className="bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                >
+                  Send Invitation
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Content */}
+        <div className="bg-white border border-gray-200 rounded-b-lg">
+          <div className="p-4 sm:p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Left Column - About Me Section */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">About Me</h3>
+                
+                {/* Description */}
+                <div>
+                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-green-600" />
+                    Description
+                  </h4>
+                  <div className="relative">
+                    <div 
+                      id="description-container"
+                      className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
+                      onScroll={handleDescriptionScroll}
+                    >
+                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
+                        {agent.looking_for || "No description provided"}
+                      </p>
+                    </div>
+                    {descriptionOverflow && !descriptionScrolled && (
+                      <div className="absolute bottom-2 right-2">
+                        <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+
+                {/* Availability */}
+                {agent.availability && agent.availability.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                      Availability
+                    </h4>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="text-gray-700 text-left text-xs">
+                        <span>{Array.isArray(agent.availability) ? agent.availability.join(", ") : agent.availability}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Time and Timezone */}
+                {agent.time && (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                      </svg>
+                      Preferred Time
+                    </h4>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="text-gray-700 text-left text-xs">
+                        <span>
+                          {agent.time.charAt(0).toUpperCase() + agent.time.slice(1)}
+                          {agent.timezone && ` (${agent.timezone})`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Region */}
+                <div>
+                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                    <Globe className="w-4 h-4 text-blue-500" />
+                    Region
+                  </h4>
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                                          <div className="text-gray-700 text-left text-xs">
+                        <span>{agent.region}</span>
+                      </div>
+                  </div>
+                </div>
+
+
+
+
+              </div>
+
+              {/* Right Column - TFT Stats Section */}
+              <div className="space-y-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">TFT Statistics</h3>
+                <TFTStatsContent
+                  leagueDataLoading={leagueDataLoading}
+                  leagueDataError={leagueDataError}
+                  playerLeagueData={leagueData}
+                  playerStatsLoading={playerStatsLoading}
+                  playerStatsError={playerStatsError}
+                  playerStatsData={playerStatsData}
+                  getRankedTftData={getRankedTftData}
+                  getTurboTftData={getTurboTftData}
+                  className="w-full"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Invitation Modal */}
+      {showInviteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-800">Send Invitation</h3>
+              <button
+                onClick={() => { 
+                  setShowInviteModal(false); 
+                  setInviteMessage(""); 
+                  setSelectedStudyGroupId(null);
+                }}
+                className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
+                style={{ lineHeight: 0 }}
+              >
+                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="bg-[#00c9ac]/10 border border-[#00c9ac]/20 rounded-lg p-4">
+                <h4 className="font-semibold text-[#00c9ac] mb-2">Inviting {agent.summoner_name}</h4>
+                <p className="text-[#00c9ac] text-sm">Send a personalized message to invite them to your group.</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Select Study Group *
+                </label>
+                <select
+                  value={selectedStudyGroupId || ''}
+                  onChange={(e) => setSelectedStudyGroupId(Number(e.target.value) || null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                  required
+                >
+                  <option value="">Choose a study group...</option>
+                  {userStudyGroups.map((userGroup) => (
+                    <option key={userGroup.study_group?.id} value={userGroup.study_group?.id}>
+                      {userGroup.study_group?.group_name || 'Unknown Group'}
+                    </option>
+                  ))}
+                </select>
+                {userStudyGroups.length === 0 && (
+                  <p className="text-sm text-red-600 mt-1">
+                    You need to be a member of at least one study group to send invitations.
+                  </p>
+                )}
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Invitation Message
+                </label>
+                <textarea
+                  value={inviteMessage}
+                  onChange={(e) => setInviteMessage(e.target.value)}
+                  rows={4}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400 resize-vertical"
+                  placeholder="Write a personalized message explaining why you'd like them to join your group..."
+                />
+              </div>
+              
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => { 
+                    setShowInviteModal(false); 
+                    setInviteMessage(""); 
+                    setSelectedStudyGroupId(null);
+                  }}
+                  className="flex-1 bg-[#ff8889] hover:bg-[#ff8889]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  disabled={inviteLoading}
+                >
+                  Cancel
+                </button>
+                {userId && (
+                  <button
+                    onClick={handleSendInvite}
+                    disabled={!selectedStudyGroupId || inviteLoading}
+                    className="flex-1 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {inviteLoading ? 'Sending...' : 'Send Invitation'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Footer />
+    </div>
+  );
+} 
