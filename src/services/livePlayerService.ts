@@ -53,13 +53,9 @@ class LivePlayerService {
         baseElo = 2400;
         break;
       case 'master':
-        baseElo = 2800;
-        break;
       case 'grandmaster':
-        baseElo = 3000;
-        break;
       case 'challenger':
-        baseElo = 3200;
+        baseElo = 2800;
         break;
       default:
         return 0;

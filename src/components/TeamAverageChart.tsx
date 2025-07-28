@@ -40,6 +40,7 @@ export function TeamAverageChart({
   // Process historic data if available
   if (hasHistoricData) {
     data.forEach(event => {
+      // Use the mapped summoner name from memberNames, or fall back to riot_id
       const summonerName = memberNames[event.riot_id] || event.riot_id;
       if (!groupedData[summonerName]) {
         groupedData[summonerName] = [];
@@ -48,14 +49,48 @@ export function TeamAverageChart({
     });
   }
   
-  // If no historic data but live data exists, create entries for live data members
-  if (!hasHistoricData && hasLiveData) {
+  // Always add entries for all members with live data, regardless of historic data
+  if (hasLiveData) {
     Object.keys(liveData).forEach(summonerName => {
       if (!groupedData[summonerName]) {
         groupedData[summonerName] = [];
       }
     });
   }
+
+  // Helper function to normalize summoner names for consistent key matching
+  const normalizeSummonerName = (name: string): string => {
+    // Remove any special characters and normalize to lowercase for comparison
+    return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  };
+
+  // Create a reverse mapping from normalized names to original names
+  const reverseMemberNames: { [normalizedName: string]: string } = {};
+  Object.entries(memberNames).forEach(([, summonerName]) => {
+    const normalizedName = normalizeSummonerName(summonerName);
+    reverseMemberNames[normalizedName] = summonerName;
+  });
+
+  // Create a mapping from live data keys to member names
+  const liveDataToMemberName: { [liveDataKey: string]: string } = {};
+  if (liveData) {
+    Object.keys(liveData).forEach(liveDataKey => {
+      const normalizedLiveKey = normalizeSummonerName(liveDataKey);
+      // Try to find a match in the reverse mapping
+      if (reverseMemberNames[normalizedLiveKey]) {
+        liveDataToMemberName[liveDataKey] = reverseMemberNames[normalizedLiveKey];
+      } else {
+        // If no match found, use the original key
+        liveDataToMemberName[liveDataKey] = liveDataKey;
+      }
+    });
+  }
+
+  console.log('🔍 Key matching debug info:');
+  console.log('  Member names:', memberNames);
+  console.log('  Reverse member names:', reverseMemberNames);
+  console.log('  Live data keys:', liveData ? Object.keys(liveData) : []);
+  console.log('  Live data to member name mapping:', liveDataToMemberName);
 
   // Helper function to truncate long names
   const truncateName = (name: string, maxLength: number = 8) => {
@@ -66,7 +101,7 @@ export function TeamAverageChart({
   // Create individual member data for average calculation
   const memberChartData = Object.keys(groupedData).map((summonerName, index) => {
     const events = groupedData[summonerName];
-    const memberName = truncateName(memberNames[summonerName] || summonerName);
+    const memberName = truncateName(summonerName);
     
     // Start with historical data
     let chartPoints = events.map(event => ({
@@ -77,11 +112,35 @@ export function TeamAverageChart({
       isLive: false
     }));
     
-    // Add live data point if available (find by summoner name in live data)
+    // Add live data point if available (use improved key matching)
     let foundLiveData = null;
-    if (liveData && liveData[summonerName]) {
-      foundLiveData = liveData[summonerName];
-      console.log(`✅ Found live data for ${summonerName}:`, foundLiveData);
+    if (liveData) {
+      // Try direct match first
+      if (liveData[summonerName]) {
+        foundLiveData = liveData[summonerName];
+        console.log(`✅ TeamAverageChart: Found live data for ${summonerName} (direct match):`, foundLiveData);
+      } else {
+        // Try to find a match using the mapping
+        const mappedMemberName = liveDataToMemberName[summonerName];
+        if (mappedMemberName && liveData[mappedMemberName]) {
+          foundLiveData = liveData[mappedMemberName];
+          console.log(`✅ TeamAverageChart: Found live data for ${summonerName} (mapped to ${mappedMemberName}):`, foundLiveData);
+        } else {
+          // Try reverse lookup - find if this summoner name maps to any live data key
+          const matchingLiveDataKey = Object.keys(liveData).find(liveKey => {
+            const normalizedLiveKey = normalizeSummonerName(liveKey);
+            const normalizedSummonerName = normalizeSummonerName(summonerName);
+            return normalizedLiveKey === normalizedSummonerName;
+          });
+          
+          if (matchingLiveDataKey) {
+            foundLiveData = liveData[matchingLiveDataKey];
+            console.log(`✅ TeamAverageChart: Found live data for ${summonerName} (normalized match to ${matchingLiveDataKey}):`, foundLiveData);
+          } else {
+            console.log(`❌ TeamAverageChart: No live data found for ${summonerName}`);
+          }
+        }
+      }
     }
     
     if (foundLiveData) {
@@ -171,6 +230,13 @@ export function TeamAverageChart({
   })));
   console.log('📊 Member names mapping:', memberNames);
   console.log('📊 Live data object:', liveData);
+  console.log('📊 Grouped data keys:', Object.keys(groupedData));
+  console.log('📊 Live data keys vs grouped data keys comparison:');
+  if (liveData) {
+    Object.keys(liveData).forEach(key => {
+      console.log(`  Live data key: "${key}" - Found in groupedData: ${key in groupedData}`);
+    });
+  }
 
   return (
     <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 ${className}`}>

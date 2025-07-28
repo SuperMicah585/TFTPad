@@ -323,7 +323,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
 
   if (agentError || !agent) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="min-h-screen bg-white flex items-center justify-center ">
         <div className="text-center">
           <p className="text-red-600 mb-4">{agentError || 'Profile not found'}</p>
           <button 
@@ -339,32 +339,48 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
 
   console.log('🎨 Component rendering, agent:', agent?.id);
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header - Back button */}
-      <div className="bg-white border-b border-gray-200 absolute top-0 left-0 right-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <button
-              onClick={() => navigate('/study-groups/free-agents')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              <ChevronsLeft className="w-5 h-5" />
-              <span>Back to Free Agents</span>
-            </button>
-          </div>
+    <div className="min-h-screen bg-white text-gray-800 relative flex flex-col">
+      {/* Notebook Lines Background - Full Viewport */}
+      <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
+        <div className="absolute inset-0 opacity-15 dark:opacity-20">
+          <svg width="100%" height="100%">
+            <pattern id="notebook-lines-free-agent" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
+              <line
+                x1="0"
+                y1="23"
+                x2="100%"
+                y2="23"
+                stroke="currentColor"
+                strokeWidth="1"
+                className="text-blue-500 dark:text-blue-400"
+              />
+            </pattern>
+            <rect width="100%" height="100%" fill="url(#notebook-lines-free-agent)" />
+          </svg>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20">
+      <div className="w-full sm:max-w-7xl sm:mx-auto px-0 sm:px-6 lg:px-8 relative z-10">
+        {/* Back Button */}
+        <div className="mt-4 sm:mt-6 mb-4 sm:mb-6 px-4 sm:px-0">
+          <button
+            onClick={() => navigate('/study-groups/free-agents')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
+          >
+            <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+            <span className="text-sm sm:text-base">Back to Free Agents</span>
+          </button>
+        </div>
+
         {/* Profile Header - Matching old player modal style */}
-        <div className="relative">
+        <div className="relative mx-2 sm:mx-0">
           {/* Banner */}
-          <div className="h-32 bg-[#2f4858] relative rounded-t-lg">
+          <div className="h-24 sm:h-32 bg-[#2f4858] relative rounded-t-lg">
             {/* Agent Icon */}
-            <div className="absolute -bottom-12 left-6">
+            <div className="absolute -bottom-8 sm:-bottom-12 left-4 sm:left-6">
               <div className="relative">
-                <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
+                <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-white overflow-hidden">
                   {profileIconUrl && !iconError && !iconLoading ? (
                     <img
                       src={profileIconUrl}
@@ -388,16 +404,16 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
           </div>
           
           {/* Username and Tag */}
-          <div className="pt-16 pb-4 px-6 bg-white rounded-b-lg border border-gray-200">
-            <div className="flex items-center justify-between">
+          <div className="pt-12 sm:pt-16 pb-4 px-4 sm:px-6 bg-white rounded-b-lg border border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
               <div>
-                <h3 className="text-xl font-bold text-gray-800 mb-1 text-left">{agent.summoner_name}</h3>
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 text-left">{agent.summoner_name}</h3>
                 <p className="text-gray-500 text-sm text-left">Free Agent</p>
               </div>
               {userId && (
                 <button
                   onClick={() => setShowInviteModal(true)}
-                  className="bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                  className="bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors w-fit"
                 >
                   Send Invitation
                 </button>
@@ -407,23 +423,23 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         </div>
         
         {/* Content */}
-        <div className="bg-white border border-gray-200 rounded-b-lg">
+        <div className="bg-white border border-gray-200 rounded-b-lg mx-2 sm:mx-0">
           <div className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
               {/* Left Column - About Me Section */}
-              <div className="space-y-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">About Me</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">About Me</h3>
                 
                 {/* Description */}
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-green-600" />
+                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
                     Description
                   </h4>
                   <div className="relative">
                     <div 
                       id="description-container"
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
+                      className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 h-64 sm:h-96 overflow-y-auto"
                       onScroll={handleDescriptionScroll}
                     >
                       <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
@@ -442,8 +458,8 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                 {/* Availability */}
                 {agent.availability && agent.availability.length > 0 && (
                   <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                      <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
                       Availability
                     </h4>
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -457,8 +473,8 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                 {/* Time and Timezone */}
                 {(agent.time || agent.timezone) && (
                   <div>
-                    <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
+                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
                       </svg>
                       Preferred Time
@@ -482,8 +498,8 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
 
                 {/* Region */}
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                    <Globe className="w-4 h-4 text-blue-500" />
+                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
                     Region
                   </h4>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -499,8 +515,8 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
               </div>
 
               {/* Right Column - TFT Stats Section */}
-              <div className="space-y-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">TFT Statistics</h3>
+              <div className="space-y-4 sm:space-y-6">
+                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">TFT Statistics</h3>
                 <TFTStatsContent
                   leagueDataLoading={leagueDataLoading}
                   leagueDataError={leagueDataError}

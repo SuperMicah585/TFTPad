@@ -5,7 +5,7 @@ import { LoadingSpinner } from './auth/LoadingSpinner';
 import { studyGroupService } from '../services/studyGroupService';
 import { userService } from '../services/userService';
 import { playerStatsService } from '../services/playerStatsService';
-import { teamStatsService } from '../services/teamStatsService';
+import { teamStatsService, type MemberData } from '../services/teamStatsService';
 
 import { riotService } from '../services/riotService';
 import { TeamStatsContent } from './TeamStatsContent';
@@ -30,8 +30,8 @@ export function GroupDetailPage() {
   const [groupLoading, setGroupLoading] = useState(true);
   const [groupError, setGroupError] = useState<string | null>(null);
   
-  // Members state
-  const [members, setMembers] = useState<GroupMember[]>([]);
+  // Members state - now using MemberData type
+  const [members, setMembers] = useState<MemberData[]>([]);
   const [membersLoading, setMembersLoading] = useState(true);
   
   // Group info state
@@ -54,8 +54,8 @@ export function GroupDetailPage() {
   
   // Team stats state
   const [teamStatsData, setTeamStatsData] = useState<any[]>([]);
-  const [teamStatsLoading, setTeamStatsLoading] = useState(false);
-  const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
+  const [teamStatsLoading] = useState(false);
+  const [teamStatsError] = useState<string | null>(null);
   const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
   const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
   const [liveDataLoading] = useState(false);
@@ -68,8 +68,10 @@ export function GroupDetailPage() {
   // Overflow detection state
   const [descriptionOverflow, setDescriptionOverflow] = useState(false);
   const [instructionsOverflow, setInstructionsOverflow] = useState(false);
+  const [membersOverflow, setMembersOverflow] = useState(false);
   const [descriptionScrolled, setDescriptionScrolled] = useState(false);
   const [instructionsScrolled, setInstructionsScrolled] = useState(false);
+  const [membersScrolled, setMembersScrolled] = useState(false);
 
   // Fetch group data on mount
   useEffect(() => {
@@ -80,13 +82,7 @@ export function GroupDetailPage() {
     }
   }, [groupId]);
 
-  // Auto-fetch team stats when component mounts
-  useEffect(() => {
-    if (group && teamStatsData.length === 0) {
-      console.log('🔄 Auto-fetching team stats for group:', group.id);
-      fetchTeamStats(group.id, group.created_at);
-    }
-  }, [group, teamStatsData.length]);
+
 
   // Fetch selected player icon when selectedPlayer changes
   useEffect(() => {
@@ -133,11 +129,8 @@ export function GroupDetailPage() {
     setGroupError(null);
     
     try {
-      // Fetch group details and members in parallel with retry
-      const [groupDetails, groupUsers] = await Promise.all([
-        retryWithBackoff(() => studyGroupService.getStudyGroup(id)),
-        retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id))
-      ]);
+      // Fetch group details with retry
+      const groupDetails = await retryWithBackoff(() => studyGroupService.getStudyGroup(id));
       
       setGroup(groupDetails);
       setGroupInfo({
@@ -145,16 +138,82 @@ export function GroupDetailPage() {
         instructions: groupDetails.application_instructions || ''
       });
       
-      const members = groupUsers.map(relationship => ({
-        summoner_name: relationship.summoner_name || 'Unknown User',
-        elo: relationship.elo || 0,
-        rank: relationship.rank || 'UNRANKED',
-        owner: relationship.owner,
-        icon_id: relationship.icon_id,
-        user_id: relationship.user_id
-      }));
+      // Try to fetch combined team stats including member data with current ELO
+      try {
+        const combinedStats = await retryWithBackoff(() => 
+          teamStatsService.getCombinedTeamStats(id, groupDetails.created_at)
+        );
+        
+        console.log('📊 Combined stats response:', combinedStats);
+        
+        // Set members with current ELO data if available
+        if (combinedStats.members && Array.isArray(combinedStats.members) && combinedStats.members.length > 0) {
+          console.log('✅ Using combined API members:', combinedStats.members);
+          setMembers(combinedStats.members);
+        } else {
+          console.log('⚠️ No members in combined API, falling back to separate calls');
+          // Fallback to separate API calls
+          const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id));
+          const members = groupUsers.map(relationship => ({
+            summoner_name: relationship.summoner_name || 'Unknown User',
+            elo: relationship.elo || 0,
+            rank: relationship.rank || 'UNRANKED',
+            owner: relationship.owner,
+            icon_id: relationship.icon_id,
+            user_id: relationship.user_id
+          }));
+          setMembers(members);
+        }
+        
+        // Set team stats data
+        setTeamStatsData(combinedStats.events || []);
+        setMemberNames(combinedStats.memberNames || {});
+        setLiveData(combinedStats.liveData || {});
+        
+      } catch (combinedError) {
+        console.log('⚠️ Combined API failed, using separate calls:', combinedError);
+        
+        // Fallback to separate API calls
+        const [groupUsers, memberStats] = await Promise.all([
+          retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id)),
+          retryWithBackoff(() => teamStatsService.getMemberStats(id, groupDetails.created_at))
+        ]);
+        
+        const members = groupUsers.map(relationship => ({
+          summoner_name: relationship.summoner_name || 'Unknown User',
+          elo: relationship.elo || 0,
+          rank: relationship.rank || 'UNRANKED',
+          owner: relationship.owner,
+          icon_id: relationship.icon_id,
+          user_id: relationship.user_id
+        }));
+        setMembers(members);
+        
+        // Handle team stats data
+        let allEvents: any[] = [];
+        let names: { [riotId: string]: string } = {};
+        let liveDataFromAPI: any = {};
+        
+        if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
+          allEvents = memberStats.events;
+          if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
+            names = memberStats.memberNames as unknown as { [riotId: string]: string };
+          }
+          if (memberStats.liveData && typeof memberStats.liveData === 'object') {
+            liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
+          }
+        } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
+          allEvents = Object.values(memberStats).flat();
+          Object.keys(memberStats).forEach(summonerName => {
+            names[summonerName] = summonerName;
+          });
+        }
+        
+        setTeamStatsData(allEvents);
+        setMemberNames(names);
+        setLiveData(liveDataFromAPI);
+      }
       
-      setMembers(members);
     } catch (err) {
       console.error('Error fetching group data:', err);
       setGroupError('Failed to load group data after multiple attempts. Please try refreshing the page.');
@@ -231,70 +290,7 @@ export function GroupDetailPage() {
     }
   };
 
-  const fetchTeamStats = async (groupId: number, startDate: string) => {
-    setTeamStatsLoading(true);
-    setTeamStatsError(null);
-    
-    try {
-      console.log('🔄 Fetching team stats for group:', groupId);
-      const memberStats = await retryWithBackoff(() => teamStatsService.getMemberStats(groupId, startDate));
-      console.log('📊 Member stats received:', memberStats);
-      
-      // Handle the new combined API response format
-      let allEvents: any[] = [];
-      let names: { [riotId: string]: string } = {};
-      let liveDataFromAPI: any = {};
-      
-      if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
-        // New combined format: {"events": [...], "memberNames": {...}, "liveData": {...}}
-        allEvents = memberStats.events;
-        console.log('📈 Using new combined API format, events:', allEvents);
-        
-        // Get member names from API response if available
-        if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
-          names = memberStats.memberNames as unknown as { [riotId: string]: string };
-          console.log('👥 Member names from API:', names);
-        }
-        
-        // Get live data from API response if available
-        if (memberStats.liveData && typeof memberStats.liveData === 'object') {
-          liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
-          console.log('🎯 Live data from API:', liveDataFromAPI);
-        }
-      } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
-        // Old format: {summonerName: [events]}
-        allEvents = Object.values(memberStats).flat();
-        console.log('📈 Using old API format, flattened events:', allEvents);
-        
-        // Create member names mapping from the API response
-        Object.keys(memberStats).forEach(summonerName => {
-          names[summonerName] = summonerName;
-        });
-      } else {
-        // No data available
-        console.log('⚠️ No member stats received');
-        allEvents = [];
-      }
-      
-      console.log('📈 Final events for chart:', allEvents);
-      console.log('📈 Number of events:', allEvents.length);
-      
-      setTeamStatsData(allEvents);
-      setMemberNames(names);
-      setLiveData(liveDataFromAPI);
-      
-      console.log('👥 Member names mapping:', names);
-      console.log('🎯 Live data set:', liveDataFromAPI);
-      
-    } catch (error) {
-      console.error('❌ Error fetching team stats:', error);
-      setTeamStatsError('Not enough historic data to graph');
-      setTeamStatsData([]);
-      setMemberNames({});
-    } finally {
-      setTeamStatsLoading(false);
-    }
-  };
+
 
   const handlePlayerClick = async (member: any) => {
     if (!member.user_id) {
@@ -330,6 +326,33 @@ export function GroupDetailPage() {
 
   const getTurboTftData = () => {
     return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
+  };
+
+  // Helper function to get current ELO for a member, prioritizing live data
+  const getCurrentElo = (member: MemberData | GroupMember): number => {
+    // If the member data already includes current_elo from the API, use it
+    if ('current_elo' in member && member.current_elo !== undefined) {
+      return member.current_elo;
+    }
+    
+    // Try to find live data for this member
+    if (liveData && Object.keys(liveData).length > 0) {
+      // Try to find the member in live data by summoner name
+      const liveDataKey = Object.keys(liveData).find(key => {
+        // Normalize both names for comparison
+        const normalizedLiveKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normalizedMemberName = member.summoner_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return normalizedLiveKey === normalizedMemberName;
+      });
+      
+      if (liveDataKey && liveData[liveDataKey]) {
+        console.log(`🎯 Using live ELO for ${member.summoner_name}: ${liveData[liveDataKey].elo} (was: ${member.elo})`);
+        return liveData[liveDataKey].elo;
+      }
+    }
+    
+    // Fallback to the cached ELO from group membership
+    return member.elo;
   };
 
   const fetchSelectedPlayerIcon = async () => {
@@ -369,10 +392,18 @@ export function GroupDetailPage() {
     }
   };
 
+  const handleMembersScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLDivElement;
+    if (target.scrollTop > 0) {
+      setMembersScrolled(true);
+    }
+  };
+
   // Check overflow when content changes
   useEffect(() => {
     const descriptionElement = document.getElementById('description-container');
     const instructionsElement = document.getElementById('instructions-container');
+    const membersElement = document.getElementById('members-container');
     
     if (descriptionElement) {
       setDescriptionOverflow(checkOverflow(descriptionElement));
@@ -380,7 +411,10 @@ export function GroupDetailPage() {
     if (instructionsElement) {
       setInstructionsOverflow(checkOverflow(instructionsElement));
     }
-  }, [groupInfo.description, groupInfo.instructions]);
+    if (membersElement) {
+      setMembersOverflow(checkOverflow(membersElement));
+    }
+  }, [groupInfo.description, groupInfo.instructions, members]);
 
   if (groupLoading) {
     return (
@@ -410,117 +444,133 @@ export function GroupDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Header - Absolute positioned */}
-      <div className="bg-white border-b border-gray-200 absolute top-0 left-0 right-0 z-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-4">
-            <div className="flex items-center gap-6">
-              <button
-                onClick={() => navigate('/study-groups/groups')}
-                className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors"
-              >
-                <ChevronsLeft className="w-5 h-5" />
-                <span>Back to Groups</span>
-              </button>
-              
-              {/* Group Icon - Hidden on small screens */}
-              <div className="hidden sm:block">
-                {group.image_url ? (
-                  <img
-                    src={group.image_url}
-                    alt={`${group.group_name} icon`}
-                    className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                    }}
-                  />
-                ) : (
-                  <div 
-                    className="w-12 h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-lg"
-                    style={{ 
-                      backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                      color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                    }}
-                  >
-                    {group.group_name.charAt(0).toUpperCase()}
-                  </div>
-                )}
-              </div>
-              
-              {/* Group Name and Date */}
-              <div className="flex-1 min-w-0">
-                <h1 className="text-xl font-bold text-gray-800">{group.group_name}</h1>
-                <p className="text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen bg-white text-gray-800 relative flex flex-col">
+      {/* Notebook Lines Background - Full Viewport */}
+      <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
+        <div className="absolute inset-0 opacity-15 dark:opacity-20">
+          <svg width="100%" height="100%">
+            <pattern id="notebook-lines-group-detail" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
+              <line
+                x1="0"
+                y1="23"
+                x2="100%"
+                y2="23"
+                stroke="currentColor"
+                strokeWidth="1"
+                className="text-blue-500 dark:text-blue-400"
+              />
+            </pattern>
+            <rect width="100%" height="100%" fill="url(#notebook-lines-group-detail)" />
+          </svg>
         </div>
       </div>
 
-              {/* Main Content */}
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Profile Header */}
-          <div className="relative -mx-4 sm:-mx-6 lg:-mx-8">
-            {/* Group header with group image background - matching groups page format */}
-            <div className="relative overflow-hidden">
-              {/* Background Image */}
+      {/* Main Content */}
+      <div className="w-full sm:max-w-7xl sm:mx-auto px-0 sm:px-6 lg:px-8 relative z-10 bg-white">
+        {/* Back Button and Group Info */}
+        <div className="absolute top-2 left-2 right-2 z-20">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+            <button
+              onClick={() => navigate('/study-groups/groups')}
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
+            >
+              <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="text-sm sm:text-base">Back to Groups</span>
+            </button>
+            
+            {/* Group Icon - Show on all screens but smaller on mobile */}
+            <div className="flex items-center gap-3">
               {group.image_url ? (
-                <div
-                  className="w-full bg-cover bg-no-repeat opacity-60"
-                  style={{
-                    backgroundImage: `url(${group.image_url})`,
-                    backgroundPosition: 'center top',
-                    paddingTop: '60%' // Creates aspect ratio for the image
+                <img
+                  src={group.image_url}
+                  alt={`${group.group_name} icon`}
+                  className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.style.display = 'none';
                   }}
                 />
               ) : (
                 <div 
-                  className="w-full flex items-center justify-center opacity-60"
+                  className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
                   style={{ 
                     backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                    paddingTop: '60%' // Creates aspect ratio for the fallback
+                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
                   }}
                 >
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-8xl font-bold opacity-20" style={{ 
-                      color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                    }}>
-                      {group.group_name.charAt(0).toUpperCase()}
-                    </div>
-                  </div>
+                  {group.group_name.charAt(0).toUpperCase()}
                 </div>
               )}
-              {/* Fade overlay */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.2) 75%, rgba(255,255,255,0.6) 90%, rgba(255,255,255,1) 100%)'
-                }}
-              />
-              {/* Content overlay - Empty since content moved to header */}
-              <div className="absolute inset-0 flex items-start justify-start p-6 pt-20">
+              
+              {/* Group Name and Date */}
+              <div className="min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
+                <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
+                <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
-          
-          {/* All Content Sections - Overlapping on banner */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10 " style={{ marginTop: '-30%' }}>
+        </div>
+
+        {/* Profile Header */}
+        <div className="relative sm:-mx-6 lg:-mx-8">
+          {/* Group header with group image background - matching groups page format */}
+          <div className="relative overflow-hidden">
+            {/* Background Image */}
+            {group.image_url ? (
+              <div
+                className="w-full bg-cover bg-no-repeat opacity-60"
+                style={{
+                  backgroundImage: `url(${group.image_url})`,
+                  backgroundPosition: 'center top',
+                  paddingTop: '60%' // Creates aspect ratio for the image
+                }}
+              />
+            ) : (
+              <div 
+                className="w-full flex items-center justify-center opacity-60"
+                style={{ 
+                  backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                  paddingTop: '60%' // Creates aspect ratio for the fallback
+                }}
+              >
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-8xl font-bold opacity-20" style={{ 
+                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                  }}>
+                    {group.group_name.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              </div>
+            )}
+            {/* Fade overlay */}
+            <div
+              className="absolute inset-0"
+              style={{
+                background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.2) 75%, rgba(255,255,255,0.6) 90%, rgba(255,255,255,1) 100%)'
+              }}
+            />
+            {/* Content overlay - Empty since content moved to header */}
+            <div className="absolute inset-0 flex items-start justify-start p-6 pt-20">
+            </div>
+          </div>
+        </div>
+        
+        {/* All Content Sections - Overlapping on banner */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 relative z-10" style={{ marginTop: '-30%' }}>
           {/* Left Column */}
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Group Information Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5" />
+            <div className="rounded-lg p-4 sm:p-6 bg-white border border-gray-200">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
+                <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
                 Group Information
               </h3>
               
               <div className="space-y-6">
                 {/* Members Subsection */}
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                    <Users className="w-4 h-4" />
+                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                    <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                     Members
                   </h4>
                   
@@ -532,11 +582,16 @@ export function GroupDetailPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {members.map((member, index) => (
+                    <div className="relative">
+                      <div 
+                        id="members-container"
+                        className="space-y-3 h-64 sm:h-96 overflow-y-auto bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200"
+                        onScroll={handleMembersScroll}
+                      >
+                        {members.map((member, index) => (
                         <div 
                           key={index} 
-                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                          className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
                             clickedMemberId === member.user_id 
                               ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
                               : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
@@ -589,7 +644,7 @@ export function GroupDetailPage() {
                               {/* ELO */}
                               <div className="flex items-center gap-1">
                                 <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-                                <span className="font-bold">{member.elo.toLocaleString()}</span>
+                                <span className="font-bold">{getCurrentElo(member).toLocaleString()}</span>
                               </div>
                             </div>
                           </div>
@@ -614,19 +669,25 @@ export function GroupDetailPage() {
                             {/* ELO */}
                             <div className="flex items-center gap-1 text-sm text-gray-600">
                               <Zap className="w-4 h-4 text-yellow-500" />
-                              <span className="font-bold">{member.elo.toLocaleString()}</span>
+                              <span className="font-bold">{getCurrentElo(member).toLocaleString()}</span>
                             </div>
                           </div>
                         </div>
                       ))}
+                      </div>
+                      {membersOverflow && !membersScrolled && (
+                        <div className="absolute bottom-2 right-2">
+                          <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
 
                 {/* Description */}
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-green-600" />
+                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
                     Description
                   </h4>
                   <div className="relative">
@@ -649,8 +710,8 @@ export function GroupDetailPage() {
                 
                 {/* Application Instructions */}
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-orange-600" />
+                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
                     Application Instructions
                   </h4>
                   <div className="relative">
@@ -673,8 +734,8 @@ export function GroupDetailPage() {
                 
                 {/* Meeting Schedule */}
                 <div>
-                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                    <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
                     Meeting Schedule
                   </h4>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
@@ -707,10 +768,10 @@ export function GroupDetailPage() {
           </div>
 
           {/* Right Column */}
-          <div className="space-y-8">
+          <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Team Stats Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">Team Statistics</h3>
+            <div className="rounded-lg p-4 sm:p-6 bg-white border border-gray-200">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Team Statistics</h3>
               
               {teamStatsLoading ? (
                 <div className="flex justify-center items-center py-8">

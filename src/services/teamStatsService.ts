@@ -57,6 +57,37 @@ export interface RankAuditEvent {
   riot_id: string;
 }
 
+export interface LivePlayerData {
+  riot_id: string;
+  summoner_name: string;
+  tier: string;
+  rank: string;
+  leaguePoints: number;
+  wins: number;
+  losses: number;
+  elo: number;
+  created_at: string;
+}
+
+export interface MemberData {
+  summoner_name: string;
+  elo: number;
+  owner: number;
+  rank?: string;
+  icon_id?: number;
+  user_id?: number;
+  current_elo?: number; // Live ELO from live data
+  current_wins?: number;
+  current_losses?: number;
+}
+
+export interface CombinedTeamStatsResponse {
+  events: RankAuditEvent[];
+  memberNames: { [riotId: string]: string };
+  liveData: { [summonerName: string]: LivePlayerData };
+  members: MemberData[]; // Current member list with live ELO
+}
+
 export interface TeamStatsData {
   events: RankAuditEvent[];
   memberCount: number;
@@ -111,6 +142,34 @@ export const teamStatsService = {
     
     const data = await response.json();
     console.log('✅ Team stats API response:', data);
+    
+    return data;
+  },
+
+  // Get combined team stats including member data with current ELO
+  async getCombinedTeamStats(groupId: number, startDate: string): Promise<CombinedTeamStatsResponse> {
+    const queryParams = new URLSearchParams();
+    queryParams.append('group_id', groupId.toString());
+    queryParams.append('start_date', startDate);
+    queryParams.append('include_members', 'true'); // Flag to include member data
+
+    console.log('🔍 Fetching combined team stats with params:', {
+      groupId,
+      startDate,
+      url: `${API_ENDPOINT}/team-stats/members?${queryParams}`
+    });
+
+    const response = await retryWithBackoff(() => 
+      fetch(`${API_ENDPOINT}/team-stats/members?${queryParams}`)
+    );
+    
+    if (!response.ok) {
+      console.error('❌ Combined team stats API error:', response.status, response.statusText);
+      throw new Error(`Failed to fetch combined team stats: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('✅ Combined team stats API response:', data);
     
     return data;
   }

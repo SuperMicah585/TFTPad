@@ -29,8 +29,8 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
       'emerald': 2000,
       'diamond': 2400,
       'master': 2800,
-      'grandmaster': 3200,
-      'challenger': 3600
+      'grandmaster': 2800,
+      'challenger': 2800
     };
     
     const rankValues: { [key: string]: number } = {

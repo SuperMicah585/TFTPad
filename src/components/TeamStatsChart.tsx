@@ -71,14 +71,48 @@ export function TeamStatsChart({
     });
   }
   
-  // If no historic data but live data exists, create entries for live data members
-  if (!hasHistoricData && hasLiveData) {
+  // Always add entries for all members with live data, regardless of historic data
+  if (hasLiveData) {
     Object.keys(liveData).forEach(summonerName => {
       if (!groupedData[summonerName]) {
         groupedData[summonerName] = [];
       }
     });
   }
+
+  // Helper function to normalize summoner names for consistent key matching
+  const normalizeSummonerName = (name: string): string => {
+    // Remove any special characters and normalize to lowercase for comparison
+    return name.toLowerCase().replace(/[^a-z0-9]/g, '');
+  };
+
+  // Create a reverse mapping from normalized names to original names
+  const reverseMemberNames: { [normalizedName: string]: string } = {};
+  Object.entries(memberNames).forEach(([, summonerName]) => {
+    const normalizedName = normalizeSummonerName(summonerName);
+    reverseMemberNames[normalizedName] = summonerName;
+  });
+
+  // Create a mapping from live data keys to member names
+  const liveDataToMemberName: { [liveDataKey: string]: string } = {};
+  if (liveData) {
+    Object.keys(liveData).forEach(liveDataKey => {
+      const normalizedLiveKey = normalizeSummonerName(liveDataKey);
+      // Try to find a match in the reverse mapping
+      if (reverseMemberNames[normalizedLiveKey]) {
+        liveDataToMemberName[liveDataKey] = reverseMemberNames[normalizedLiveKey];
+      } else {
+        // If no match found, use the original key
+        liveDataToMemberName[liveDataKey] = liveDataKey;
+      }
+    });
+  }
+
+  console.log('🔍 TeamStatsChart Key matching debug info:');
+  console.log('  Member names:', memberNames);
+  console.log('  Reverse member names:', reverseMemberNames);
+  console.log('  Live data keys:', liveData ? Object.keys(liveData) : []);
+  console.log('  Live data to member name mapping:', liveDataToMemberName);
 
   // Helper function to truncate long names
   const truncateName = (name: string, maxLength: number = 8) => {
@@ -100,16 +134,55 @@ export function TeamStatsChart({
       isLive: false
     }));
     
-    // Add live data point if available (use original summoner name for lookup)
-    if (liveData && liveData[summonerName]) {
-      const livePoint = liveData[summonerName];
-      chartPoints.push({
-        x: 'Current',
-        y: livePoint.elo,
-        wins: livePoint.wins,
-        losses: livePoint.losses,
-        isLive: true
-      });
+    // Add live data point if available (use improved key matching)
+    if (liveData) {
+      // Try direct match first
+      if (liveData[summonerName]) {
+        const livePoint = liveData[summonerName];
+        console.log(`✅ TeamStatsChart: Found live data for ${summonerName} (direct match):`, livePoint);
+        chartPoints.push({
+          x: 'Current',
+          y: livePoint.elo,
+          wins: livePoint.wins,
+          losses: livePoint.losses,
+          isLive: true
+        });
+      } else {
+        // Try to find a match using the mapping
+        const mappedMemberName = liveDataToMemberName[summonerName];
+        if (mappedMemberName && liveData[mappedMemberName]) {
+          const livePoint = liveData[mappedMemberName];
+          console.log(`✅ TeamStatsChart: Found live data for ${summonerName} (mapped to ${mappedMemberName}):`, livePoint);
+          chartPoints.push({
+            x: 'Current',
+            y: livePoint.elo,
+            wins: livePoint.wins,
+            losses: livePoint.losses,
+            isLive: true
+          });
+        } else {
+          // Try reverse lookup - find if this summoner name maps to any live data key
+          const matchingLiveDataKey = Object.keys(liveData).find(liveKey => {
+            const normalizedLiveKey = normalizeSummonerName(liveKey);
+            const normalizedSummonerName = normalizeSummonerName(summonerName);
+            return normalizedLiveKey === normalizedSummonerName;
+          });
+          
+          if (matchingLiveDataKey) {
+            const livePoint = liveData[matchingLiveDataKey];
+            console.log(`✅ TeamStatsChart: Found live data for ${summonerName} (normalized match to ${matchingLiveDataKey}):`, livePoint);
+            chartPoints.push({
+              x: 'Current',
+              y: livePoint.elo,
+              wins: livePoint.wins,
+              losses: livePoint.losses,
+              isLive: true
+            });
+          } else {
+            console.log(`❌ TeamStatsChart: No live data found for ${summonerName}`);
+          }
+        }
+      }
     }
     
     // Only include series that have data points (historic or live)
@@ -132,6 +205,12 @@ export function TeamStatsChart({
   console.log('📊 Chart series IDs:', chartData.map(series => series.id));
   console.log('📊 Live data available:', liveData);
   console.log('📊 Live data keys:', liveData ? Object.keys(liveData) : []);
+  console.log('📊 Live data keys vs grouped data keys comparison:');
+  if (liveData) {
+    Object.keys(liveData).forEach(key => {
+      console.log(`  Live data key: "${key}" - Found in groupedData: ${key in groupedData}`);
+    });
+  }
 
   return (
     <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 ${className}`}>
