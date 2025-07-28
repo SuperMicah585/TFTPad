@@ -469,123 +469,126 @@ export function GroupDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 relative z-10" style={{ marginTop: '-30%' }}>
           {/* Left Column */}
           <div className="space-y-8">
-            {/* Members Section */}
+            {/* Group Information Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <Users className="w-6 h-6" />
-                Members ({members.length})
-              </h2>
-              
-              {membersLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-center">
-                    <LoadingSpinner size="md" className="mx-auto mb-2" />
-                    <p className="text-gray-500">Loading members...</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {members.map((member, index) => (
-                    <div 
-                      key={index} 
-                      className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
-                        clickedMemberId === member.user_id 
-                          ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
-                          : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                      }`}
-                      onClick={() => handlePlayerClick(member)}
-                    >
-                      {/* Member Icon */}
-                      <ProfileIcon 
-                        memberId={member.user_id || index}
-                        summonerName={member.summoner_name}
-                        iconId={member.icon_id}
-                        size="md"
-                        shape="rounded-full"
-                      />
-                      
-                      {/* Member Info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span 
-                            className={`font-medium transition-all duration-300 ${
-                              clickedMemberId === member.user_id 
-                                ? 'text-blue-600 scale-105' 
-                                : 'text-gray-800 hover:text-blue-600'
-                            }`}
-                          >
-                            {member.summoner_name}
-                          </span>
-                          {member.owner === 1 && (
-                            <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                          )}
-                        </div>
-                        
-                        {/* Rank and ELO - Below name on mobile, hidden on larger screens */}
-                        <div className="flex flex-row gap-2 text-xs sm:text-sm text-gray-600 sm:hidden">
-                          {/* Rank */}
-                          <div className="flex items-center gap-1">
-                            <img 
-                              src={getRankIconUrl(member.rank || 'UNRANKED')} 
-                              alt={member.rank || 'UNRANKED'} 
-                              className="w-3 h-3 sm:w-4 sm:h-4"
-                              onError={(e) => {
-                                console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
-                                const target = e.target as HTMLImageElement;
-                                target.style.display = 'none';
-                              }}
-                            />
-                            <span className="font-medium">{member.rank || 'UNRANKED'}</span>
-                          </div>
-                          
-                          {/* ELO */}
-                          <div className="flex items-center gap-1">
-                            <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-                            <span className="font-bold">{member.elo.toLocaleString()}</span>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      {/* Rank and ELO - To the right on larger screens, hidden on mobile */}
-                      <div className="hidden sm:flex sm:flex-row sm:items-center sm:gap-2">
-                        {/* Rank */}
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <img 
-                            src={getRankIconUrl(member.rank || 'UNRANKED')} 
-                            alt={member.rank || 'UNRANKED'} 
-                            className="w-4 h-4"
-                            onError={(e) => {
-                              console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                          <span className="font-medium">{member.rank || 'UNRANKED'}</span>
-                        </div>
-                        
-                        {/* ELO */}
-                        <div className="flex items-center gap-1 text-sm text-gray-600">
-                          <Zap className="w-4 h-4 text-yellow-500" />
-                          <span className="font-bold">{member.elo.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* Group Info Section */}
-            <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                <FileText className="w-6 h-6" />
+              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5" />
                 Group Information
-              </h2>
+              </h3>
               
               <div className="space-y-6">
+                {/* Members Subsection */}
+                <div>
+                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                    <Users className="w-4 h-4" />
+                    Members
+                  </h4>
+                  
+                  {membersLoading ? (
+                    <div className="flex justify-center items-center py-8">
+                      <div className="text-center">
+                        <LoadingSpinner size="md" className="mx-auto mb-2" />
+                        <p className="text-gray-500">Loading members...</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {members.map((member, index) => (
+                        <div 
+                          key={index} 
+                          className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                            clickedMemberId === member.user_id 
+                              ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
+                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handlePlayerClick(member)}
+                        >
+                          {/* Member Icon */}
+                          <ProfileIcon 
+                            memberId={member.user_id || index}
+                            summonerName={member.summoner_name}
+                            iconId={member.icon_id}
+                            size="md"
+                            shape="rounded-full"
+                          />
+                          
+                          {/* Member Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span 
+                                className={`font-medium transition-all duration-300 ${
+                                  clickedMemberId === member.user_id 
+                                    ? 'text-blue-600 scale-105' 
+                                    : 'text-gray-800 hover:text-blue-600'
+                                }`}
+                              >
+                                {member.summoner_name}
+                              </span>
+                              {member.owner === 1 && (
+                                <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                              )}
+                            </div>
+                            
+                            {/* Rank and ELO - Below name on mobile, hidden on larger screens */}
+                            <div className="flex flex-row gap-2 text-xs sm:text-sm text-gray-600 sm:hidden">
+                              {/* Rank */}
+                              <div className="flex items-center gap-1">
+                                <img 
+                                  src={getRankIconUrl(member.rank || 'UNRANKED')} 
+                                  alt={member.rank || 'UNRANKED'} 
+                                  className="w-3 h-3 sm:w-4 sm:h-4"
+                                  onError={(e) => {
+                                    console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                                <span className="font-medium">{member.rank || 'UNRANKED'}</span>
+                              </div>
+                              
+                              {/* ELO */}
+                              <div className="flex items-center gap-1">
+                                <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+                                <span className="font-bold">{member.elo.toLocaleString()}</span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Rank and ELO - To the right on larger screens, hidden on mobile */}
+                          <div className="hidden sm:flex sm:flex-row sm:items-center sm:gap-2">
+                            {/* Rank */}
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <img 
+                                src={getRankIconUrl(member.rank || 'UNRANKED')} 
+                                alt={member.rank || 'UNRANKED'} 
+                                className="w-4 h-4"
+                                onError={(e) => {
+                                  console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
+                                  const target = e.target as HTMLImageElement;
+                                  target.style.display = 'none';
+                                }}
+                              />
+                              <span className="font-medium">{member.rank || 'UNRANKED'}</span>
+                            </div>
+                            
+                            {/* ELO */}
+                            <div className="flex items-center gap-1 text-sm text-gray-600">
+                              <Zap className="w-4 h-4 text-yellow-500" />
+                              <span className="font-bold">{member.elo.toLocaleString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* Description */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Description</h3>
+                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-green-600" />
+                    Description
+                  </h4>
                   <div className="relative">
                     <div 
                       id="description-container"
@@ -606,7 +609,10 @@ export function GroupDetailPage() {
                 
                 {/* Application Instructions */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3">Application Instructions</h3>
+                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-orange-600" />
+                    Application Instructions
+                  </h4>
                   <div className="relative">
                     <div 
                       id="instructions-container"
@@ -627,10 +633,10 @@ export function GroupDetailPage() {
                 
                 {/* Meeting Schedule */}
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <Calendar className="w-5 h-5" style={{ color: '#ff8889' }} />
+                  <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
+                    <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
                     Meeting Schedule
-                  </h3>
+                  </h4>
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center gap-2 text-gray-700 text-xs">
                       <span className="font-medium">
@@ -658,7 +664,7 @@ export function GroupDetailPage() {
           <div className="space-y-8">
             {/* Team Stats Section */}
             <div className="bg-white border border-gray-200 rounded-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">Team Statistics</h2>
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Team Statistics</h3>
               
               {teamStatsLoading ? (
                 <div className="flex justify-center items-center py-8">

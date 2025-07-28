@@ -761,7 +761,7 @@ export function FreeAgentsTab({
                       updateSearchInURL(searchQuery);
                     }
                   }}
-                  className="flex-1 px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460]"
+                  className="flex-1 px-3 sm:px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
                 />
                 <button
                   onClick={() => {
@@ -772,7 +772,7 @@ export function FreeAgentsTab({
                   style={{ minWidth: '40px', minHeight: '40px' }}
                   aria-label="Search"
                 >
-                  <FaSearch size={18} />
+                  <FaSearch size={16} className="sm:w-[18px] sm:h-[18px]" />
                 </button>
               </div>
             </div>
