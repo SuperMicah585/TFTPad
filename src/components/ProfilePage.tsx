@@ -46,7 +46,7 @@ interface TftLeagueEntry {
 }
 
 function ProfileContent() {
-  const { user, userId, signOut } = useAuth()
+  const { user, userId, signOut, checkProfileCompletion } = useAuth()
   const { profileIconUrl, refreshProfileIcon } = useProfile()
   const [showRiotModal, setShowRiotModal] = useState(false)
   const [riotAccount, setRiotAccount] = useState<RiotAccount | null>(null)
@@ -181,6 +181,8 @@ function ProfileContent() {
   const handleDescriptionSave = async () => {
     await updateUserProfile({ description: descriptionDraft })
     setIsEditingDescription(false)
+    // Check profile completion after saving description
+    await checkProfileCompletion()
   }
 
   // Handle description cancel
@@ -326,20 +328,20 @@ function ProfileContent() {
       <div className="relative z-10">
       <div className="container mx-auto px-4 py-8 relative z-10 max-w-7xl">
         {/* Header Section */}
-        <div className="mb-8">
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-8">
+        <div className="mb-6 sm:mb-8">
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6 lg:p-8">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
               <div className="flex-1 min-w-0">
-                <h1 className="text-2xl sm:text-4xl font-bold text-black mb-2">Player Dashboard</h1>
-                <p className="text-black text-base sm:text-lg">Track your TFT performance and manage your account</p>
+                <h1 className="text-xl sm:text-2xl lg:text-4xl font-bold text-black mb-2">Player Dashboard</h1>
+                <p className="text-black text-sm sm:text-base lg:text-lg">Track your TFT performance and manage your account</p>
               </div>
               <div className="flex flex-col items-start sm:items-end sm:text-right min-w-0">
-                <p className="text-sm text-black mb-1">Signed in as</p>
-                <p className="font-semibold text-black mb-4 break-all">{user?.email || 'User'}</p>
+                <p className="text-xs sm:text-sm text-black mb-1">Signed in as</p>
+                <p className="font-semibold text-black mb-3 sm:mb-4 break-all text-sm sm:text-base">{user?.summoner_name || 'User'}</p>
                 <button
                   onClick={handleDeleteButtonClick}
                   disabled={!userId || deletingAccount}
-                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                  className="bg-red-600 hover:bg-red-700 disabled:bg-red-400 text-white font-semibold py-2 px-3 sm:px-4 rounded-lg transition-all duration-200 disabled:cursor-not-allowed text-xs sm:text-sm whitespace-nowrap"
                 >
                   {deletingAccount ? (
                     <div className="flex items-center justify-center gap-2">
@@ -398,10 +400,10 @@ function ProfileContent() {
                   </div>
                 </div>
               ) : riotAccount && (
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-2xl font-bold text-black flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-black flex items-center gap-2 sm:gap-3">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
                         {profileIconUrl ? (
                           <img 
                             src={profileIconUrl} 
@@ -410,29 +412,29 @@ function ProfileContent() {
                             onError={() => {}} // Error handling is managed by the context
                           />
                         ) : (
-                          <svg className="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                          <svg className="w-3 h-3 sm:w-5 sm:h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                           </svg>
                         )}
                       </div>
                       Riot Account
                     </h2>
-                    <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                    <span className="px-2 sm:px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs sm:text-sm font-medium">
                       Connected
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-sm text-black mb-1">Summoner Name</p>
-                      <p className="font-semibold text-black text-lg">{riotAccount.summoner_name}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+                    <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
+                      <p className="text-xs sm:text-sm text-black mb-1">Summoner Name</p>
+                      <p className="font-semibold text-black text-sm sm:text-base lg:text-lg break-all">{riotAccount.summoner_name}</p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-sm text-black mb-1">Region</p>
-                      <p className="font-semibold text-black text-lg">{riotAccount.region.charAt(0).toUpperCase() + riotAccount.region.slice(1)}</p>
+                    <div className="bg-gray-50 rounded-xl p-3 sm:p-4">
+                      <p className="text-xs sm:text-sm text-black mb-1">Region</p>
+                      <p className="font-semibold text-black text-sm sm:text-base lg:text-lg">{riotAccount.region.charAt(0).toUpperCase() + riotAccount.region.slice(1)}</p>
                     </div>
-                    <div className="bg-gray-50 rounded-xl p-4">
-                      <p className="text-sm text-black mb-1">Connected Since</p>
-                      <p className="font-semibold text-black text-lg">{new Date(riotAccount.created_at).toLocaleDateString()}</p>
+                    <div className="bg-gray-50 rounded-xl p-3 sm:p-4 sm:col-span-2 lg:col-span-1">
+                      <p className="text-xs sm:text-sm text-black mb-1">Connected Since</p>
+                      <p className="font-semibold text-black text-sm sm:text-base lg:text-lg">{new Date(riotAccount.created_at).toLocaleDateString()}</p>
                     </div>
                   </div>
                   
@@ -567,54 +569,59 @@ function ProfileContent() {
                   </div>
                 </div>
               ) : leagueData.length > 0 && (
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                  <h2 className="text-2xl font-bold text-black mb-6 flex items-center gap-3">
-                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
-                      <Star className="w-5 h-5 text-yellow-600" fill="currentColor" />
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl lg:text-2xl font-bold text-black mb-4 sm:mb-6 flex items-center gap-2 sm:gap-3">
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <Star className="w-3 h-3 sm:w-5 sm:h-5 text-yellow-600" fill="currentColor" />
                     </div>
                     TFT League Stats
                   </h2>
                   <div className="space-y-4">
                     {/* Ranked TFT */}
                     {getRankedTftData() && (
-                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                        <h3 className="font-bold text-black mb-3">
+                      <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-200">
+                        <h3 className="font-bold text-black mb-3 text-sm sm:text-base flex items-center gap-2">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-amber-500 rounded-lg flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                            </svg>
+                          </div>
                           Ranked TFT
                         </h3>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
-                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-6">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <Award className="w-3 h-3 text-amber-600" />
+                                <Award className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600" />
                                 <p className="text-xs text-black">Rank</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-600" fill="currentColor" />
                                 <p className="text-xs text-black">LP</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.leaguePoints}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getRankedTftData()?.leaguePoints}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600" />
                                 <p className="text-xs text-black">Wins</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.wins}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getRankedTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingDown className="w-3 h-3 text-red-600" />
+                                <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600" />
                                 <p className="text-xs text-black">Losses</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getRankedTftData()?.losses}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getRankedTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center sm:border-l sm:border-gray-200 sm:pl-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-200">
+                          <div className="text-center sm:border-l sm:border-gray-200 sm:pl-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-200">
                             <p className="text-xs text-black mb-1">Win Rate</p>
-                            <p className="font-bold text-black text-lg sm:text-xl">
+                            <p className="font-bold text-black text-base sm:text-lg lg:text-xl">
                               {getRankedTftData() ? 
                                 `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
                             </p>
@@ -625,49 +632,49 @@ function ProfileContent() {
 
                     {/* Turbo TFT */}
                     {getTurboTftData() && (
-                      <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
-                        <h3 className="font-bold text-black mb-3 flex items-center gap-2">
-                          <div className="w-5 h-5 bg-gray-200 rounded-lg flex items-center justify-center">
-                            <svg className="w-3 h-3 text-gray-700" fill="currentColor" viewBox="0 0 20 20">
+                      <div className="bg-gray-50 rounded-xl p-3 sm:p-4 border border-gray-200">
+                        <h3 className="font-bold text-black mb-3 text-sm sm:text-base flex items-center gap-2">
+                          <div className="w-4 h-4 sm:w-5 sm:h-5 bg-purple-500 rounded-lg flex items-center justify-center">
+                            <svg className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
                               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                             </svg>
                           </div>
                           Turbo TFT
                         </h3>
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0">
-                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                          <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-6">
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <Award className="w-3 h-3 text-amber-600" />
+                                <Award className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-amber-600" />
                                 <p className="text-xs text-black">Tier</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.ratedTier}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getTurboTftData()?.ratedTier}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
+                                <Star className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-yellow-600" fill="currentColor" />
                                 <p className="text-xs text-black">Rating</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.ratedRating}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getTurboTftData()?.ratedRating}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingUp className="w-3 h-3 text-green-600" />
+                                <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-green-600" />
                                 <p className="text-xs text-black">Wins</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.wins}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getTurboTftData()?.wins}</p>
                             </div>
                             <div className="text-center">
                               <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingDown className="w-3 h-3 text-red-600" />
+                                <TrendingDown className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-red-600" />
                                 <p className="text-xs text-black">Losses</p>
                               </div>
-                              <p className="font-bold text-black text-sm sm:text-lg">{getTurboTftData()?.losses}</p>
+                              <p className="font-bold text-black text-xs sm:text-sm lg:text-lg">{getTurboTftData()?.losses}</p>
                             </div>
                           </div>
-                          <div className="text-center sm:border-l sm:border-gray-200 sm:pl-6 pt-4 sm:pt-0 border-t sm:border-t-0 border-gray-200">
+                          <div className="text-center sm:border-l sm:border-gray-200 sm:pl-6 pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-200">
                             <p className="text-xs text-black mb-1">Win Rate</p>
-                            <p className="font-bold text-black text-lg sm:text-xl">
+                            <p className="font-bold text-black text-base sm:text-lg lg:text-xl">
                               {getTurboTftData() ? 
                                 `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
                             </p>
@@ -683,10 +690,10 @@ function ProfileContent() {
             {/* Right Column - Actions & Features */}
             <div className="space-y-8">
               {/* User Profile Description */}
-              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                <h2 className="text-xl font-bold text-black mb-4 flex items-center gap-3">
-                  <div className="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <User className="w-4 h-4 text-blue-600" />
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-4 sm:p-6">
+                <h2 className="text-lg sm:text-xl font-bold text-black mb-3 sm:mb-4 flex items-center gap-2 sm:gap-3">
+                  <div className="w-5 h-5 sm:w-6 sm:h-6 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <User className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
                   </div>
                   Profile Description
                 </h2>
@@ -706,7 +713,7 @@ function ProfileContent() {
                         <textarea
                           value={descriptionDraft}
                           onChange={(e) => setDescriptionDraft(e.target.value)}
-                          placeholder="Tell others about yourself..."
+                          placeholder="Who are you as a TFT player and what are you looking for in a study group?"
                           className="w-full p-3 border border-gray-300 rounded-lg text-black placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none text-xs"
                           rows={4}
                         />
@@ -731,7 +738,7 @@ function ProfileContent() {
                             {userProfile?.description ? (
                               <p className="text-black whitespace-pre-wrap text-left text-xs">{userProfile.description}</p>
                             ) : (
-                              <p className="text-gray-500 italic text-left text-xs">No description added yet.</p>
+                              <p className="text-gray-500 italic text-left text-xs">Tell players who you are as a TFT player and what are you looking for in a study group</p>
                             )}
                           </div>
                         <div className="mt-3 flex justify-between items-center">
@@ -801,14 +808,16 @@ function ProfileContent() {
                             Preferred Time
                           </h3>
                           <div className="bg-gray-50 rounded-xl p-4 min-h-[60px]">
-                            {timeDraft ? (
+                            {(timeDraft || timezoneDraft) ? (
                               <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-black font-medium">Time:</span>
-                                  <span className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium">
-                                    {timeDraft.charAt(0).toUpperCase() + timeDraft.slice(1)}
-                                  </span>
-                                </div>
+                                {timeDraft && (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-black font-medium">Time:</span>
+                                    <span className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm font-medium">
+                                      {timeDraft.charAt(0).toUpperCase() + timeDraft.slice(1)}
+                                    </span>
+                                  </div>
+                                )}
                                 {timezoneDraft && (
                                   <div className="flex items-center gap-2">
                                     <span className="text-black font-medium">Timezone:</span>

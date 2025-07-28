@@ -7,10 +7,11 @@ import { Header } from './components/header'
 import { BlogPage } from './components/BlogPage'
 import { ContactPage } from './components/ContactPage'
 import { ProfilePage } from './components/ProfilePage'
-import { AuthCallback } from './components/auth/AuthCallback'
+
 import { TFTProvider } from './contexts/TFTContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProfileProvider } from './contexts/ProfileContext'
+
 import { HelpCircle } from 'lucide-react'
 import { GoogleAnalytics, trackEvent } from './components/GoogleAnalytics'
 import './App.css'
@@ -245,6 +246,8 @@ function BlogPost({ title, content }: { title: string; content: React.ReactNode 
 // ... (remove all lines from 'function StudyGroupsPage() {' to the closing '}' of that function)
 // ... existing code ...
 
+
+
 function App() {
   return (
     <>
@@ -303,7 +306,7 @@ function App() {
               <Route path="/blog/mana" element={<BlogPost title="Mana" content={<Mana />} />} />
               <Route path="/blog/base-stats-comparison" element={<BlogPost title="Comparing Units Base Stats" content={<BaseStatsComparison />} />} />
               <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
+
             </Routes>
           </div>
                   </div>

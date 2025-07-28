@@ -1,15 +1,15 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { OAuthLoginModal } from './auth/OAuthLoginModal'
+import { RiotLoginModal } from './auth/RiotLoginModal'
 import { UserMenu } from './auth/UserMenu'
 
 export function Header() {
    const location = useLocation();
    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
    const [showLoginModal, setShowLoginModal] = useState(false);
-   const [modalMode, setModalMode] = useState<'login' | 'signup'>('login');
-   const { user, signOut } = useAuth();
+   const { user, signOut, isProfileIncomplete } = useAuth();
+   const navigate = useNavigate();
    
    return(
        <div className="border-b border-gray-800 px-6 py-2 relative" style={{ backgroundColor: '#964B00' }}>
@@ -69,30 +69,45 @@ export function Header() {
                
                {/* Desktop Authentication */}
                <div className="hidden md:flex items-center gap-2">
-                   {user ? (
-                       <UserMenu />
-                   ) : (
-                       <>
-                           <button
-                               onClick={() => {
-                                   setModalMode('login');
-                                   setShowLoginModal(true);
-                               }}
-                               className="bg-transparent text-orange-200 hover:text-white hover:bg-orange-300/20 rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
-                           >
-                               Login
-                           </button>
-                           <button
-                               onClick={() => {
-                                   setModalMode('signup');
-                                   setShowLoginModal(true);
-                               }}
-                               className="bg-[#00c9ac] text-white hover:bg-[#00b89a] rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
-                           >
-                               Sign Up
-                           </button>
-                       </>
-                   )}
+                                           {user ? (
+                            <>
+                                {isProfileIncomplete() && (
+                                    <button
+                                        onClick={() => navigate('/profile')}
+                                        className="text-white px-3 py-1 rounded-lg text-xs font-medium transition-colors flex items-center gap-1"
+                                        style={{ backgroundColor: '#ff8889' }}
+                                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ff7778'}
+                                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff8889'}
+                                        title="Complete your profile"
+                                    >
+                                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                        Complete Profile
+                                    </button>
+                                )}
+                                <UserMenu />
+                            </>
+                        ) : (
+                            <>
+                                <button
+                                    onClick={() => {
+                                        setShowLoginModal(true);
+                                    }}
+                                    className="bg-transparent text-orange-200 hover:text-white hover:bg-orange-300/20 rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
+                                >
+                                    Login
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowLoginModal(true);
+                                    }}
+                                    className="bg-[#00c9ac] text-white hover:bg-[#00b89a] rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
+                                >
+                                    Sign Up
+                                </button>
+                            </>
+                        )}
                </div>
                
                {/* Mobile Menu Button */}
@@ -169,17 +184,37 @@ export function Header() {
                            Contact
                        </Link>
                        {user && (
-                           <Link
-                               to="/profile"
-                               onClick={() => setIsMobileMenuOpen(false)}
-                               className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                                   location.pathname === '/profile'
-                                       ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
-                                       : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
-                               }`}
-                           >
-                               Profile
-                           </Link>
+                           <>
+                               {isProfileIncomplete() && (
+                                   <button
+                                       onClick={() => {
+                                           navigate('/profile')
+                                           setIsMobileMenuOpen(false)
+                                       }}
+                                       className="text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                                       style={{ backgroundColor: '#ff8889' }}
+                                       onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#ff7778'}
+                                       onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ff8889'}
+                                       title="Complete your profile"
+                                   >
+                                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                           <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                                       </svg>
+                                       Complete Profile
+                                   </button>
+                               )}
+                               <Link
+                                   to="/profile"
+                                   onClick={() => setIsMobileMenuOpen(false)}
+                                   className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                                       location.pathname === '/profile'
+                                           ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
+                                           : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
+                                   }`}
+                               >
+                                   Profile
+                               </Link>
+                           </>
                        )}
                        {user ? (
                            <button
@@ -195,21 +230,19 @@ export function Header() {
                            <div className="flex flex-col gap-2">
                                <button
                                    onClick={() => {
-                                       setModalMode('login');
                                        setShowLoginModal(true);
                                        setIsMobileMenuOpen(false);
                                    }}
-                                   className="text-orange-300 hover:text-white hover:bg-orange-400/20 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent"
+                                   className="bg-transparent text-orange-200 hover:text-white hover:bg-orange-300/20 rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
                                >
                                    Login
                                </button>
                                <button
                                    onClick={() => {
-                                       setModalMode('signup');
                                        setShowLoginModal(true);
                                        setIsMobileMenuOpen(false);
                                    }}
-                                   className="text-[#00c9ac] hover:text-white hover:bg-[#00c9ac]/20 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-transparent"
+                                   className="bg-[#00c9ac] text-white hover:bg-[#00b89a] rounded-lg p-2 focus:outline-none focus:ring-0 border-0 text-xs transition-colors"
                                >
                                    Sign Up
                                </button>
@@ -220,10 +253,9 @@ export function Header() {
            )}
            
            {/* Auth Modals */}
-           <OAuthLoginModal
+           <RiotLoginModal
                isOpen={showLoginModal}
                onClose={() => setShowLoginModal(false)}
-               mode={modalMode}
            />
        </div>
    )

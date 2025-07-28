@@ -30,8 +30,12 @@ export function TeamStatsChart({
   console.log('📊 Sample event riot_id:', data[0]?.riot_id);
   console.log('📊 Mapped summoner name for sample:', memberNames[data[0]?.riot_id]);
   
-  if (!data || data.length === 0) {
-    console.log('⚠️ No data available for chart');
+  // Check if we have any data (historic or live)
+  const hasHistoricData = data && data.length > 0;
+  const hasLiveData = liveData && Object.keys(liveData).length > 0;
+  
+  if (!hasHistoricData && !hasLiveData) {
+    console.log('⚠️ No data available for chart (no historic or live data)');
     return (
       <div className={`flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 ${className}`} style={{ width, height }}>
         <div className="text-center text-gray-500">
@@ -49,19 +53,32 @@ export function TeamStatsChart({
 
   // Group data by summoner name (already provided by backend)
   const groupedData: { [summonerName: string]: RankAuditEventWithName[] } = {};
-  data.forEach((event: RankAuditEventWithName) => {
-    // Backend already adds summoner_name to each event
-    const summonerName = event.summoner_name || event.riot_id;
-    if (!groupedData[summonerName]) {
-      groupedData[summonerName] = [];
-    }
-    groupedData[summonerName].push(event);
-  });
+  
+  // Process historic data if available
+  if (hasHistoricData) {
+    data.forEach((event: RankAuditEventWithName) => {
+      // Backend already adds summoner_name to each event
+      const summonerName = event.summoner_name || event.riot_id;
+      if (!groupedData[summonerName]) {
+        groupedData[summonerName] = [];
+      }
+      groupedData[summonerName].push(event);
+    });
 
-  // Sort each member's data by date
-  Object.keys(groupedData).forEach(summonerName => {
-    groupedData[summonerName].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  });
+    // Sort each member's data by date
+    Object.keys(groupedData).forEach(summonerName => {
+      groupedData[summonerName].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    });
+  }
+  
+  // If no historic data but live data exists, create entries for live data members
+  if (!hasHistoricData && hasLiveData) {
+    Object.keys(liveData).forEach(summonerName => {
+      if (!groupedData[summonerName]) {
+        groupedData[summonerName] = [];
+      }
+    });
+  }
 
   // Helper function to truncate long names
   const truncateName = (name: string, maxLength: number = 8) => {
@@ -95,12 +112,17 @@ export function TeamStatsChart({
       });
     }
     
+    // Only include series that have data points (historic or live)
+    if (chartPoints.length === 0) {
+      return null;
+    }
+    
     return {
       id: memberName,
       color: `hsl(${index * 60}, 70%, 50%)`, // Generate distinct colors
       data: chartPoints
     };
-  });
+  }).filter(series => series !== null);
   
   console.log('🎨 Transformed chart data for Nivo:', chartData);
   console.log('📊 Chart data length:', chartData.length);

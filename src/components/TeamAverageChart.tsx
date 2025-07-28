@@ -17,7 +17,11 @@ export function TeamAverageChart({
   height = 400, 
   className = '' 
 }: TeamAverageChartProps) {
-  if (!data || data.length === 0) {
+  // Check if we have any data (historic or live)
+  const hasHistoricData = data && data.length > 0;
+  const hasLiveData = liveData && Object.keys(liveData).length > 0;
+  
+  if (!hasHistoricData && !hasLiveData) {
     return (
       <div className={`bg-white rounded-xl shadow-lg border border-gray-100 p-6 ${className}`}>
         <div className="flex items-center justify-center h-full">
@@ -32,13 +36,26 @@ export function TeamAverageChart({
 
   // Group data by summoner name
   const groupedData: { [summonerName: string]: RankAuditEvent[] } = {};
-  data.forEach(event => {
-    const summonerName = memberNames[event.riot_id] || event.riot_id;
-    if (!groupedData[summonerName]) {
-      groupedData[summonerName] = [];
-    }
-    groupedData[summonerName].push(event);
-  });
+  
+  // Process historic data if available
+  if (hasHistoricData) {
+    data.forEach(event => {
+      const summonerName = memberNames[event.riot_id] || event.riot_id;
+      if (!groupedData[summonerName]) {
+        groupedData[summonerName] = [];
+      }
+      groupedData[summonerName].push(event);
+    });
+  }
+  
+  // If no historic data but live data exists, create entries for live data members
+  if (!hasHistoricData && hasLiveData) {
+    Object.keys(liveData).forEach(summonerName => {
+      if (!groupedData[summonerName]) {
+        groupedData[summonerName] = [];
+      }
+    });
+  }
 
   // Helper function to truncate long names
   const truncateName = (name: string, maxLength: number = 8) => {
@@ -60,15 +77,11 @@ export function TeamAverageChart({
       isLive: false
     }));
     
-    // Add live data point if available (find by riot_id in live data)
+    // Add live data point if available (find by summoner name in live data)
     let foundLiveData = null;
-    if (liveData) {
-      // Find the live data entry that matches this riot_id
-      const liveDataEntry = Object.values(liveData).find(entry => entry.riot_id === summonerName);
-      if (liveDataEntry) {
-        foundLiveData = liveDataEntry;
-        console.log(`✅ Found live data for riot_id ${summonerName}:`, foundLiveData);
-      }
+    if (liveData && liveData[summonerName]) {
+      foundLiveData = liveData[summonerName];
+      console.log(`✅ Found live data for ${summonerName}:`, foundLiveData);
     }
     
     if (foundLiveData) {
@@ -82,12 +95,17 @@ export function TeamAverageChart({
       });
     }
     
+    // Only include series that have data points (historic or live)
+    if (chartPoints.length === 0) {
+      return null;
+    }
+    
     return {
       id: memberName,
       color: `hsl(${index * 60}, 70%, 50%)`,
       data: chartPoints
     };
-  });
+  }).filter(series => series !== null);
 
   // Calculate average ELO data
   const calculateAverageChartData = () => {

@@ -24,41 +24,44 @@ export function TeamStatsSummary({
 }: TeamStatsSummaryProps) {
   // Calculate current team stats
   const calculateCurrentTeamStats = () => {
-    if (!teamStatsData || teamStatsData.length === 0) {
+    const hasHistoricData = teamStatsData && teamStatsData.length > 0;
+    const hasLiveData = liveData && Object.keys(liveData).length > 0;
+    
+    if (!hasHistoricData && !hasLiveData) {
       return null;
     }
 
     // Get the most recent data point for each member
     const memberLatestData: { [summonerName: string]: any } = {};
     
-    // Group data by member
+    // Group data by member (only if historic data exists)
     const groupedData: { [summonerName: string]: RankAuditEvent[] } = {};
-    teamStatsData.forEach(event => {
-      const summonerName = memberNames[event.riot_id] || event.riot_id;
-      if (!groupedData[summonerName]) {
-        groupedData[summonerName] = [];
-      }
-      groupedData[summonerName].push(event);
-    });
-
-    // Get latest data for each member
-    Object.keys(groupedData).forEach(summonerName => {
-      const events = groupedData[summonerName];
-      const latestEvent = events.sort((a, b) => 
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      )[0];
-      
-      memberLatestData[summonerName] = latestEvent;
-    });
-
-    // Add live data if available (this will override historical data)
-    if (liveData) {
-      Object.keys(groupedData).forEach(summonerName => {
-        // Find the live data entry that matches this riot_id (same logic as TeamAverageChart)
-        const liveDataEntry = Object.values(liveData).find(entry => entry.riot_id === summonerName);
-        if (liveDataEntry) {
-          memberLatestData[summonerName] = liveDataEntry;
+    if (hasHistoricData) {
+      teamStatsData.forEach(event => {
+        const summonerName = memberNames[event.riot_id] || event.riot_id;
+        if (!groupedData[summonerName]) {
+          groupedData[summonerName] = [];
         }
+        groupedData[summonerName].push(event);
+      });
+    }
+
+    // Get latest data for each member (only if historic data exists)
+    if (hasHistoricData) {
+      Object.keys(groupedData).forEach(summonerName => {
+        const events = groupedData[summonerName];
+        const latestEvent = events.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+        
+        memberLatestData[summonerName] = latestEvent;
+      });
+    }
+
+    // Add live data if available (this will override historical data or be the only data)
+    if (hasLiveData) {
+      Object.keys(liveData).forEach(summonerName => {
+        memberLatestData[summonerName] = liveData[summonerName];
       });
     }
 

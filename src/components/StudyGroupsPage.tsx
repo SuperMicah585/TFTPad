@@ -8,7 +8,7 @@ import { FreeAgentsTab } from './FreeAgentsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
 import { useAuth } from '../contexts/AuthContext';
 import { LoadingSpinner } from './auth/LoadingSpinner';
-import { OAuthLoginModal } from './auth/OAuthLoginModal';
+import { RiotLoginModal } from './auth/RiotLoginModal';
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -93,7 +93,6 @@ export function StudyGroupsPage() {
 
   // Login modal state
   const [showLoginModal, setShowLoginModal] = useState(false);
-  const [modalMode, setModalMode] = useState<'login' | 'signup'>('login');
 
   // Sort state
   const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
@@ -332,7 +331,6 @@ export function StudyGroupsPage() {
     if (tab === 'my-groups' && !userId) {
       setActiveTab('groups');
       navigate('/study-groups/groups');
-      setModalMode('login');
       setShowLoginModal(true);
       return;
     }
@@ -347,7 +345,6 @@ export function StudyGroupsPage() {
     if (activeTab === 'my-groups' && !userId) {
       setActiveTab('groups');
       navigate('/study-groups/groups');
-      setModalMode('login');
       setShowLoginModal(true);
     }
   }, [activeTab, userId, navigate]);
@@ -616,10 +613,12 @@ export function StudyGroupsPage() {
       </div>
 
       {/* Authentication Modal */}
-      <OAuthLoginModal
+      <RiotLoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        mode={modalMode}
+        onSuccess={(user) => {
+          console.log('Login successful:', user)
+        }}
       />
     </>
   )

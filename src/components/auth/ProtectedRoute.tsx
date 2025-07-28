@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, redirectTo = '/study-groups/groups' }: ProtectedRouteProps) {
-  const { user, loading } = useAuth()
+  const { user, userId, loading } = useAuth()
 
   if (loading) {
     return (
@@ -19,7 +19,7 @@ export function ProtectedRoute({ children, redirectTo = '/study-groups/groups' }
     )
   }
 
-  if (!user) {
+  if (!user && !userId) {
     return <Navigate to={redirectTo} replace />
   }
 

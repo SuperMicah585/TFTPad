@@ -54,7 +54,6 @@ export interface StudyGroupInvite {
   created_at: string;
   updated_at?: string;
   sender_name?: string;
-  sender_email?: string;
   receiver_name?: string;
   study_group?: {
     group_name: string;

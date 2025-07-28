@@ -53,7 +53,7 @@ export function UserMenu() {
         <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
           <div className="px-4 py-2 border-b border-gray-100">
             <p className="text-sm text-gray-600">Signed in as</p>
-            <p className="text-sm font-medium text-gray-800 truncate">{user.email}</p>
+            <p className="text-sm font-medium text-gray-800 truncate">{user.summoner_name}</p>
           </div>
           <Link
             to="/profile"

@@ -51,10 +51,14 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
     return tierValue + rankValue + lp;
   };
 
-  if (!data || data.length === 0) {
+  // Check if we have any data (historic or live)
+  const hasHistoricData = data && data.length > 0;
+  const hasLiveData = liveData && liveData.tier;
+
+  if (!hasHistoricData && !hasLiveData) {
     return (
       <div className={`bg-gray-50 border border-gray-200 rounded-lg p-8 text-center ${className}`}>
-        <p className="text-gray-600">No historic ELO data available</p>
+        <p className="text-gray-600">No ELO data available</p>
       </div>
     );
   }
@@ -65,16 +69,17 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
       id: 'ELO Rating',
       color: '#3B82F6',
       data: [
-        ...data.map(event => ({
+        // Add historic data points if available
+        ...(hasHistoricData ? data.map(event => ({
           x: new Date(event.created_at).toLocaleDateString(),
           y: event.elo,
           date: event.created_at,
           wins: event.wins,
           losses: event.losses,
           isLive: false
-        })),
+        })) : []),
         // Add live data point if available
-        ...(liveData && liveData.tier ? [{
+        ...(hasLiveData ? [{
           x: 'Current',
           y: rankToElo(`${liveData.tier} ${liveData.rank} ${liveData.leaguePoints}`),
           date: new Date().toISOString(),

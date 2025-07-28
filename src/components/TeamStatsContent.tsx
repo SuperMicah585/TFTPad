@@ -52,7 +52,11 @@ export function TeamStatsContent({
     );
   }
 
-  if (!teamStatsData || teamStatsData.length === 0) {
+  // Check if we have any data (historic or live)
+  const hasHistoricData = teamStatsData && teamStatsData.length > 0;
+  const hasLiveData = liveData && Object.keys(liveData).length > 0;
+
+  if (!hasHistoricData && !hasLiveData) {
     return (
       <div className={`space-y-4 ${className}`}>
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">

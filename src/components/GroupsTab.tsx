@@ -5,7 +5,8 @@ import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, ChevronsLeft, 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
 import { teamStatsService } from '../services/teamStatsService'
-import { livePlayerService } from '../services/livePlayerService'
+
+import { riotService } from '../services/riotService'
 import { TeamStatsContent } from './TeamStatsContent'
 import { TFTStatsContent } from './TFTStatsContent'
 import { playerStatsService } from '../services/playerStatsService'
@@ -248,7 +249,12 @@ export function GroupsTab({
   const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
   const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
   const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
-  const [liveDataLoading, setLiveDataLoading] = useState(false);
+  const [liveDataLoading] = useState(false);
+
+  // Profile icon state for selected player
+  const [selectedPlayerIconUrl, setSelectedPlayerIconUrl] = useState<string>('');
+  const [selectedPlayerIconError, setSelectedPlayerIconError] = useState(false);
+  const [selectedPlayerIconLoading, setSelectedPlayerIconLoading] = useState(false);
   
   // Auto-fetch team stats when group changes and team-stats tab is active
   useEffect(() => {
@@ -257,6 +263,13 @@ export function GroupsTab({
       fetchTeamStats(selectedGroup.id, selectedGroup.created_at);
     }
   }, [selectedGroup, activeTab, teamStatsData.length]);
+
+  // Fetch selected player icon when selectedPlayer changes
+  useEffect(() => {
+    if (selectedPlayer?.icon_id) {
+      fetchSelectedPlayerIcon();
+    }
+  }, [selectedPlayer?.icon_id]);
   
   // Intersection Observer for infinite scroll
   const observerRef = useRef<IntersectionObserver | null>(null);
@@ -334,45 +347,51 @@ export function GroupsTab({
       console.log('📊 Member stats type:', typeof memberStats);
       console.log('📊 Member stats keys:', Object.keys(memberStats || {}));
       
-      if (!memberStats || Object.keys(memberStats).length === 0) {
+      // Handle the new combined API response format
+      let allEvents: any[] = [];
+      let names: { [riotId: string]: string } = {};
+      let liveDataFromAPI: any = {};
+      
+      if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
+        // New combined format: {"events": [...], "memberNames": {...}, "liveData": {...}}
+        allEvents = memberStats.events;
+        console.log('📈 Using new combined API format, events:', allEvents);
+        
+        // Get member names from API response if available
+        if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
+          names = memberStats.memberNames as unknown as { [riotId: string]: string };
+          console.log('👥 Member names from API:', names);
+        }
+        
+        // Get live data from API response if available
+        if (memberStats.liveData && typeof memberStats.liveData === 'object') {
+          liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
+          console.log('🎯 Live data from API:', liveDataFromAPI);
+        }
+      } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
+        // Old format: {summonerName: [events]}
+        allEvents = Object.values(memberStats).flat();
+        console.log('📈 Using old API format, flattened events:', allEvents);
+        
+        // Create member names mapping from the API response
+        Object.keys(memberStats).forEach(summonerName => {
+          names[summonerName] = summonerName;
+        });
+      } else {
+        // No data available
         console.log('⚠️ No member stats received');
-        setTeamStatsData([]);
-        setMemberNames({});
-        return;
+        allEvents = [];
       }
       
-      // Flatten the data for the chart
-      const allEvents = Object.values(memberStats).flat();
-      console.log('📈 Flattened events for chart:', allEvents);
+      console.log('📈 Final events for chart:', allEvents);
       console.log('📈 Number of events:', allEvents.length);
       
       setTeamStatsData(allEvents);
-      
-      // Create member names mapping from the API response
-      // The API now returns summoner_name as keys
-      const names: { [riotId: string]: string } = {};
-      
-      // Map summoner names to themselves (since the API now returns summoner names as keys)
-      Object.keys(memberStats).forEach(summonerName => {
-        names[summonerName] = summonerName;
-      });
+      setMemberNames(names);
+      setLiveData(liveDataFromAPI);
       
       console.log('👥 Member names mapping:', names);
-      setMemberNames(names);
-      
-      // Fetch live data for all members
-      try {
-        setLiveDataLoading(true);
-        console.log('🔄 Fetching live data for group:', groupId);
-        const liveStats = await livePlayerService.getLivePlayerStats(groupId);
-        console.log('🎯 Live stats received:', liveStats);
-        setLiveData(liveStats);
-      } catch (liveError) {
-        console.error('❌ Error fetching live data:', liveError);
-        setLiveData({});
-      } finally {
-        setLiveDataLoading(false);
-      }
+      console.log('🎯 Live data set:', liveDataFromAPI);
       
     } catch (error) {
       console.error('❌ Error fetching team stats:', error);
@@ -418,6 +437,24 @@ export function GroupsTab({
 
   const getTurboTftData = () => {
     return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
+  };
+
+  const fetchSelectedPlayerIcon = async () => {
+    if (!selectedPlayer?.icon_id) return;
+    
+    setSelectedPlayerIconLoading(true);
+    setSelectedPlayerIconError(false);
+    
+    try {
+      const version = await riotService.getCurrentVersion();
+      const iconUrl = riotService.getProfileIconUrl(selectedPlayer.icon_id, version);
+      setSelectedPlayerIconUrl(iconUrl);
+    } catch (error) {
+      console.error('Error fetching selected player icon:', error);
+      setSelectedPlayerIconError(true);
+    } finally {
+      setSelectedPlayerIconLoading(false);
+    }
   };
 
   const fetchPlayerStats = async (riotId: string) => {
@@ -886,24 +923,16 @@ export function GroupsTab({
                   <div className="absolute -bottom-12 left-6">
                     <div className="relative">
                       <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
-                        {selectedPlayer.icon_id ? (
+                        {selectedPlayerIconUrl && !selectedPlayerIconError && !selectedPlayerIconLoading ? (
                           <img
-                            src={`https://ddragon.leagueoflegends.com/cdn/14.14.1/img/profileicon/${selectedPlayer.icon_id}.png`}
+                            src={selectedPlayerIconUrl}
                             alt={`${selectedPlayer.summoner_name} profile icon`}
                             className="w-full h-full object-cover"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                              // Show placeholder instead
-                              const placeholder = target.parentElement?.querySelector('.profile-placeholder') as HTMLElement;
-                              if (placeholder) {
-                                placeholder.style.display = 'flex';
-                              }
-                            }}
+                            onError={() => setSelectedPlayerIconError(true)}
                           />
                         ) : null}
                         <div 
-                          className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${selectedPlayer.icon_id ? 'hidden' : 'flex'}`}
+                          className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${(selectedPlayerIconUrl && !selectedPlayerIconError && !selectedPlayerIconLoading) ? 'hidden' : 'flex'}`}
                           style={{ 
                             backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][selectedPlayer.user_id % 5],
                             color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][selectedPlayer.user_id % 5])
@@ -1011,7 +1040,7 @@ export function GroupsTab({
                         )}
 
                         {/* Time and Timezone */}
-                        {playerProfile.time && (
+                        {(playerProfile.time || playerProfile.timezone) && (
                           <div className="w-full">
                             <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
                               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
@@ -1021,10 +1050,16 @@ export function GroupsTab({
                             </h4>
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
                                                           <div className="text-gray-700 text-xs text-left">
-                              <span>
-                                {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                              </span>
+                              {playerProfile.time ? (
+                                <span>
+                                  {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
+                                  {playerProfile.timezone && ` (${playerProfile.timezone})`}
+                                </span>
+                              ) : (
+                                <span>
+                                  Timezone: {playerProfile.timezone}
+                                </span>
+                              )}
                             </div>
                             </div>
                           </div>
@@ -1244,14 +1279,20 @@ function StudyGroupCard({
           </div>
           
           {/* Time and timezone */}
-          {group.time && (
+          {(group.time || group.timezone) && (
             <div className="flex items-center gap-2 text-gray-600 text-sm">
               <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
               <span className="font-medium truncate">
-                {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                {group.timezone && ` (${group.timezone})`}
+                {group.time ? (
+                  <>
+                    {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
+                    {group.timezone && ` (${group.timezone})`}
+                  </>
+                ) : (
+                  `Timezone: ${group.timezone}`
+                )}
               </span>
             </div>
           )}
@@ -1311,14 +1352,20 @@ function StudyGroupCard({
           </div>
           
           {/* Time and timezone */}
-          {group.time && (
+          {(group.time || group.timezone) && (
             <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
               <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
               <span className="truncate">
-                {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                {group.timezone && ` (${group.timezone})`}
+                {group.time ? (
+                  <>
+                    {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
+                    {group.timezone && ` (${group.timezone})`}
+                  </>
+                ) : (
+                  `Timezone: ${group.timezone}`
+                )}
               </span>
             </div>
           )}
@@ -1396,12 +1443,8 @@ function ProfileIcon({
 
     setLoading(true)
     try {
-      const version = await import('../services/riotService').then(module => 
-        module.riotService.getCurrentVersion()
-      )
-      const iconUrl = import('../services/riotService').then(module => 
-        module.riotService.getProfileIconUrl(iconId, version)
-      )
+      const version = await riotService.getCurrentVersion()
+      const iconUrl = riotService.getProfileIconUrl(iconId, version)
       setProfileIconUrl(await iconUrl)
       setIconError(false)
     } catch (error) {

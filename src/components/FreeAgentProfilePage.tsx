@@ -10,6 +10,7 @@ import { userService } from '../services/userService';
 import { playerStatsService } from '../services/playerStatsService';
 import { TFTStatsContent } from './TFTStatsContent';
 import { Footer } from './Footer';
+import { riotService } from '../services/riotService';
 
 interface FreeAgentProfilePageProps {}
 
@@ -44,6 +45,10 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   const [descriptionOverflow, setDescriptionOverflow] = useState(false);
   const [descriptionScrolled, setDescriptionScrolled] = useState(false);
   
+  // Profile icon state
+  const [profileIconUrl, setProfileIconUrl] = useState<string | null>(null);
+  const [iconError, setIconError] = useState(false);
+  const [iconLoading, setIconLoading] = useState(false);
 
 
   // Fetch agent data on mount
@@ -61,6 +66,33 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       fetchUserStudyGroups();
     }
   }, [userId]);
+
+  // Fetch profile icon when agent data is loaded
+  const fetchProfileIcon = async () => {
+    if (!agent?.icon_id) {
+      setIconError(true);
+      return;
+    }
+
+    setIconLoading(true);
+    try {
+      const version = await riotService.getCurrentVersion();
+      const iconUrl = riotService.getProfileIconUrl(agent.icon_id, version);
+      setProfileIconUrl(iconUrl);
+      setIconError(false);
+    } catch (error) {
+      console.error('Error fetching profile icon:', error);
+      setIconError(true);
+    } finally {
+      setIconLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (agent?.icon_id && !iconError) {
+      fetchProfileIcon();
+    }
+  }, [agent?.icon_id]);
 
   // Retry helper function with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -333,23 +365,16 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
             <div className="absolute -bottom-12 left-6">
               <div className="relative">
                 <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
-                  {agent.icon_id ? (
+                  {profileIconUrl && !iconError && !iconLoading ? (
                     <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/13.24.1/img/profileicon/${agent.icon_id}.png`}
+                      src={profileIconUrl}
                       alt={`${agent.summoner_name} profile icon`}
                       className="w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const placeholder = target.parentElement?.querySelector('.profile-placeholder') as HTMLElement;
-                        if (placeholder) {
-                          placeholder.style.display = 'flex';
-                        }
-                      }}
+                      onError={() => setIconError(true)}
                     />
                   ) : null}
                   <div 
-                    className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${agent.icon_id ? 'hidden' : 'flex'}`}
+                    className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${(profileIconUrl && !iconError && !iconLoading) ? 'hidden' : 'flex'}`}
                     style={{ 
                       backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][agent.id % 5],
                       color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][agent.id % 5])
@@ -430,7 +455,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                 )}
 
                 {/* Time and Timezone */}
-                {agent.time && (
+                {(agent.time || agent.timezone) && (
                   <div>
                     <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
                       <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
@@ -440,10 +465,16 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                     </h4>
                     <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                       <div className="text-gray-700 text-left text-xs">
-                        <span>
-                          {agent.time.charAt(0).toUpperCase() + agent.time.slice(1)}
-                          {agent.timezone && ` (${agent.timezone})`}
-                        </span>
+                        {agent.time ? (
+                          <span>
+                            {agent.time.charAt(0).toUpperCase() + agent.time.slice(1)}
+                            {agent.timezone && ` (${agent.timezone})`}
+                          </span>
+                        ) : (
+                          <span>
+                            Timezone: {agent.timezone}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>

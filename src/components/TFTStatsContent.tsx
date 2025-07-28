@@ -176,7 +176,7 @@ export function TFTStatsContent({
         <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
           <p className="text-red-600">{playerStatsError}</p>
         </div>
-      ) : playerStatsData.length > 0 ? (
+      ) : (playerStatsData.length > 0 || getRankedTftData()) ? (
         <PlayerEloChart 
           data={playerStatsData}
           liveData={getRankedTftData()}
