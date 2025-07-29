@@ -1327,7 +1327,7 @@ function StudyGroupCard({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <h3 className="text-base sm:text-lg font-bold text-gray-800 truncate">{group.group_name}</h3>
+              <h3 className="text-lg font-bold text-gray-800 truncate">{group.group_name}</h3>
               <p className="text-xs text-gray-500 truncate">Created: {new Date(group.created_at).toLocaleDateString()}</p>
             </div>
           </div>
@@ -1336,24 +1336,24 @@ function StudyGroupCard({
         {/* Group details */}
         <div className="space-y-2 sm:space-y-3 text-left">
           <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 font-semibold text-xs sm:text-sm">
+            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 font-semibold text-sm">
               <Users className="w-3 h-3 sm:w-4 sm:h-4" />
               <span>Members: {memberCounts?.[group.id] || 0}</span>
             </div>
-            <div className="flex items-center gap-1 text-gray-400 text-xs sm:text-sm">
+            <div className="flex items-center gap-1 text-gray-400 text-sm">
               <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
               <span className="font-semibold">{group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'}</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
+          <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-sm">
             <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
             <span className="truncate">{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
           </div>
           
           {/* Time and timezone */}
           {(group.time || group.timezone) && (
-            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-xs sm:text-sm">
+            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-sm">
               <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
               </svg>
