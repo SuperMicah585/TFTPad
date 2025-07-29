@@ -414,11 +414,11 @@ export function StudyGroupsPage() {
           {/* Main Content Container */}
           <div className="container mx-auto px-4 py-6 relative z-10 max-w-7xl">
             {/* Tab Navigation - Mobile Responsive */}
-            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
+            <div className="flex flex-row space-x-1 mb-6 bg-gray-100 p-1 rounded-lg">
               <div className="flex-1 relative group">
                 <button
                   onClick={() => handleTabChange('groups')}
-                  className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
+                  className={`w-full py-2 px-2 sm:px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-xs sm:text-sm md:text-base ${
                     activeTab === 'groups'
                       ? 'bg-white text-gray-800 shadow-sm'
                       : 'text-gray-600 hover:text-gray-800'
@@ -432,8 +432,8 @@ export function StudyGroupsPage() {
                 >
                   Groups
                 </button>
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-                  <HelpCircle size={16} className="text-gray-400" />
+                <div className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+                  <HelpCircle size={14} className="text-gray-400 sm:w-4 sm:h-4" />
                 </div>
                 {/* Groups Tab Tooltip - Hidden on mobile */}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
@@ -445,7 +445,7 @@ export function StudyGroupsPage() {
               <div className="flex-1 relative group">
                 <button
                   onClick={() => handleTabChange('free-agents')}
-                  className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
+                  className={`w-full py-2 px-2 sm:px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-xs sm:text-sm md:text-base ${
                     activeTab === 'free-agents'
                       ? 'bg-white text-gray-800 shadow-sm'
                       : 'text-gray-600 hover:text-gray-800'
@@ -459,8 +459,8 @@ export function StudyGroupsPage() {
                 >
                   Free Agents
                 </button>
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-                  <HelpCircle size={16} className="text-gray-400" />
+                <div className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+                  <HelpCircle size={14} className="text-gray-400 sm:w-4 sm:h-4" />
                 </div>
                 {/* Free Agents Tab Tooltip - Hidden on mobile */}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
@@ -472,7 +472,7 @@ export function StudyGroupsPage() {
               <div className="flex-1 relative group">
                 <button
                   onClick={() => handleTabChange('my-groups')}
-                  className={`w-full py-3 sm:py-2 px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-sm sm:text-base ${
+                  className={`w-full py-2 px-2 sm:px-4 rounded-md font-medium transition-colors focus:outline-none border-2 border-transparent text-xs sm:text-sm md:text-base ${
                     activeTab === 'my-groups'
                       ? 'bg-white text-gray-800 shadow-sm'
                       : userId 
@@ -490,8 +490,8 @@ export function StudyGroupsPage() {
                 >
                   My Groups
                 </button>
-                <div className="absolute right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
-                  <HelpCircle size={16} className="text-gray-400" />
+                <div className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 hidden sm:block">
+                  <HelpCircle size={14} className="text-gray-400 sm:w-4 sm:h-4" />
                 </div>
                 {/* My Groups Tab Tooltip - Hidden on mobile */}
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
