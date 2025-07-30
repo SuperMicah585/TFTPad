@@ -2468,7 +2468,7 @@ function MyGroupCard({
   return (
     <div 
       className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative" 
-      style={{ backgroundColor: '#fff6ea', borderColor: '#e6d7c3' }}
+      style={{ backgroundColor: '#fefdfa', borderColor: '#f5f0e8' }}
       onClick={() => onTileClick(group)}
     >
       {/* Hover arrow */}
