@@ -2508,14 +2508,10 @@ function MyGroupCard({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h3 className="text-lg font-bold text-gray-800 truncate">{group.name}</h3>
-                  {/* Role Tag */}
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
-                    group.role === 'captain' 
-                      ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
-                      : 'bg-blue-100 text-blue-800 border-blue-200'
-                  }`}>
-                    {group.role === 'captain' ? 'Captain' : 'Member'}
-                  </span>
+                  {/* Crown icon for captains only */}
+                  {group.role === 'captain' && (
+                    <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                  )}
                 </div>
                 <p className="text-xs text-gray-500">Created: {new Date(group.created_date).toLocaleDateString()}</p>
               </div>
