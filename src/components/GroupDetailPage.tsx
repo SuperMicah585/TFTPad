@@ -328,8 +328,8 @@ export function GroupDetailPage() {
     return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
   };
 
-  // Helper function to get current ELO for a member, prioritizing live data
-  const getCurrentElo = (member: MemberData | GroupMember): number => {
+  // Helper function to get current ELO for a member, only from live data
+  const getCurrentElo = (member: MemberData | GroupMember): number | null => {
     // If the member data already includes current_elo from the API, use it
     if ('current_elo' in member && member.current_elo !== undefined) {
       return member.current_elo;
@@ -345,15 +345,60 @@ export function GroupDetailPage() {
         return normalizedLiveKey === normalizedMemberName;
       });
       
-      if (liveDataKey && liveData[liveDataKey]) {
-        console.log(`🎯 Using live ELO for ${member.summoner_name}: ${liveData[liveDataKey].elo} (was: ${member.elo})`);
+      if (liveDataKey && liveData[liveDataKey] && liveData[liveDataKey].elo) {
+        console.log(`🎯 Using live ELO for ${member.summoner_name}: ${liveData[liveDataKey].elo}`);
         return liveData[liveDataKey].elo;
       }
     }
     
-    // Fallback to the cached ELO from group membership
-    return member.elo;
+    // No live data available
+    console.log(`❌ No live ELO data for ${member.summoner_name}`);
+    return null;
   };
+
+  // Helper function to get current rank for a member, only from live data
+  const getCurrentRank = (member: MemberData | GroupMember): string | null => {
+    console.log(`🔍 Getting current rank for ${member.summoner_name}:`, {
+      memberRank: member.rank,
+      liveDataKeys: liveData ? Object.keys(liveData) : [],
+      liveData: liveData
+    });
+    
+    // If the member data already includes current_rank from the API, use it
+    if ('current_rank' in member && member.current_rank !== undefined && member.current_rank !== null) {
+      return String(member.current_rank);
+    }
+    
+    // Try to find live data for this member
+    if (liveData && Object.keys(liveData).length > 0) {
+      // Try to find the member in live data by summoner name
+      const liveDataKey = Object.keys(liveData).find(key => {
+        // Normalize both names for comparison
+        const normalizedLiveKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normalizedMemberName = member.summoner_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return normalizedLiveKey === normalizedMemberName;
+      });
+      
+      if (liveDataKey && liveData[liveDataKey]) {
+        const liveMemberData = liveData[liveDataKey];
+        if (liveMemberData.tier && liveMemberData.rank) {
+          // Construct the full rank string: "TIER RANK LP"
+          const tier = String(liveMemberData.tier).toUpperCase();
+          const rank = String(liveMemberData.rank);
+          const lp = liveMemberData.leaguePoints !== undefined ? ` ${liveMemberData.leaguePoints}LP` : '';
+          const liveRank = `${tier} ${rank}${lp}`;
+          console.log(`🎯 Using live rank for ${member.summoner_name}: ${liveRank}`);
+          return liveRank;
+        }
+      }
+    }
+    
+    // No live data available
+    console.log(`❌ No live rank data for ${member.summoner_name}`);
+    return null;
+  };
+
+
 
   const fetchSelectedPlayerIcon = async () => {
     if (!selectedPlayer?.icon_id) return;
@@ -561,8 +606,7 @@ export function GroupDetailPage() {
           <div className="space-y-4 sm:space-y-6 lg:space-y-8">
             {/* Group Information Section */}
             <div className="rounded-lg p-4 sm:p-6 bg-white border border-gray-200">
-              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 flex items-center gap-2">
-                <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4 text-center">
                 Group Information
               </h3>
               
@@ -626,51 +670,63 @@ export function GroupDetailPage() {
                             
                             {/* Rank and ELO - Below name on mobile, hidden on larger screens */}
                             <div className="flex flex-row gap-2 text-xs sm:text-sm text-gray-600 sm:hidden">
-                              {/* Rank */}
-                              <div className="flex items-center gap-1">
-                                <img 
-                                  src={getRankIconUrl(member.rank || 'UNRANKED')} 
-                                  alt={member.rank || 'UNRANKED'} 
-                                  className="w-3 h-3 sm:w-4 sm:h-4"
-                                  onError={(e) => {
-                                    console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                  }}
-                                />
-                                <span className="font-medium">{member.rank || 'UNRANKED'}</span>
-                              </div>
-                              
-                              {/* ELO */}
-                              <div className="flex items-center gap-1">
-                                <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-                                <span className="font-bold">{getCurrentElo(member).toLocaleString()}</span>
-                              </div>
+                              {getCurrentRank(member) && getCurrentElo(member) ? (
+                                <>
+                                  {/* Rank */}
+                                  <div className="flex items-center gap-1">
+                                    <img 
+                                      src={getRankIconUrl(getCurrentRank(member)!)} 
+                                      alt={getCurrentRank(member)!} 
+                                      className="w-3 h-3 sm:w-4 sm:h-4"
+                                      onError={(e) => {
+                                        console.log('Failed to load rank icon for:', getCurrentRank(member), 'URL:', getRankIconUrl(getCurrentRank(member)!));
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                      }}
+                                    />
+                                    <span className="font-medium">{getCurrentRank(member)}</span>
+                                  </div>
+                                  
+                                  {/* ELO */}
+                                  <div className="flex items-center gap-1">
+                                    <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+                                    <span className="font-bold">{getCurrentElo(member)!.toLocaleString()}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-gray-500 italic">No current ranked data</span>
+                              )}
                             </div>
                           </div>
                           
                           {/* Rank and ELO - To the right on larger screens, hidden on mobile */}
                           <div className="hidden sm:flex sm:flex-row sm:items-center sm:gap-2">
-                            {/* Rank */}
-                            <div className="flex items-center gap-2 text-sm text-gray-600">
-                              <img 
-                                src={getRankIconUrl(member.rank || 'UNRANKED')} 
-                                alt={member.rank || 'UNRANKED'} 
-                                className="w-4 h-4"
-                                onError={(e) => {
-                                  console.log('Failed to load rank icon for:', member.rank, 'URL:', getRankIconUrl(member.rank || 'UNRANKED'));
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                              <span className="font-medium">{member.rank || 'UNRANKED'}</span>
-                            </div>
-                            
-                            {/* ELO */}
-                            <div className="flex items-center gap-1 text-sm text-gray-600">
-                              <Zap className="w-4 h-4 text-yellow-500" />
-                              <span className="font-bold">{getCurrentElo(member).toLocaleString()}</span>
-                            </div>
+                            {getCurrentRank(member) && getCurrentElo(member) ? (
+                              <>
+                                {/* Rank */}
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <img 
+                                    src={getRankIconUrl(getCurrentRank(member)!)} 
+                                    alt={getCurrentRank(member)!} 
+                                    className="w-4 h-4"
+                                    onError={(e) => {
+                                      console.log('Failed to load rank icon for:', getCurrentRank(member), 'URL:', getRankIconUrl(getCurrentRank(member)!));
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                  <span className="font-medium">{getCurrentRank(member)}</span>
+                                </div>
+                                
+                                {/* ELO */}
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Zap className="w-4 h-4 text-yellow-500" />
+                                  <span className="font-bold">{getCurrentElo(member)!.toLocaleString()}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-gray-500 italic">No current ranked data</span>
+                            )}
                           </div>
                         </div>
                       ))}

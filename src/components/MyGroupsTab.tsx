@@ -263,13 +263,13 @@ export function MyGroupsTab() {
   const [selectedPlayerIconError, setSelectedPlayerIconError] = useState(false);
   const [selectedPlayerIconLoading, setSelectedPlayerIconLoading] = useState(false);
   
-  // Auto-fetch team stats when group changes and team-stats tab is active
+  // Auto-fetch team stats when group changes (for live data)
   useEffect(() => {
-    if (selectedGroup && activeSection === 'team-stats' && teamStatsData.length === 0) {
+    if (selectedGroup && teamStatsData.length === 0) {
       console.log('🔄 Auto-fetching team stats for group:', selectedGroup.id);
       fetchTeamStats(selectedGroup.id, selectedGroup.created_date);
     }
-  }, [selectedGroup, activeSection, teamStatsData.length]);
+  }, [selectedGroup, teamStatsData.length]);
 
   // Fetch selected player icon when selectedPlayer changes
   useEffect(() => {
@@ -830,6 +830,39 @@ export function MyGroupsTab() {
     }
   };
 
+
+
+  // Helper function to get current rank for a member, only from live data
+  const getCurrentRank = (member: GroupMember): string | null => {
+    // Try to find live data for this member
+    if (liveData && Object.keys(liveData).length > 0) {
+      // Try to find the member in live data by summoner name
+      const liveDataKey = Object.keys(liveData).find(key => {
+        // Normalize both names for comparison
+        const normalizedLiveKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const normalizedMemberName = member.summoner_name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return normalizedLiveKey === normalizedMemberName;
+      });
+      
+      if (liveDataKey && liveData[liveDataKey]) {
+        const liveMemberData = liveData[liveDataKey];
+        if (liveMemberData.tier && liveMemberData.rank) {
+          // Construct the full rank string: "TIER RANK LP"
+          const tier = String(liveMemberData.tier).toUpperCase();
+          const rank = String(liveMemberData.rank);
+          const lp = liveMemberData.leaguePoints !== undefined ? ` ${liveMemberData.leaguePoints}LP` : '';
+          const liveRank = `${tier} ${rank}${lp}`;
+          console.log(`🎯 Using live rank for ${member.summoner_name}: ${liveRank}`);
+          return liveRank;
+        }
+      }
+    }
+    
+    // No live data available
+    console.log(`❌ No live rank data for ${member.summoner_name}`);
+    return null;
+  };
+
   return (
     <>
       <div className="p-6 min-h-screen flex flex-col">
@@ -1252,20 +1285,24 @@ export function MyGroupsTab() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap">
-                      <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
-                        {member.rank && getRankTier(member.rank) && (
-                          <img 
-                            src={getRankIconUrl(getRankTier(member.rank) + '+')} 
-                            alt={getRankTier(member.rank)}
-                            className="w-6 h-6 object-contain"
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement;
-                              target.style.display = 'none';
-                            }}
-                          />
-                        )}
-                        <span className="text-sm truncate">{member.rank || 'UNRANKED'}</span>
-                      </div>
+                      {getCurrentRank(member) ? (
+                        <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
+                          {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
+                            <img 
+                              src={getRankIconUrl(getRankTier(getCurrentRank(member)!) + '+')} 
+                              alt={getRankTier(getCurrentRank(member)!)}
+                              className="w-6 h-6 object-contain"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <span className="text-sm truncate">{getCurrentRank(member)}</span>
+                        </div>
+                      ) : (
+                        <span className="text-gray-500 italic text-sm">No current ranked data</span>
+                      )}
                       {selectedGroup.role === 'captain' && member.summoner_name !== 'Moisturizar' && (
                         <button className="text-red-500 hover:text-red-700 text-sm font-medium flex-shrink-0">
                           Remove
@@ -1396,20 +1433,24 @@ export function MyGroupsTab() {
                               )}
                             </div>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
-                                {member.rank && getRankTier(member.rank) && (
-                                  <img 
-                                    src={getRankIconUrl(getRankTier(member.rank) + '+')} 
-                                    alt={getRankTier(member.rank)}
-                                    className="w-4 h-4 object-contain"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      target.style.display = 'none';
-                                    }}
-                                  />
-                                )}
-                                <span className="text-xs truncate">{member.rank || 'UNRANKED'}</span>
-                              </div>
+                              {getCurrentRank(member) ? (
+                                <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
+                                  {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
+                                    <img 
+                                      src={getRankIconUrl(getRankTier(getCurrentRank(member)!) + '+')} 
+                                      alt={getRankTier(getCurrentRank(member)!)}
+                                      className="w-4 h-4 object-contain"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                      }}
+                                    />
+                                  )}
+                                  <span className="text-xs truncate">{getCurrentRank(member)}</span>
+                                </div>
+                              ) : (
+                                <span className="text-gray-500 italic text-xs">No current ranked data</span>
+                              )}
                               <button
                                 className={`px-3 py-1 rounded text-xs font-medium transition-colors flex-shrink-0 ${
                                   promoteLoading === member.summoner_name
@@ -1483,20 +1524,24 @@ export function MyGroupsTab() {
                             </div>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
-                              {m.rank && getRankTier(m.rank) && (
-                                <img 
-                                  src={getRankIconUrl(getRankTier(m.rank) + '+')} 
-                                  alt={getRankTier(m.rank)}
-                                  className="w-4 h-4 object-contain"
+                            {getCurrentRank(m) ? (
+                              <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
+                                {getCurrentRank(m) && getRankTier(getCurrentRank(m)!) && (
+                                  <img 
+                                    src={getRankIconUrl(getRankTier(getCurrentRank(m)!) + '+')} 
+                                    alt={getRankTier(getCurrentRank(m)!)}
+                                    className="w-4 h-4 object-contain"
                                   onError={(e) => {
                                     const target = e.target as HTMLImageElement;
                                     target.style.display = 'none';
                                   }}
                                 />
                               )}
-                              <span className="text-xs truncate">{m.rank || 'UNRANKED'}</span>
+                              <span className="text-xs truncate">{getCurrentRank(m)}</span>
                             </div>
+                          ) : (
+                            <span className="text-gray-500 italic text-xs">No current ranked data</span>
+                          )}
                           </div>
                         </li>
                         ))}
@@ -1781,20 +1826,24 @@ export function MyGroupsTab() {
                         
                         {/* Rank */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                          <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
-                            {member.rank && getRankTier(member.rank) && (
-                              <img 
-                                src={getRankIconUrl(getRankTier(member.rank) === 'challenger' || getRankTier(member.rank) === 'grandmaster' ? getRankTier(member.rank) : getRankTier(member.rank) + '+')} 
-                                alt={getRankTier(member.rank)}
-                                className="w-4 h-4 object-contain"
-                                onError={(e) => {
-                                  const target = e.target as HTMLImageElement;
-                                  target.style.display = 'none';
-                                }}
-                              />
-                            )}
-                            <span className="text-sm">{member.rank || 'UNRANKED'}</span>
-                          </div>
+                          {getCurrentRank(member) ? (
+                            <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
+                              {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
+                                <img 
+                                  src={getRankIconUrl(getRankTier(getCurrentRank(member)!) === 'challenger' || getRankTier(getCurrentRank(member)!) === 'grandmaster' ? getRankTier(getCurrentRank(member)!) : getRankTier(getCurrentRank(member)!) + '+')} 
+                                  alt={getRankTier(getCurrentRank(member)!)}
+                                  className="w-4 h-4 object-contain"
+                                  onError={(e) => {
+                                    const target = e.target as HTMLImageElement;
+                                    target.style.display = 'none';
+                                  }}
+                                />
+                              )}
+                              <span className="text-sm">{getCurrentRank(member)}</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-500 italic text-sm">No current ranked data</span>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -1869,20 +1918,24 @@ export function MyGroupsTab() {
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                  <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
-                                    {member.rank && getRankTier(member.rank) && (
-                                      <img 
-                                        src={getRankIconUrl(getRankTier(member.rank) === 'challenger' || getRankTier(member.rank) === 'grandmaster' ? getRankTier(member.rank) : getRankTier(member.rank) + '+')} 
-                                        alt={getRankTier(member.rank)}
-                                        className="w-3 h-3 object-contain"
-                                        onError={(e) => {
-                                          const target = e.target as HTMLImageElement;
-                                          target.style.display = 'none';
-                                        }}
-                                      />
-                                    )}
-                                    <span className="text-xs truncate">{member.rank || 'UNRANKED'}</span>
-                                  </div>
+                                  {getCurrentRank(member) ? (
+                                    <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
+                                      {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
+                                        <img 
+                                          src={getRankIconUrl(getRankTier(getCurrentRank(member)!) === 'challenger' || getRankTier(getCurrentRank(member)!) === 'grandmaster' ? getRankTier(getCurrentRank(member)!) : getRankTier(getCurrentRank(member)!) + '+')} 
+                                          alt={getRankTier(getCurrentRank(member)!)}
+                                          className="w-3 h-3 object-contain"
+                                          onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                          }}
+                                        />
+                                      )}
+                                      <span className="text-xs truncate">{getCurrentRank(member)}</span>
+                                    </div>
+                                  ) : (
+                                    <span className="text-gray-500 italic text-xs">No current ranked data</span>
+                                  )}
                                   <button
                                     className={`px-3 py-1 rounded text-xs font-medium transition-colors flex-shrink-0 ${
                                       promoteLoading === member.summoner_name
@@ -3113,20 +3166,24 @@ function InvitationCard({
                               
                               {/* Rank */}
                               <div className="flex items-center gap-2 flex-shrink-0">
-                                <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
-                                  {member.rank && getRankTier(member.rank) && (
-                                    <img 
-                                      src={getRankIconUrl(getRankTier(member.rank) === 'challenger' || getRankTier(member.rank) === 'grandmaster' ? getRankTier(member.rank) : getRankTier(member.rank) + '+')} 
-                                      alt={getRankTier(member.rank)}
-                                      className="w-4 h-4 object-contain"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                      }}
-                                    />
-                                  )}
-                                  <span className="text-sm">{member.rank || 'UNRANKED'}</span>
-                                </div>
+                                {member.rank ? (
+                                  <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
+                                    {member.rank && getRankTier(member.rank) && (
+                                      <img 
+                                        src={getRankIconUrl(getRankTier(member.rank) === 'challenger' || getRankTier(member.rank) === 'grandmaster' ? getRankTier(member.rank) : getRankTier(member.rank) + '+')} 
+                                        alt={getRankTier(member.rank)}
+                                        className="w-4 h-4 object-contain"
+                                        onError={(e) => {
+                                          const target = e.target as HTMLImageElement;
+                                          target.style.display = 'none';
+                                        }}
+                                      />
+                                    )}
+                                    <span className="text-sm">{member.rank}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-gray-500 italic text-sm">No current ranked data</span>
+                                )}
                               </div>
                             </div>
                           ))}
