@@ -89,7 +89,7 @@ export function MatchHistoryModal({ isOpen, onClose, onSelectMatch }: MatchHisto
   const getChampionIconUrl = (championName: string) => {
     // First, try to find the champion in our champions data
     const tftChampionKey = Object.keys(champions).find(key => 
-      key.includes(`TFT14_${championName}`) || 
+      key.includes(`TFT15_${championName}`) || 
       champions[key].name.toLowerCase() === championName.toLowerCase()
     );
     
@@ -105,14 +105,14 @@ export function MatchHistoryModal({ isOpen, onClose, onSelectMatch }: MatchHisto
     }
     
     // Final fallback to the original logic if no mapping found
-    const tftChampionName = `TFT14_${championName}`;
-    return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set14.png`;
+    const tftChampionName = `TFT15_${championName}`;
+    return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set15.png`;
   };
 
   const getChampionTier = (championName: string): number => {
-    // Look for the champion in the champions data with TFT14_ prefix
+    // Look for the champion in the champions data with TFT15_ prefix
     const tftChampionKey = Object.keys(champions).find(key => 
-      key.includes(`TFT14_${championName}`) || 
+      key.includes(`TFT15_${championName}`) || 
       champions[key].name.toLowerCase() === championName.toLowerCase()
     );
     
@@ -137,17 +137,32 @@ export function MatchHistoryModal({ isOpen, onClose, onSelectMatch }: MatchHisto
     
     // Manual mapping for common trait names
     const traitMapping: { [key: string]: string } = {
-      'Armorclad': 'TFT14_Armorclad',
-      'Strong': 'TFT14_Strong', 
-      'Cutter': 'TFT14_Cutter',
-      'Marksman': 'TFT14_Marksman',
-      'Techie': 'TFT14_Techie',
-      'Controller': 'TFT14_Controller',
-      'Supercharge': 'TFT14_Supercharge',
-      'Immortal': 'TFT14_Immortal',
-      'Assassin': 'TFTTutorial_Assassin',
-      'Mage': 'TFTTutorial_Sorcerer',
-      'Vanguard': 'TFTTutorial_Brawler'
+      'Destroyer': 'TFT15_Destroyer',
+      'Duelist': 'TFT15_Duelist',
+      'Edgelord': 'TFT15_Edgelord',
+      'Heavyweight': 'TFT15_Heavyweight',
+      'Juggernaut': 'TFT15_Juggernaut',
+      'OldMentor': 'TFT15_OldMentor',
+      'SentaiRanger': 'TFT15_SentaiRanger',
+      'Strategist': 'TFT15_Strategist',
+      'ElTigre': 'TFT15_ElTigre',
+      'Empyrean': 'TFT15_Empyrean',
+      'Luchador': 'TFT15_Luchador',
+      'SoulFighter': 'TFT15_SoulFighter',
+      'Bastion': 'TFT15_Bastion',
+      'BattleAcademia': 'TFT15_BattleAcademia',
+      'Protector': 'TFT15_Protector',
+      'Spellslinger': 'TFT15_Spellslinger',
+      'Prodigy': 'TFT15_Prodigy',
+      'StarGuardian': 'TFT15_StarGuardian',
+      'SupremeCells': 'TFT15_SupremeCells',
+      'TheCrew': 'TFT15_TheCrew',
+      'Rosemother': 'TFT15_Rosemother',
+      'Captain': 'TFT15_Captain',
+      'Sniper': 'TFT15_Sniper',
+      'DragonFist': 'TFT15_DragonFist',
+      'GemForce': 'TFT15_GemForce',
+      'MonsterTrainer': 'TFT15_MonsterTrainer'
     };
     
     // Try manual mapping first

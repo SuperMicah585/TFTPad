@@ -159,28 +159,28 @@ export function TFTProvider({ children }: TFTProviderProps) {
                         console.log(`Champions object keys count:`, Object.keys(champions).length);
                         console.log(`First few champion keys:`, Object.keys(champions).slice(0, 5));
                         
-                        // Try to find the champion by searching for the TFT14_ prefixed name in the full path
-                        const tft14Name = `TFT14_${champion.name}`;
+                        // Try to find the champion by searching for the TFT15_ prefixed name in the full path
+                        const tft15Name = `TFT15_${champion.name}`;
                         let championData = null;
                         let foundKey = null;
                         
                         // Search through all keys to find the one containing our champion name
                         for (const key of Object.keys(champions)) {
-                            if (key.includes(tft14Name)) {
+                            if (key.includes(tft15Name)) {
                                 championData = champions[key];
                                 foundKey = key;
                                 break;
                             }
                         }
                         
-                        console.log(`Looking for: ${tft14Name}`);
+                        console.log(`Looking for: ${tft15Name}`);
                         console.log(`Found champion:`, !!championData);
                         if (foundKey) {
                             console.log(`Found by key: ${foundKey}`);
                         }
                         
                         if (!championData) {
-                            // If not found, try searching for just the name without TFT14_ prefix
+                            // If not found, try searching for just the name without TFT15_ prefix
                             for (const key of Object.keys(champions)) {
                                 if (key.includes(champion.name)) {
                                     championData = champions[key];
@@ -217,7 +217,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
                             console.log(`Image URL: ${fullImageUrl}`);
                         } else {
                             console.log(`No champion data found for: ${champion.name}`);
-                            console.log(`Tried looking for: TFT14_${champion.name}, ${champion.name}`);
+                            console.log(`Tried looking for: TFT15_${champion.name}, ${champion.name}`);
                             console.log(`Available champion keys:`, Object.keys(champions).slice(0, 10));
                         }
                     }
@@ -281,9 +281,10 @@ export function TFTProvider({ children }: TFTProviderProps) {
             const currentVersion = await fetchCurrentVersion();
             setVersion(currentVersion);
             
-            // Load detailed trait data
-            const detailedTraitDataModule = await import('../components/comp_data.json');
-            const detailedTraitDataArray = (detailedTraitDataModule.default || detailedTraitDataModule) as unknown as DetailedTraitData[];
+            // Load detailed trait data - temporarily disabled for TFT Set 15 migration
+            // const detailedTraitDataModule = await import('../components/comp_data.json');
+            // const detailedTraitDataArray = (detailedTraitDataModule.default || detailedTraitDataModule) as unknown as DetailedTraitData[];
+            const detailedTraitDataArray: DetailedTraitData[] = [];
             
             // Fetch champion data, trait data, and TFT comps in parallel
             const [championData, traitData, compsData] = await Promise.all([

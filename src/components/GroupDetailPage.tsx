@@ -60,6 +60,40 @@ export function GroupDetailPage() {
   const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
   const [liveDataLoading] = useState(false);
 
+  // Cache state
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+  // Enhanced cache functions with localStorage
+  const getCachedData = (groupId: number) => {
+    try {
+      const cacheKey = `group-${groupId}-cache`;
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < CACHE_DURATION) {
+          console.log('📦 Using cached data from localStorage for group:', groupId);
+          return data;
+        }
+      }
+    } catch (error) {
+      console.error('Cache read error:', error);
+    }
+    return null;
+  };
+
+  const setCachedData = (groupId: number, data: any) => {
+    try {
+      const cacheKey = `group-${groupId}-cache`;
+      localStorage.setItem(cacheKey, JSON.stringify({
+        data,
+        timestamp: Date.now()
+      }));
+      console.log('📦 Data cached to localStorage for group:', groupId);
+    } catch (error) {
+      console.error('Cache write error:', error);
+    }
+  };
+
   // Profile icon state for selected player
   const [selectedPlayerIconUrl, setSelectedPlayerIconUrl] = useState<string>('');
   const [selectedPlayerIconError, setSelectedPlayerIconError] = useState(false);
@@ -90,6 +124,8 @@ export function GroupDetailPage() {
       fetchSelectedPlayerIcon();
     }
   }, [selectedPlayer?.icon_id]);
+
+
 
   // Retry helper function with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -128,6 +164,32 @@ export function GroupDetailPage() {
     setGroupLoading(true);
     setGroupError(null);
     
+    // Check if we have valid cached data in localStorage
+    const cachedData = getCachedData(id);
+    if (cachedData) {
+      console.log('📦 Using cached data from localStorage, skipping API calls');
+      
+      // Set all state synchronously to avoid race conditions
+      
+      setGroup(cachedData.group);
+      setGroupInfo({
+        description: cachedData.group.description || '',
+        instructions: cachedData.group.application_instructions || ''
+      });
+      setMembers(cachedData.members || []);
+      setTeamStatsData(cachedData.teamStatsData || []);
+      setMemberNames(cachedData.memberNames || {});
+      setLiveData(cachedData.liveData || {});
+      
+      // Set loading states to false after a small delay to ensure state updates complete
+      setTimeout(() => {
+        setGroupLoading(false);
+        setMembersLoading(false);
+      }, 0);
+      
+      return;
+    }
+    
     try {
       // Fetch group details with retry
       const groupDetails = await retryWithBackoff(() => studyGroupService.getStudyGroup(id));
@@ -147,14 +209,17 @@ export function GroupDetailPage() {
         console.log('📊 Combined stats response:', combinedStats);
         
         // Set members with current ELO data if available
+        let finalMembers: any[] = [];
+        
         if (combinedStats.members && Array.isArray(combinedStats.members) && combinedStats.members.length > 0) {
           console.log('✅ Using combined API members:', combinedStats.members);
+          finalMembers = combinedStats.members;
           setMembers(combinedStats.members);
         } else {
           console.log('⚠️ No members in combined API, falling back to separate calls');
           // Fallback to separate API calls
           const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id));
-          const members = groupUsers.map(relationship => ({
+          finalMembers = groupUsers.map(relationship => ({
             summoner_name: relationship.summoner_name || 'Unknown User',
             elo: relationship.elo || 0,
             rank: relationship.rank || 'UNRANKED',
@@ -162,13 +227,23 @@ export function GroupDetailPage() {
             icon_id: relationship.icon_id,
             user_id: relationship.user_id
           }));
-          setMembers(members);
+          setMembers(finalMembers);
         }
         
         // Set team stats data
         setTeamStatsData(combinedStats.events || []);
         setMemberNames(combinedStats.memberNames || {});
         setLiveData(combinedStats.liveData || {});
+        
+        // Cache the complete data with the actual members that were set
+        const dataToCache = {
+          group: groupDetails,
+          members: finalMembers,
+          teamStatsData: combinedStats.events || [],
+          memberNames: combinedStats.memberNames || {},
+          liveData: combinedStats.liveData || {}
+        };
+        setCachedData(id, dataToCache);
         
       } catch (combinedError) {
         console.log('⚠️ Combined API failed, using separate calls:', combinedError);
@@ -212,6 +287,16 @@ export function GroupDetailPage() {
         setTeamStatsData(allEvents);
         setMemberNames(names);
         setLiveData(liveDataFromAPI);
+        
+        // Cache the complete data (fallback)
+        const fallbackDataToCache = {
+          group: groupDetails,
+          members: members,
+          teamStatsData: allEvents,
+          memberNames: names,
+          liveData: liveDataFromAPI
+        };
+        setCachedData(id, fallbackDataToCache);
       }
       
     } catch (err) {

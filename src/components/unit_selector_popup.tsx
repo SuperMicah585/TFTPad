@@ -29,8 +29,8 @@ export function UnitSelectorPopup({
         }
         
         // Fallback to the original logic if no mapping found
-        const tftChampionName = `TFT14_${championName}`;
-        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set14.png`;
+        const tftChampionName = `TFT15_${championName}`;
+        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set15.png`;
     };
 
     const getTierBorderColor = (tier: number): string => {
@@ -47,7 +47,7 @@ export function UnitSelectorPopup({
     // Filter champions based on search query
     const filteredChampions = useMemo(() => {
         const allChampions = Object.entries(champions)
-            .filter(([, champion]) => champion.id.startsWith('TFT14_'))
+            .filter(([, champion]) => champion.id.startsWith('TFT15_'))
             .map(([, champion]) => ({
                 name: champion.name,
                 imageUrl: getChampionIconUrl(champion.name),

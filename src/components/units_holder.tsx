@@ -88,7 +88,7 @@ export function UnitsHolder() {
             
             // Create unit data from all available champions
             const allUnits: UnitContestData[] = Object.values(champions)
-                .filter(champion => champion.id.startsWith('TFT14_'))
+                .filter(champion => champion.id.startsWith('TFT15_'))
                 .map(champion => ({
                     name: champion.name,
                     contestRate: contestRates[champion.name] || 0,

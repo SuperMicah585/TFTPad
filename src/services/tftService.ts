@@ -7,7 +7,7 @@ export interface TFTComp {
     playCount: number;
     difficulty: string;
     levelling: string;
-    stars: string[]; // Array of starred units (e.g., ["TFT14_Seraphine", "TFT14_Shaco"])
+    stars: string[]; // Array of starred units (e.g., ["TFT15_Seraphine", "TFT15_Shaco"])
     topUnits: Array<{
         name: string;
         type: 'unit' | 'trait';
@@ -179,13 +179,13 @@ export async function fetchChampionData(version: string): Promise<{ [key: string
         const response = await fetch(`https://ddragon.leagueoflegends.com/cdn/${version}/data/en_US/tft-champion.json`);
         const data = await response.json();
         
-        // Filter for only TFT Set 14 champions (TFT14_ prefix)
+        // Filter for only TFT Set 15 champions (TFT15_ prefix)
         const filteredData: { [key: string]: ChampionData } = {};
         
         Object.entries(data.data).forEach(([key, champion]) => {
             const championData = champion as ChampionData;
-            // Only include champions with TFT14_ prefix
-            if (championData.id.startsWith('TFT14_')) {
+            // Only include champions with TFT15_ prefix
+            if (championData.id.startsWith('TFT15_')) {
                 filteredData[key] = championData;
             }
         });
@@ -201,8 +201,8 @@ export function createChampionImageMappings(champions: { [key: string]: Champion
     const mappings: { [key: string]: string } = {};
     
     Object.values(champions).forEach(champion => {
-        // Only create mappings for TFT14_ champions
-        if (!champion.id.startsWith('TFT14_')) {
+        // Only create mappings for TFT15_ champions
+        if (!champion.id.startsWith('TFT15_')) {
             return;
         }
         
@@ -246,21 +246,21 @@ export async function fetchTFTComps(): Promise<TFTComp[]> {
         
         // Transform the API data into our format
         Object.entries(tftData.cluster_details).forEach(([clusterId, cluster]) => {
-            // Extract units from units_string and filter for only TFT14_ units
+            // Extract units from units_string and filter for only TFT15_ units
             const units = cluster.units_string
                 .split(', ')
-                .filter(unit => unit.startsWith('TFT14_')) // Only include TFT14_ units
-                .map(unit => unit.replace('TFT14_', ''))
+                .filter(unit => unit.startsWith('TFT15_')) // Only include TFT15_ units
+                .map(unit => unit.replace('TFT15_', ''))
                 .filter(unit => unit.length > 0);
             
             // Extract traits from traits_string
             const traits = cluster.traits_string
                 .split(', ')
-                .map(trait => trait.replace('TFT14_', ''))
+                .map(trait => trait.replace('TFT15_', ''))
                 .filter(trait => trait.length > 0);
             
             // Get the main name (usually the first trait or unit)
-            const mainName = cluster.name[0]?.name.replace('TFT14_', '') || `Comp ${clusterId}`;
+            const mainName = cluster.name[0]?.name.replace('TFT15_', '') || `Comp ${clusterId}`;
             
             const comp: TFTComp = {
                 id: clusterId,
@@ -271,16 +271,16 @@ export async function fetchTFTComps(): Promise<TFTComp[]> {
                 playCount: cluster.overall.count,
                 difficulty: cluster.difficulty || 'Medium',
                 levelling: cluster.levelling || 'Standard',
-                stars: (cluster.stars || []).map(star => star.replace('TFT14_', '')), // Add stars array from API data and remove TFT14_ prefix
+                stars: (cluster.stars || []).map(star => star.replace('TFT15_', '')), // Add stars array from API data and remove TFT15_ prefix
                 topUnits: cluster.name
-                    .filter(item => item.name.startsWith('TFT14_')) // Only include TFT14_ units in topUnits
+                    .filter(item => item.name.startsWith('TFT15_')) // Only include TFT15_ units in topUnits
                     .map(item => ({
-                        name: item.name.replace('TFT14_', ''),
+                        name: item.name.replace('TFT15_', ''),
                         type: item.type,
                         score: item.score
                     })),
                 builds: cluster.builds.map(build => ({
-                    unit: build.unit.replace('TFT14_', ''),
+                    unit: build.unit.replace('TFT15_', ''),
                     count: build.count,
                     avg: build.avg,
                     buildName: build.buildName,
@@ -584,21 +584,21 @@ export function mergePlacementStatsWithComps(
 
     // Process each comp from the comps data
     Object.entries(compsData.cluster_details).forEach(([clusterId, cluster]) => {
-        // Extract units from units_string and filter for only TFT14_ units
+        // Extract units from units_string and filter for only TFT15_ units
         const units = cluster.units_string
             .split(', ')
-            .filter(unit => unit.startsWith('TFT14_'))
-            .map(unit => unit.replace('TFT14_', ''))
+            .filter(unit => unit.startsWith('TFT15_'))
+            .map(unit => unit.replace('TFT15_', ''))
             .filter(unit => unit.length > 0);
         
         // Extract traits from traits_string
         const traits = cluster.traits_string
             .split(', ')
-            .map(trait => trait.replace('TFT14_', ''))
+            .map(trait => trait.replace('TFT15_', ''))
             .filter(trait => trait.length > 0);
         
         // Get the main name (usually the first trait or unit)
-        const mainName = cluster.name[0]?.name.replace('TFT14_', '') || `Comp ${clusterId}`;
+        const mainName = cluster.name[0]?.name.replace('TFT15_', '') || `Comp ${clusterId}`;
         
                     const comp: TFTComp = {
                 id: clusterId,
@@ -611,14 +611,14 @@ export function mergePlacementStatsWithComps(
                 levelling: cluster.levelling || 'Standard',
             stars: cluster.stars || [], // Add stars array from API data
             topUnits: cluster.name
-                .filter(item => item.name.startsWith('TFT14_'))
+                .filter(item => item.name.startsWith('TFT15_'))
                 .map(item => ({
-                    name: item.name.replace('TFT14_', ''),
+                    name: item.name.replace('TFT15_', ''),
                     type: item.type,
                     score: item.score
                 })),
             builds: cluster.builds.map(build => ({
-                unit: build.unit.replace('TFT14_', ''),
+                unit: build.unit.replace('TFT15_', ''),
                 count: build.count,
                 avg: build.avg,
                 buildName: build.buildName,
@@ -858,13 +858,45 @@ export function getTraitBreakpointInfo(traitName: string, breakpoint: string, de
         };
     }
     
-    // Fallback: assume the breakpoint number is the number of units required
+    // Fallback: provide basic breakpoint information for TFT Set 15 traits
+    const traitBreakpointMap: { [key: string]: { [key: number]: string } } = {
+        'Destroyer': { 1: '1 Executioner', 2: '2 Executioner', 3: '3 Executioner', 4: '4 Executioner' },
+        'Duelist': { 1: '1 Duelist', 2: '2 Duelist', 3: '3 Duelist', 4: '4 Duelist' },
+        'Edgelord': { 1: '1 Edgelord', 2: '2 Edgelord', 3: '3 Edgelord', 4: '4 Edgelord' },
+        'Heavyweight': { 1: '1 Heavyweight', 2: '2 Heavyweight', 3: '3 Heavyweight', 4: '4 Heavyweight' },
+        'Juggernaut': { 1: '1 Juggernaut', 2: '2 Juggernaut', 3: '3 Juggernaut', 4: '4 Juggernaut' },
+        'OldMentor': { 1: '1 Mentor', 2: '2 Mentor', 3: '3 Mentor', 4: '4 Mentor' },
+        'SentaiRanger': { 1: '1 Mighty Mech', 2: '2 Mighty Mech', 3: '3 Mighty Mech', 4: '4 Mighty Mech' },
+        'Strategist': { 1: '1 Strategist', 2: '2 Strategist', 3: '3 Strategist', 4: '4 Strategist' },
+        'ElTigre': { 1: '1 The Champ', 2: '2 The Champ', 3: '3 The Champ', 4: '4 The Champ' },
+        'Empyrean': { 1: '1 Wraith', 2: '2 Wraith', 3: '3 Wraith', 4: '4 Wraith' },
+        'Luchador': { 1: '1 Luchador', 2: '2 Luchador', 3: '3 Luchador', 4: '4 Luchador' },
+        'SoulFighter': { 1: '1 Soul Fighter', 2: '2 Soul Fighter', 3: '3 Soul Fighter', 4: '4 Soul Fighter' },
+        'Bastion': { 1: '1 Bastion', 2: '2 Bastion', 3: '3 Bastion', 4: '4 Bastion' },
+        'BattleAcademia': { 1: '1 Battle Academia', 2: '2 Battle Academia', 3: '3 Battle Academia', 4: '4 Battle Academia' },
+        'Protector': { 1: '1 Protector', 2: '2 Protector', 3: '3 Protector', 4: '4 Protector' },
+        'Spellslinger': { 1: '1 Sorcerer', 2: '2 Sorcerer', 3: '3 Sorcerer', 4: '4 Sorcerer' },
+        'Prodigy': { 1: '1 Prodigy', 2: '2 Prodigy', 3: '3 Prodigy', 4: '4 Prodigy' },
+        'StarGuardian': { 1: '1 Star Guardian', 2: '2 Star Guardian', 3: '3 Star Guardian', 4: '4 Star Guardian', 5: '5 Star Guardian', 6: '6 Star Guardian', 7: '7 Star Guardian' },
+        'SupremeCells': { 1: '1 Supreme Cells', 2: '2 Supreme Cells', 3: '3 Supreme Cells', 4: '4 Supreme Cells' },
+        'TheCrew': { 1: '1 The Crew', 2: '2 The Crew', 3: '3 The Crew', 4: '4 The Crew', 5: '5 The Crew', 6: '6 The Crew', 7: '7 The Crew' },
+        'Rosemother': { 1: '1 Rosemother', 2: '2 Rosemother', 3: '3 Rosemother', 4: '4 Rosemother' },
+        'Captain': { 1: '1 Rogue Captain', 2: '2 Rogue Captain', 3: '3 Rogue Captain', 4: '4 Rogue Captain' },
+        'Sniper': { 1: '1 Sniper', 2: '2 Sniper', 3: '3 Sniper', 4: '4 Sniper' },
+        'DragonFist': { 1: '1 Stance Master', 2: '2 Stance Master', 3: '3 Stance Master', 4: '4 Stance Master' },
+        'GemForce': { 1: '1 Crystal Gambit', 2: '2 Crystal Gambit', 3: '3 Crystal Gambit', 4: '4 Crystal Gambit' },
+        'MonsterTrainer': { 1: '1 Monster Trainer', 2: '2 Monster Trainer', 3: '3 Monster Trainer', 4: '4 Monster Trainer' }
+    };
+    
+    const traitBreakpoints = traitBreakpointMap[cleanTraitName];
+    const levelName = traitBreakpoints?.[breakpointNum] || `${breakpointNum} ${cleanTraitName}`;
+    
     return {
         unitsRequired: breakpointNum,
         maxUnits: undefined,
         description: undefined,
         traitName: cleanTraitName,
-        levelName: `${breakpointNum} ${cleanTraitName}`
+        levelName: levelName
     };
 }
 
@@ -877,9 +909,9 @@ export function decodeHtmlEntities(text: string): string {
         .trim();
 }
 
-// Team planner codes for TFT Set 14 champions (from official data)
+// Team planner codes for TFT Set 15 champions (from official data)
 const TEAM_PLANNER_CODES = {
-    'TFTSet14': {
+    'TFTSet15': {
         'Alistar': { traits: [ 'Bruiser', 'Golden Ox' ], championTier: 1, teamPlannerCode: '312' },
         'Annie': { traits: [ 'A.M.P', 'Golden Ox' ], championTier: 4, teamPlannerCode: '316' },
         'Aphelios': { traits: [ 'Golden Ox', 'Marksman' ], championTier: 4, teamPlannerCode: '71a' },
@@ -941,8 +973,8 @@ const TEAM_PLANNER_CODES = {
     }
 };
 
-// TFTSet14 configuration
-const TFTSET14_CONFIG = {
+// TFTSet15 configuration
+const TFTSET15_CONFIG = {
     targetSlots: 10,
     teamPlannerCodePrefix: '02'
 };
@@ -950,22 +982,22 @@ const TFTSET14_CONFIG = {
 /**
  * Generate a team planner code string from a list of champions
  * @param champions Array of champion names
- * @returns Team planner code string ending with TFTSet14
+ * @returns Team planner code string ending with TFTSet15
  */
 // Helper function to normalize champion names from comp data to team planner format
 function normalizeChampionName(name: string): string {
-    // Remove TFT14_ prefix if present
-    const cleanName = name.replace(/^TFT14_/, '');
+    // Remove TFT15_ prefix if present
+    const cleanName = name.replace(/^TFT15_/, '');
     
     // Handle specific cases where comp data uses different naming than team planner codes
     const nameMappings: { [key: string]: string } = {
         'MissFortune': 'Miss Fortune',
         'TwistedFate': 'Twisted Fate',
         'DrMundo': 'Dr. Mundo',
-        'KogMaw': 'Kog\'Maw', // TFT14_KogMaw -> Kog'Maw (no apostrophe in comp data)
-        'Jarvan': 'Jarvan IV', // TFT14_Jarvan -> Jarvan IV
+        'KogMaw': 'Kog\'Maw', // TFT15_KogMaw -> Kog'Maw (no apostrophe in comp data)
+        'Jarvan': 'Jarvan IV', // TFT15_Jarvan -> Jarvan IV
         'JarvanIV': 'Jarvan IV',
-        'Chogath': 'Cho\'Gath', // TFT14_Chogath -> Cho'Gath (no apostrophe in comp data)
+        'Chogath': 'Cho\'Gath', // TFT15_Chogath -> Cho'Gath (no apostrophe in comp data)
         'ChoGath': 'Cho\'Gath', // Alternative spelling
         'Cho\'Gath': 'Cho\'Gath', // Already correct
         'LeBlanc': 'LeBlanc', // Already correct
@@ -993,8 +1025,8 @@ export function generateTeamPlannerCode(champions: string[]): string {
             return normalized;
         })
         .sort((a, b) => {
-            const championA = TEAM_PLANNER_CODES.TFTSet14[a as keyof typeof TEAM_PLANNER_CODES.TFTSet14];
-            const championB = TEAM_PLANNER_CODES.TFTSet14[b as keyof typeof TEAM_PLANNER_CODES.TFTSet14];
+            const championA = TEAM_PLANNER_CODES.TFTSet15[a as keyof typeof TEAM_PLANNER_CODES.TFTSet15];
+            const championB = TEAM_PLANNER_CODES.TFTSet15[b as keyof typeof TEAM_PLANNER_CODES.TFTSet15];
             
             if (!championA && !championB) return a.localeCompare(b);
             if (!championA) return 1;
@@ -1015,7 +1047,7 @@ export function generateTeamPlannerCode(champions: string[]): string {
     
     // Process sorted champions
     for (const championName of sortedChampions) {
-        const championData = TEAM_PLANNER_CODES.TFTSet14[championName as keyof typeof TEAM_PLANNER_CODES.TFTSet14];
+        const championData = TEAM_PLANNER_CODES.TFTSet15[championName as keyof typeof TEAM_PLANNER_CODES.TFTSet15];
         console.log(`DEBUG: Looking up ${championName} -> Found: ${!!championData}, Code: ${championData?.teamPlannerCode || '000'}`);
         if (championData) {
             codes.push(championData.teamPlannerCode);
@@ -1029,7 +1061,7 @@ export function generateTeamPlannerCode(champions: string[]): string {
         codes.push('000');
     }
     
-    const result = TFTSET14_CONFIG.teamPlannerCodePrefix + codes.join('') + 'TFTSet14';
+    const result = TFTSET15_CONFIG.teamPlannerCodePrefix + codes.join('') + 'TFTSet15';
     console.log('DEBUG: Final code:', result);
     
     // Combine prefix + champion codes + set identifier
@@ -1127,9 +1159,9 @@ export function parseMatchDataForGameTab(matchData: MatchData) {
   const sortedPlayers = matchData.info.participants.sort((a, b) => a.placement - b.placement);
   
   return sortedPlayers.map(player => {
-    // Convert character_id to champion name (remove TFT14_ prefix)
+    // Convert character_id to champion name (remove TFT15_ prefix)
     const champions = player.units.map(unit => {
-      const championName = unit.character_id.replace('TFT14_', '');
+      const championName = unit.character_id.replace('TFT15_', '');
       // Map tier to star level: tier 2 = normal, tier 3 = 3*, tier 4 = 4*
       const starLevel = unit.tier === 4 ? 4 : unit.tier === 3 ? 3 : unit.tier === 2 ? 2 : 1;
       console.log(`Parsing unit: ${championName}, tier: ${unit.tier}, starLevel: ${starLevel}`);

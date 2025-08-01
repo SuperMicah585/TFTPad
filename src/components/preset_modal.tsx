@@ -28,17 +28,32 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
         
         // Manual mapping for common trait names
         const traitMapping: { [key: string]: string } = {
-            'Armorclad': 'TFT14_Armorclad',
-            'Strong': 'TFT14_Strong', 
-            'Cutter': 'TFT14_Cutter',
-            'Marksman': 'TFT14_Marksman',
-            'Techie': 'TFT14_Techie',
-            'Controller': 'TFT14_Controller',
-            'Supercharge': 'TFT14_Supercharge',
-            'Immortal': 'TFT14_Immortal',
-            'Assassin': 'TFTTutorial_Assassin',
-            'Mage': 'TFTTutorial_Sorcerer',
-            'Vanguard': 'TFTTutorial_Brawler'
+            'Destroyer': 'TFT15_Destroyer',
+            'Duelist': 'TFT15_Duelist',
+            'Edgelord': 'TFT15_Edgelord',
+            'Heavyweight': 'TFT15_Heavyweight',
+            'Juggernaut': 'TFT15_Juggernaut',
+            'OldMentor': 'TFT15_OldMentor',
+            'SentaiRanger': 'TFT15_SentaiRanger',
+            'Strategist': 'TFT15_Strategist',
+            'ElTigre': 'TFT15_ElTigre',
+            'Empyrean': 'TFT15_Empyrean',
+            'Luchador': 'TFT15_Luchador',
+            'SoulFighter': 'TFT15_SoulFighter',
+            'Bastion': 'TFT15_Bastion',
+            'BattleAcademia': 'TFT15_BattleAcademia',
+            'Protector': 'TFT15_Protector',
+            'Spellslinger': 'TFT15_Spellslinger',
+            'Prodigy': 'TFT15_Prodigy',
+            'StarGuardian': 'TFT15_StarGuardian',
+            'SupremeCells': 'TFT15_SupremeCells',
+            'TheCrew': 'TFT15_TheCrew',
+            'Rosemother': 'TFT15_Rosemother',
+            'Captain': 'TFT15_Captain',
+            'Sniper': 'TFT15_Sniper',
+            'DragonFist': 'TFT15_DragonFist',
+            'GemForce': 'TFT15_GemForce',
+            'MonsterTrainer': 'TFT15_MonsterTrainer'
         };
         
         // Try manual mapping first
@@ -163,7 +178,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
     const getChampionIconUrl = (championName: string) => {
         // First, try to find the champion in our champions data
         const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
+            key.includes(`TFT15_${championName}`) || 
             champions[key].name.toLowerCase() === championName.toLowerCase()
         );
         
@@ -179,11 +194,11 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
         }
         
         // Final fallback to the original logic if no mapping found
-        const tftChampionName = `TFT14_${championName}`;
-        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set14.png`;
+        const tftChampionName = `TFT15_${championName}`;
+        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set15.png`;
     };
 
-    const isValidTFT14Champion = (championName: string): boolean => {
+    const isValidTFT15Champion = (championName: string): boolean => {
         // Exclude special units that are not playable champions
         const excludedUnits = [
             'SummonLevel2',
@@ -194,23 +209,23 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
             return false;
         }
         
-        // Check if the champion exists in our TFT14_ data
+        // Check if the champion exists in our TFT15_ data
         const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
+            key.includes(`TFT15_${championName}`) || 
             champions[key].name.toLowerCase() === championName.toLowerCase()
         );
         
         if (!tftChampionKey) return false;
         
-        // Double-check that it's actually a TFT14_ champion
+        // Double-check that it's actually a TFT15_ champion
         const championData = champions[tftChampionKey];
-        return championData.id.startsWith('TFT14_');
+        return championData.id.startsWith('TFT15_');
     };
 
     const getChampionTier = (championName: string): number => {
-        // Look for the champion in the champions data with TFT14_ prefix
+        // Look for the champion in the champions data with TFT15_ prefix
         const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
+            key.includes(`TFT15_${championName}`) || 
             champions[key].name.toLowerCase() === championName.toLowerCase()
         );
         
@@ -227,8 +242,8 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
 
     const handleCompClick = (comp: TFTComp) => {
         if (onCompSelect) {
-            const validChampions = comp.units
-                .filter((unit: string) => isValidTFT14Champion(unit))
+                    const validChampions = comp.units
+            .filter((unit: string) => isValidTFT15Champion(unit))
                 .map((unit: string) => ({
                     name: unit,
                     imageUrl: getChampionIconUrl(unit),
@@ -310,7 +325,7 @@ export function PresetModal({ isOpen, onClose, playerNumber, onCompSelect }: Pre
                                 <div className="mb-3">
                                     <div className="flex flex-wrap gap-2">
                                         {comp.units
-                                            .filter(unit => isValidTFT14Champion(unit))
+                                            .filter(unit => isValidTFT15Champion(unit))
                                             .sort((a, b) => getChampionTier(a) - getChampionTier(b))
                                             .map((unit, index) => {
                                                 const tier = getChampionTier(unit);

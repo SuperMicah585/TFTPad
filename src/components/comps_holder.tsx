@@ -260,17 +260,32 @@ export function CompsHolder() {
         
         // Manual mapping for common trait names
         const traitMapping: { [key: string]: string } = {
-            'Armorclad': 'TFT14_Armorclad',
-            'Strong': 'TFT14_Strong', 
-            'Cutter': 'TFT14_Cutter',
-            'Marksman': 'TFT14_Marksman',
-            'Techie': 'TFT14_Techie',
-            'Controller': 'TFT14_Controller',
-            'Supercharge': 'TFT14_Supercharge',
-            'Immortal': 'TFT14_Immortal',
-            'Assassin': 'TFTTutorial_Assassin',
-            'Mage': 'TFTTutorial_Sorcerer',
-            'Vanguard': 'TFTTutorial_Brawler'
+            'Destroyer': 'TFT15_Destroyer',
+            'Duelist': 'TFT15_Duelist',
+            'Edgelord': 'TFT15_Edgelord',
+            'Heavyweight': 'TFT15_Heavyweight',
+            'Juggernaut': 'TFT15_Juggernaut',
+            'OldMentor': 'TFT15_OldMentor',
+            'SentaiRanger': 'TFT15_SentaiRanger',
+            'Strategist': 'TFT15_Strategist',
+            'ElTigre': 'TFT15_ElTigre',
+            'Empyrean': 'TFT15_Empyrean',
+            'Luchador': 'TFT15_Luchador',
+            'SoulFighter': 'TFT15_SoulFighter',
+            'Bastion': 'TFT15_Bastion',
+            'BattleAcademia': 'TFT15_BattleAcademia',
+            'Protector': 'TFT15_Protector',
+            'Spellslinger': 'TFT15_Spellslinger',
+            'Prodigy': 'TFT15_Prodigy',
+            'StarGuardian': 'TFT15_StarGuardian',
+            'SupremeCells': 'TFT15_SupremeCells',
+            'TheCrew': 'TFT15_TheCrew',
+            'Rosemother': 'TFT15_Rosemother',
+            'Captain': 'TFT15_Captain',
+            'Sniper': 'TFT15_Sniper',
+            'DragonFist': 'TFT15_DragonFist',
+            'GemForce': 'TFT15_GemForce',
+            'MonsterTrainer': 'TFT15_MonsterTrainer'
         };
         
         // Try manual mapping first
@@ -384,7 +399,7 @@ export function CompsHolder() {
                     if (unit) {
                         // Check if this unit is itemized in any comp
                         const isItemized = displayComps.some(comp => {
-                            const unitBuild = comp.builds.find((build) => build.unit === unit.name.replace(/^TFT14_/, ''));
+                            const unitBuild = comp.builds.find((build) => build.unit === unit.name.replace(/^TFT15_/, ''));
                             return unitBuild && unitBuild.num_items > 0;
                         });
                         
@@ -392,8 +407,8 @@ export function CompsHolder() {
                         if (isItemized) {
                             const starLevel = currentPlayerStars[unit.name] || 0;
                             const weight = starLevel >= 3 ? 3 : 1; // 3-star and 4-star units count as 3, others as 1
-                            // Normalize unit name to match Comps tab display (remove TFT14_ prefix and trim)
-                            let normalizedUnitName = unit.name.replace(/^TFT14_/, '').toLowerCase().trim();
+                                    // Normalize unit name to match Comps tab display (remove TFT15_ prefix and trim)
+        let normalizedUnitName = unit.name.replace(/^TFT15_/, '').toLowerCase().trim();
                             
                             // Handle special case for Nidalee/NidaleeCougar mismatch
                             if (normalizedUnitName === 'nidalee') {
@@ -430,8 +445,8 @@ export function CompsHolder() {
             let unitCount = 0;
             
             comp.units.forEach((unit: string) => {
-                // Normalize unit name for better matching - remove TFT14_ prefix if present
-                const normalizedUnitName = unit.replace(/^TFT14_/, '').toLowerCase().trim();
+                        // Normalize unit name for better matching - remove TFT15_ prefix if present
+        const normalizedUnitName = unit.replace(/^TFT15_/, '').toLowerCase().trim();
                 const contestRate = unitContestRates[normalizedUnitName] || 0;
                 
                 // Debug: Log unit and contest rate
@@ -525,7 +540,7 @@ export function CompsHolder() {
     const getChampionIconUrl = (championName: string) => {
         // First, try to find the champion in our champions data
         const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
+            key.includes(`TFT15_${championName}`) || 
             champions[key].name.toLowerCase() === championName.toLowerCase()
         );
         
@@ -541,14 +556,14 @@ export function CompsHolder() {
         }
         
         // Final fallback to the original logic if no mapping found
-        const tftChampionName = `TFT14_${championName}`;
-        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set14.png`;
+        const tftChampionName = `TFT15_${championName}`;
+        return `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${tftChampionName}.TFT_Set15.png`;
     };
 
     const getChampionTier = (championName: string): number => {
-        // Look for the champion in the champions data with TFT14_ prefix
+        // Look for the champion in the champions data with TFT15_ prefix
         const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
+            key.includes(`TFT15_${championName}`) || 
             champions[key].name.toLowerCase() === championName.toLowerCase()
         );
         
@@ -567,9 +582,9 @@ export function CompsHolder() {
     const calculateCompCost = (comp: TFTComp): number => {
         let totalCost = 0;
         comp.units.forEach((unit: string) => {
-            if (isValidTFT14Champion(unit)) {
+            if (isValidTFT15Champion(unit)) {
                 const tier = getChampionTier(unit);
-                const isStarred = comp.stars.includes(`TFT14_${unit}`);
+                const isStarred = comp.stars.includes(`TFT15_${unit}`);
                 if (isStarred) {
                     // For now, assume 3-star since comp data doesn't track star levels yet
                     // TODO: Update when comp data structure supports star levels
@@ -593,7 +608,7 @@ export function CompsHolder() {
         }
     };
 
-    const isValidTFT14Champion = (championName: string): boolean => {
+    const isValidTFT15Champion = (championName: string): boolean => {
         // Exclude special units that are not playable champions
         const excludedUnits = [
             'SummonLevel2',
@@ -604,17 +619,17 @@ export function CompsHolder() {
             return false;
         }
         
-        // Check if the champion exists in our TFT14_ data
+        // Check if the champion exists in our TFT15_ data
         const tftChampionKey = Object.keys(champions).find(key => 
-            key.includes(`TFT14_${championName}`) || 
+            key.includes(`TFT15_${championName}`) || 
             champions[key].name.toLowerCase() === championName.toLowerCase()
         );
         
         if (!tftChampionKey) return false;
         
-        // Double-check that it's actually a TFT14_ champion
+        // Double-check that it's actually a TFT15_ champion
         const championData = champions[tftChampionKey];
-        return championData.id.startsWith('TFT14_');
+        return championData.id.startsWith('TFT15_');
     };
 
     if (loading) {
@@ -885,19 +900,19 @@ export function CompsHolder() {
                                         <div className="mb-4">
                                             <div className="flex flex-wrap gap-2">
                                                 {compWithContest.comp.units
-                                                    .filter((unit: string) => isValidTFT14Champion(unit))
+                                                    .filter((unit: string) => isValidTFT15Champion(unit))
                                                     .sort((a: string, b: string) => getChampionTier(a) - getChampionTier(b))
                                                     .map((unit: string, index: number) => {
                                                         const tier = getChampionTier(unit);
                                                         const baseBorderColor = getTierBorderColor(tier);
                                                         const unitBuild = compWithContest.comp.builds.find((build) => build.unit === unit);
-                                                        // Check if this unit is in the stars array (with TFT14_ prefix)
-                                                        const isStarred = compWithContest.comp.stars.includes(`TFT14_${unit}`);
+                                                                // Check if this unit is in the stars array (with TFT15_ prefix)
+        const isStarred = compWithContest.comp.stars.includes(`TFT15_${unit}`);
                                                         
                                                         // Determine border color based on contest status
                                                         let borderColor = baseBorderColor;
                                                         // Check if unit is contested (has contest rate > 12.5%)
-                                                        const normalizedUnitName = unit.replace(/^TFT14_/, '').toLowerCase().trim();
+                                                        const normalizedUnitName = unit.replace(/^TFT15_/, '').toLowerCase().trim();
                                                         console.log(`Comps tab - Original unit name: "${unit}", Normalized: "${normalizedUnitName}"`);
                                                         const contestRate = unitContestRates[normalizedUnitName] || 0;
                                                         console.log(`Comps tab - Unit: ${unit}, Normalized: ${normalizedUnitName}, Contest Rate: ${contestRate}%, Should be red: ${contestRate > 12.5}`);
