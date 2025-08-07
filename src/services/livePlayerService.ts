@@ -17,75 +17,75 @@ export interface LivePlayerStats {
 }
 
 class LivePlayerService {
-  private async rankToElo(rankStr: string, leaguePoints: number): Promise<number> {
+  private async rankToElo(rankStr: string): Promise<number> {
     // This function replicates the server-side rank_to_elo logic
-    if (!rankStr) return 0;
+    if (!rankStr || rankStr === 'UNRANKED') return 0;
     
-    const parts = rankStr.split(' ');
-    if (parts.length < 2) return 0;
+    rankStr = rankStr.toUpperCase();
     
-    const tier = parts[0].toLowerCase();
-    const rank = parts[1];
-    
-    let baseElo = 0;
-    
-    // Convert tier to base ELO
-    switch (tier) {
-      case 'iron':
-        baseElo = 0;
-        break;
-      case 'bronze':
-        baseElo = 400;
-        break;
-      case 'silver':
-        baseElo = 800;
-        break;
-      case 'gold':
-        baseElo = 1200;
-        break;
-      case 'platinum':
-        baseElo = 1600;
-        break;
-      case 'emerald':
-        baseElo = 2000;
-        break;
-      case 'diamond':
-        baseElo = 2400;
-        break;
-      case 'master':
-      case 'grandmaster':
-      case 'challenger':
-        baseElo = 2800;
-        break;
-      default:
-        return 0;
+    // Handle TURBO ranks
+    if (rankStr.startsWith('TURBO ')) {
+      const turboRank = rankStr.replace('TURBO ', '');
+      if (turboRank === 'UNRANKED') return 0;
+      if (turboRank === 'IRON') return 200;
+      if (turboRank === 'BRONZE') return 600;
+      if (turboRank === 'SILVER') return 1000;
+      if (turboRank === 'GOLD') return 1400;
+      if (turboRank === 'PLATINUM') return 1800;
+      if (turboRank === 'EMERALD') return 2200;
+      if (turboRank === 'DIAMOND') return 2600;
+      return 0;
     }
     
-    // Convert rank to tier number (I=1, II=2, III=3, IV=4)
-    let tierNumber = 0;
-    switch (rank) {
-      case 'I':
-        tierNumber = 1;
-        break;
-      case 'II':
-        tierNumber = 2;
-        break;
-      case 'III':
-        tierNumber = 3;
-        break;
-      case 'IV':
-        tierNumber = 4;
-        break;
-      default:
-        tierNumber = 1;
+    // Handle regular ranks
+    const getDivisionValue = (rankStr: string, baseElo: number): number => {
+      if (rankStr.includes(' IV')) return baseElo + 0;
+      if (rankStr.includes(' III')) return baseElo + 100;
+      if (rankStr.includes(' II')) return baseElo + 200;
+      if (rankStr.includes(' I')) return baseElo + 300;
+      return baseElo;
+    };
+    
+    const addLpToElo = (rankStr: string, baseElo: number): number => {
+      let lp = 0;
+      if (rankStr.includes('LP')) {
+        try {
+          const lpPart = rankStr.split('LP')[0].trim();
+          lp = parseInt(lpPart.split(' ').pop() || '0');
+        } catch {
+          lp = 0;
+        }
+      }
+      return baseElo + lp;
+    };
+    
+    if (rankStr.includes('IRON')) {
+      const baseElo = getDivisionValue(rankStr, 0);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('BRONZE')) {
+      const baseElo = getDivisionValue(rankStr, 400);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('SILVER')) {
+      const baseElo = getDivisionValue(rankStr, 800);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('GOLD')) {
+      const baseElo = getDivisionValue(rankStr, 1200);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('PLATINUM')) {
+      const baseElo = getDivisionValue(rankStr, 1600);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('EMERALD')) {
+      const baseElo = getDivisionValue(rankStr, 2000);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('DIAMOND')) {
+      const baseElo = getDivisionValue(rankStr, 2400);
+      return addLpToElo(rankStr, baseElo);
+    } else if (rankStr.includes('MASTER') || rankStr.includes('GRANDMASTER') || rankStr.includes('CHALLENGER')) {
+      const baseElo = 2800;
+      return addLpToElo(rankStr, baseElo);
     }
     
-    // Calculate ELO based on tier and league points
-    if (tier === 'master' || tier === 'grandmaster' || tier === 'challenger') {
-      return baseElo + leaguePoints;
-    } else {
-      return baseElo + (tierNumber - 4) * 100 + leaguePoints;
-    }
+    return 0;
   }
 
   async getLivePlayerStats(groupId: number): Promise<LivePlayerStats> {
@@ -143,8 +143,8 @@ class LivePlayerService {
           }
           
           // Convert rank to ELO
-          const rankStr = `${rankedData.tier} ${rankedData.rank}`;
-          const elo = await this.rankToElo(rankStr, rankedData.leaguePoints);
+          const rankStr = `${rankedData.tier} ${rankedData.rank} ${rankedData.leaguePoints}LP`;
+          const elo = await this.rankToElo(rankStr);
           
           // Create live data point
           const liveData: LivePlayerData = {
