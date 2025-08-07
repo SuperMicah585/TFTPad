@@ -121,18 +121,55 @@ export function TeamStatsChart({
   };
 
   // Transform data for Nivo
-  const chartData = Object.keys(groupedData).map((summonerName, index) => {
+  const chartData = Object.keys(groupedData).map((summonerName) => {
     const events = groupedData[summonerName];
     const memberName = truncateName(summonerName);
     
     // Start with historical data
-    let chartPoints = events.map(event => ({
-      x: event.created_at.split('T')[0],
-      y: event.elo,
-      wins: event.wins,
-      losses: event.losses,
-      isLive: false
-    }));
+    let chartPoints = events
+      .filter(event => {
+        if (!event.created_at) return false;
+        const date = new Date(event.created_at);
+        return !isNaN(date.getTime()) && date.getTime() > 0;
+      })
+      .map((event) => {
+        const date = new Date(event.created_at);
+        console.log('Processing date:', event.created_at, '-> formatted:', date.toLocaleDateString());
+        return {
+          x: date.toLocaleDateString(), // Use just the date for now
+          y: event.elo,
+          date: event.created_at,
+          timestamp: date.getTime(), // Keep timestamp for sorting
+          displayDate: date.toLocaleDateString(),
+          displayTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          wins: event.wins,
+          losses: event.losses,
+          isLive: false
+        };
+      })
+      .sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically first
+      .reduce((filtered, point, index) => {
+        // Keep the first point always
+        if (index === 0) {
+          filtered.push(point);
+          return filtered;
+        }
+        
+        // For points on the same day, only keep the latest one
+        const previousPoint = filtered[filtered.length - 1];
+        const currentDate = new Date(point.date).toDateString();
+        const previousDate = new Date(previousPoint.date).toDateString();
+        
+        if (currentDate === previousDate) {
+          // Same day - replace the previous point with this one (latest)
+          filtered[filtered.length - 1] = point;
+        } else {
+          // Different day - add this point
+          filtered.push(point);
+        }
+        
+        return filtered;
+      }, [] as any[]);
     
     // Add live data point if available (use improved key matching)
     if (liveData) {
@@ -143,6 +180,10 @@ export function TeamStatsChart({
         chartPoints.push({
           x: 'Current',
           y: livePoint.elo,
+          date: new Date().toISOString(),
+          timestamp: new Date().getTime(),
+          displayDate: 'Current',
+          displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           wins: livePoint.wins,
           losses: livePoint.losses,
           isLive: true
@@ -156,6 +197,10 @@ export function TeamStatsChart({
           chartPoints.push({
             x: 'Current',
             y: livePoint.elo,
+            date: new Date().toISOString(),
+            timestamp: new Date().getTime(),
+            displayDate: 'Current',
+            displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             wins: livePoint.wins,
             losses: livePoint.losses,
             isLive: true
@@ -174,6 +219,10 @@ export function TeamStatsChart({
             chartPoints.push({
               x: 'Current',
               y: livePoint.elo,
+              date: new Date().toISOString(),
+              timestamp: new Date().getTime(),
+              displayDate: 'Current',
+              displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               wins: livePoint.wins,
               losses: livePoint.losses,
               isLive: true
@@ -192,12 +241,19 @@ export function TeamStatsChart({
     
     return {
       id: memberName,
-      color: `hsl(${index * 60}, 70%, 50%)`, // Generate distinct colors
-      data: chartPoints
+      data: chartPoints.sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically
     };
   }).filter(series => series !== null);
+
+  // Simplify x-axis values since we no longer have multiple points per day
+  chartData.forEach(series => {
+    series.data.forEach(point => {
+      point.x = point.isLive ? 'Current' : point.displayDate;
+    });
+  });
   
   console.log('🎨 Transformed chart data for Nivo:', chartData);
+  console.log('📊 Chart data structure:', JSON.stringify(chartData, null, 2));
   console.log('📊 Chart data length:', chartData.length);
   console.log('📊 First series data:', chartData[0]?.data);
   console.log('📊 Grouped data keys:', Object.keys(groupedData));
@@ -212,6 +268,37 @@ export function TeamStatsChart({
     });
   }
 
+  // Debug: Check for invalid timestamps
+  chartData.forEach((series, seriesIndex) => {
+    series.data.forEach((point, pointIndex) => {
+      if (typeof point.x === 'string') {
+        const date = new Date(point.x);
+        if (isNaN(date.getTime())) {
+          console.error(`Invalid date at series ${seriesIndex}, point ${pointIndex}:`, point.x);
+        }
+      }
+    });
+  });
+
+  // Check if we have any valid data points after filtering
+  const hasValidData = chartData.length > 0 && chartData.some(series => series && series.data.length > 0);
+
+  if (!hasValidData) {
+    return (
+      <div className={`flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 ${className}`} style={{ width, height }}>
+        <div className="text-center text-gray-500">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <p className="text-lg font-medium text-gray-600 mb-1">No Valid Rank Data</p>
+          <p className="text-sm text-gray-500">Valid rank progression data will appear here</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 ${className}`}>
       <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-xs">
@@ -223,11 +310,25 @@ export function TeamStatsChart({
         Team Rank Progression
       </h5>
       
+      <div className="mb-4">
+        <div className="flex flex-wrap gap-2 justify-center">
+          {chartData.map((series, index) => (
+            <div key={series.id} className="flex items-center gap-1 text-xs">
+              <div 
+                className="w-3 h-3 rounded-full" 
+                style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
+              ></div>
+              <span className="text-gray-600 font-medium">{series.id}</span>
+            </div>
+          ))}
+        </div>
+      </div>
       <div style={{ height: height }}>
         <ResponsiveLine
           curve="natural"
           data={chartData}
-          margin={{ top: 120, right: 80, bottom: 100, left: 80 }}
+          margin={{ top: 50, right: 80, bottom: 100, left: 80 }}
+          colors={chartData.map((_, index) => `hsl(${index * 60}, 70%, 50%)`)}
           xScale={{ 
             type: 'point'
           }}
@@ -255,28 +356,7 @@ export function TeamStatsChart({
           pointLabelYOffset={-20}
           enableTouchCrosshair={true}
           useMesh={true}
-          legends={[
-            {
-              anchor: 'top',
-              direction: 'row',
-              justify: false,
-              translateX: 0,
-              translateY: -40,
-              itemWidth: 120,
-              itemHeight: 20,
-              symbolShape: 'circle',
-              symbolSize: 12,
-              itemTextColor: '#666',
-              effects: [
-                {
-                  on: 'hover',
-                  style: {
-                    itemTextColor: '#000'
-                  }
-                }
-              ]
-            }
-          ]}
+          legends={[]}
           tooltip={({ point }) => (
             <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[200px] text-center">
               <div className="font-semibold text-gray-800 mb-1 flex items-center justify-center gap-2">
@@ -296,6 +376,9 @@ export function TeamStatsChart({
                     LIVE
                   </span>
                 )}
+              </div>
+              <div className="text-xs text-gray-500 mb-1">
+                {point.data.displayTime}
               </div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-2">
                 <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
