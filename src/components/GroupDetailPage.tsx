@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { SquareX, Crown, ChevronsLeft, Users, Calendar, Zap, FileText, ChevronDown } from 'lucide-react';
 import { LoadingSpinner } from './auth/LoadingSpinner';
+
 import { studyGroupService } from '../services/studyGroupService';
 import { userService } from '../services/userService';
 import { playerStatsService } from '../services/playerStatsService';
@@ -151,6 +152,8 @@ export function GroupDetailPage() {
   // Update button state
   const [isUpdatingData, setIsUpdatingData] = useState(false);
   const [updateProgress, setUpdateProgress] = useState<string>('');
+  
+
 
 
 
@@ -525,6 +528,10 @@ export function GroupDetailPage() {
     console.log('🔐 Auth check - Token exists:', !!riotAuthService.getToken());
     console.log('🔐 Auth check - User ID:', userId);
     console.log('🔐 Auth check - Is authenticated:', riotAuthService.isAuthenticated());
+    
+    // Note: Update button should work without authentication
+    // The API will handle authentication requirements
+    
     setIsUpdatingData(true);
     
     try {

@@ -67,6 +67,7 @@ function getAuthHeaders(): Record<string, string> {
     
     headers['Authorization'] = `Bearer ${token}`
     console.log('🔐 API call - Token found and valid, adding Authorization header');
+    console.log('🔐 API call - Token preview:', token.substring(0, 20) + '...');
   } else {
     console.log('🔐 API call - No token found, making unauthenticated request');
   }
@@ -97,6 +98,8 @@ export async function apiCall<T>(
 
   if (!response.ok) {
     console.log(`🔐 API call failed - Status: ${response.status}, URL: ${url}`);
+    console.log(`🔐 API call failed - Response headers:`, Object.fromEntries(response.headers.entries()));
+    
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
     console.log(`🔐 API call failed - Error data:`, errorData);
     
