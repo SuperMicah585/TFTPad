@@ -6,6 +6,7 @@ import { studyGroupService } from '../services/studyGroupService';
 import { userService } from '../services/userService';
 import { playerStatsService } from '../services/playerStatsService';
 import { teamStatsService, type MemberData } from '../services/teamStatsService';
+import { api } from '../services/apiUtils';
 
 import { riotService } from '../services/riotService';
 import { TeamStatsContent } from './TeamStatsContent';
@@ -77,6 +78,29 @@ function PlaceholderTeamStats() {
   );
 }
 
+function PlaceholderContentSection() {
+  return (
+    <div className="space-y-3">
+      <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+        <div className="w-3 h-3 sm:w-4 sm:h-4 bg-gray-200 rounded"></div>
+        <div className="h-4 bg-gray-200 rounded w-24"></div>
+      </h4>
+      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto">
+        <div className="space-y-2 animate-pulse">
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+          <div className="h-4 bg-gray-200 rounded w-4/5"></div>
+          <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
@@ -91,12 +115,12 @@ export function GroupDetailPage() {
   // Placeholder loading state
   const [memberCount, setMemberCount] = useState(0);
   const [showMemberPlaceholders, setShowMemberPlaceholders] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isMemberDataLoading, setIsMemberDataLoading] = useState(false);
-  const [isTeamStatsLoading, setIsTeamStatsLoading] = useState(false);
+  const [isTeamStatsLoading, setIsTeamStatsLoading] = useState(true);
   
   // Group info state
   const [groupInfo, setGroupInfo] = useState({ description: '', instructions: '' });
+  const [isGroupInfoLoading, setIsGroupInfoLoading] = useState(false);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
@@ -120,6 +144,10 @@ export function GroupDetailPage() {
   const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
   const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
   const [liveDataLoading, setLiveDataLoading] = useState(false);
+  
+  // Update button state
+  const [isUpdatingData, setIsUpdatingData] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState<string>('');
 
 
 
@@ -165,7 +193,6 @@ export function GroupDetailPage() {
       setMemberCount(groupUsers.length);
       
       // Show the page with placeholders immediately
-      setIsInitialLoading(false);
       setShowMemberPlaceholders(true);
       setIsMemberDataLoading(true);
       setIsTeamStatsLoading(true);
@@ -173,15 +200,44 @@ export function GroupDetailPage() {
       // Start loading detailed member data and team stats in background
       Promise.all([
         fetchMembersData(id),
-        fetchTeamStatsData(id)
-      ]).catch(err => {
+        fetchTeamStatsData(id, true) // Load live data initially to get wins/losses
+      ]).then(async () => {
+        // After loading team stats, check if we need to create initial rank audit events
+        try {
+          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
+          if (!memberStats.events || memberStats.events.length === 0) {
+            console.log('📊 No rank audit events found, creating initial events...');
+            // Get members with riot_id and create initial rank audit events
+            const groupUsers = await studyGroupService.getStudyGroupUsers(id, false);
+            const membersWithRiotId = await Promise.all(
+              groupUsers.map(async (member) => {
+                try {
+                  const riotAccount = await userService.getUserRiotAccount(member.user_id);
+                  return {
+                    ...member,
+                    riot_id: riotAccount?.riot_id || null
+                  };
+                } catch (error) {
+                  console.error(`❌ Error getting riot_id for user ${member.user_id}:`, error);
+                  return {
+                    ...member,
+                    riot_id: null
+                  };
+                }
+              })
+            );
+            await createRankAuditEventsForMembers(membersWithRiotId);
+          }
+        } catch (error) {
+          console.error('Error checking for initial rank audit events:', error);
+        }
+      }).catch(err => {
         console.error('Background data loading failed:', err);
         // Don't show error to user for background loading
       });
       
     } catch (err) {
       console.error('Error fetching initial data:', err);
-      setIsInitialLoading(false);
       setGroupError('Failed to load group data. Please try refreshing the page.');
     }
   };
@@ -192,6 +248,34 @@ export function GroupDetailPage() {
       fetchSelectedPlayerIcon();
     }
   }, [selectedPlayer?.icon_id]);
+
+  // Fetch group icon in background when group data is available
+  useEffect(() => {
+    if (group?.image_url) {
+      // Preload the group image in background
+      const img = new Image();
+      img.onload = () => {
+        // Image loaded successfully, it will be displayed automatically
+      };
+      img.onerror = () => {
+        // Image failed to load, will show fallback
+      };
+      img.src = group.image_url;
+    }
+  }, [group?.image_url]);
+
+  // Preload member profile icons in background when members data is available
+  useEffect(() => {
+    if (members.length > 0) {
+      // Preload member icons in background
+      members.forEach(member => {
+        if (member.icon_id) {
+          // The ProfileIcon component will handle the icon loading
+          // This is just to ensure the data is available
+        }
+      });
+    }
+  }, [members]);
 
   // Retry helper function with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -232,7 +316,7 @@ export function GroupDetailPage() {
   const fetchMembersData = async (id: number) => {
     try {
       // Use faster loading without retry for better UX
-      const groupUsers = await studyGroupService.getStudyGroupUsers(id, true); // Update ranks for full data
+      const groupUsers = await studyGroupService.getStudyGroupUsers(id, false); // Don't update ranks, use stored data
       
       const membersData = groupUsers.map(relationship => ({
         summoner_name: relationship.summoner_name || 'Unknown User',
@@ -244,13 +328,14 @@ export function GroupDetailPage() {
       }));
       
       setMembers(membersData);
-      // Don't hide placeholders yet - wait for live data to load too
+      // Hide placeholders now since we have member data (rank/elo from database)
+      setShowMemberPlaceholders(false);
       
     } catch (err) {
       console.error('Error fetching members data:', err);
       // Don't show error immediately, try once more with retry
       try {
-        const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id, true));
+        const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id, false));
         const membersData = groupUsers.map(relationship => ({
           summoner_name: relationship.summoner_name || 'Unknown User',
           elo: relationship.elo || 0,
@@ -260,7 +345,8 @@ export function GroupDetailPage() {
           user_id: relationship.user_id
         }));
         setMembers(membersData);
-        // Don't hide placeholders yet - wait for live data to load too
+        // Hide placeholders now since we have member data (rank/elo from database)
+        setShowMemberPlaceholders(false);
       } catch (retryErr) {
         console.error('Retry failed:', retryErr);
         setShowMemberPlaceholders(false);
@@ -270,62 +356,315 @@ export function GroupDetailPage() {
     }
   };
 
+  // Function to fetch updated group information
+  const fetchUpdatedGroupInfo = async (id: number) => {
+    console.log('🔄 Starting group info update for group ID:', id);
+    setIsGroupInfoLoading(true);
+    try {
+      // Step 1: Update the database with fresh data from Riot Games API
+      console.log('📡 Step 1: Updating database with fresh rank data from Riot API...');
+      const updatedGroupUsers = await studyGroupService.getStudyGroupUsers(id, true); // updateRanks = true
+      console.log('📊 Database updated with fresh data for', updatedGroupUsers.length, 'members');
+      
+      // Step 2: Fetch the updated group details from database
+      console.log('📡 Step 2: Fetching updated group details from database...');
+      const updatedGroupDetails = await studyGroupService.getStudyGroup(id);
+      console.log('📊 Updated group details fetched from database');
+      
+      // Step 3: Update the UI with the fresh data
+      console.log('📡 Step 3: Updating UI with fresh data...');
+      
+      // Check if data actually changed
+      const currentDescription = groupInfo.description;
+      const currentInstructions = groupInfo.instructions;
+      const newDescription = updatedGroupDetails.description || '';
+      const newInstructions = updatedGroupDetails.application_instructions || '';
+      
+      console.log('📝 Data comparison:', {
+        descriptionChanged: currentDescription !== newDescription,
+        instructionsChanged: currentInstructions !== newInstructions,
+        oldDescription: currentDescription,
+        newDescription: newDescription,
+        oldInstructions: currentInstructions,
+        newInstructions: newInstructions
+      });
+      
+      // Force a re-render by creating new objects
+      setGroup({ ...updatedGroupDetails });
+      setGroupInfo({
+        description: newDescription,
+        instructions: newInstructions
+      });
+      
+      // Also update the members data with fresh rank/elo
+      const membersData = updatedGroupUsers.map(relationship => ({
+        summoner_name: relationship.summoner_name || 'Unknown User',
+        elo: relationship.elo || 0,
+        rank: relationship.rank || 'UNRANKED',
+        owner: relationship.owner,
+        icon_id: relationship.icon_id,
+        user_id: relationship.user_id
+      }));
+      setMembers(membersData);
+      
+      console.log('✅ Group info and members updated successfully in UI');
+      
+      // Return the updated members data for immediate use
+      return membersData;
+    } catch (error) {
+      console.error('❌ Error fetching updated group info:', error);
+      return [];
+    } finally {
+      // Add a small delay to make the loading state visible and ensure database operations complete
+      setTimeout(() => {
+        setIsGroupInfoLoading(false);
+        console.log('🏁 Group info loading finished');
+      }, 1000);
+    }
+  };
+
+  // Function to create rank audit events for all members
+  const createRankAuditEventsForMembers = async (members: any[]) => {
+    console.log('📊 Creating rank audit events for members:', members.length);
+    
+    // Filter out members without required data
+    const validMembers = members.filter(member => 
+      member.riot_id && member.elo !== undefined && member.elo !== null
+    );
+    
+    if (validMembers.length === 0) {
+      console.log('⚠️ No valid members found for rank audit events');
+      return 0;
+    }
+    
+    console.log(`📊 Processing ${validMembers.length} valid members for rank audit events`);
+    
+    // Create rank audit events for each member
+    const auditPromises = validMembers.map(async (member, index) => {
+      console.log(`📡 Creating rank audit event ${index + 1}/${validMembers.length} for ${member.summoner_name}...`);
+      
+      // Get wins and losses from live data if available, otherwise try to fetch them
+      let wins = 0;
+      let losses = 0;
+      
+      const liveMemberData = liveData[member.summoner_name];
+      if (liveMemberData) {
+        wins = liveMemberData.wins || 0;
+        losses = liveMemberData.losses || 0;
+      } else {
+        // If no live data available, try to fetch it for this member
+        try {
+          console.log(`📡 Fetching live data for ${member.summoner_name} to get wins/losses...`);
+          const riotAccount = await userService.getUserRiotAccount(member.user_id);
+          if (riotAccount?.riot_id) {
+            // Fetch live data from Riot API
+            const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+            const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${member.user_id}`);
+            if (response.ok) {
+              const leagueData = await response.json();
+              const rankedData = leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT');
+              if (rankedData) {
+                wins = rankedData.wins || 0;
+                losses = rankedData.losses || 0;
+                console.log(`✅ Fetched wins/losses for ${member.summoner_name}: ${wins}W/${losses}L`);
+              }
+            }
+          }
+        } catch (error) {
+          console.error(`❌ Error fetching live data for ${member.summoner_name}:`, error);
+        }
+      }
+      
+      console.log(`📊 Final data for ${member.summoner_name}:`, {
+        wins,
+        losses,
+        elo: member.elo
+      });
+      
+      const auditData = {
+        elo: member.elo,
+        wins: wins,
+        losses: losses,
+        riot_id: member.riot_id
+      };
+      
+      try {
+        const result = await api.post('/api/rank-audit-events', auditData);
+        console.log(`✅ Created rank audit event for ${member.summoner_name}:`, result);
+        return result;
+      } catch (error) {
+        console.error(`❌ Error creating rank audit event for ${member.summoner_name}:`, error);
+        // Don't fail the entire process if one member fails
+        return null;
+      }
+    });
+    
+    try {
+      console.log('📡 Waiting for all rank audit events to be created in database...');
+      const results = await Promise.all(auditPromises);
+      const successful = results.filter(result => result !== null).length;
+      console.log(`📊 Rank audit events created: ${successful}/${validMembers.length} successful`);
+      return successful;
+    } catch (error) {
+      console.error('❌ Error creating rank audit events:', error);
+      return 0;
+    }
+  };
+
+  // Function to update live data (called by update button)
+  const updateLiveData = async () => {
+    if (!groupId || isUpdatingData) return;
+    
+    console.log('🚀 Update button clicked, starting data refresh...');
+    setIsUpdatingData(true);
+    
+    try {
+      // Step 1: Fetch fresh live data
+      setUpdateProgress('Fetching fresh live data...');
+      console.log('📡 Step 1: Fetching fresh live data...');
+      await fetchTeamStatsData(parseInt(groupId), true);
+      
+      // Step 2: Update database with fresh rank data and fetch updated group info
+      setUpdateProgress('Updating database with fresh rank data...');
+      console.log('📡 Step 2: Updating database with fresh rank data...');
+      const updatedMembers = await fetchUpdatedGroupInfo(parseInt(groupId));
+      
+      // Step 3: Create rank audit events for all members with riot_id
+      if (updatedMembers && updatedMembers.length > 0) {
+        setUpdateProgress('Creating rank audit events...');
+        console.log('📡 Step 3: Creating rank audit events for updated members...');
+        
+        // Get riot_id for each member
+        const membersWithRiotId = await Promise.all(
+          updatedMembers.map(async (member) => {
+            try {
+              const riotAccount = await userService.getUserRiotAccount(member.user_id);
+              return {
+                ...member,
+                riot_id: riotAccount?.riot_id || null
+              };
+            } catch (error) {
+              console.error(`❌ Error getting riot_id for user ${member.user_id}:`, error);
+              return {
+                ...member,
+                riot_id: null
+              };
+            }
+          })
+        );
+        
+        // Wait for all rank audit events to be created in the database
+        const auditResults = await createRankAuditEventsForMembers(membersWithRiotId);
+        console.log(`📊 Rank audit events created: ${auditResults} successful`);
+      }
+      
+      // Step 4: Final refresh of team stats to show updated data
+      setUpdateProgress('Refreshing team stats...');
+      console.log('📡 Step 4: Refreshing team stats with updated data...');
+      await fetchTeamStatsData(parseInt(groupId), false); // Don't fetch live data again, just refresh from database
+      
+      setUpdateProgress('Update completed successfully!');
+      console.log('✅ All data updated successfully');
+    } catch (error) {
+      console.error('❌ Error updating live data:', error);
+      setUpdateProgress('Update failed - please try again');
+    } finally {
+      // Add a small delay to ensure the user sees the completion
+      setTimeout(() => {
+        setIsUpdatingData(false);
+        setUpdateProgress('');
+        console.log('🏁 Update process finished');
+      }, 1000);
+    }
+  };
+
   // Independent team stats data fetching
-  const fetchTeamStatsData = async (id: number) => {
+  const fetchTeamStatsData = async (id: number, loadLiveData: boolean = false) => {
     setTeamStatsError(null);
-    setLiveDataLoading(true);
+    if (loadLiveData) {
+      setLiveDataLoading(true);
+    }
     
     try {
       // Use the group data we already have instead of fetching again
       const groupDetails = group || await studyGroupService.getStudyGroup(id);
       
-      // Try to fetch combined team stats with faster loading
-      try {
-        const combinedStats = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
-        
-        setTeamStatsData(combinedStats.events || []);
-        setMemberNames(combinedStats.memberNames || {});
-        setLiveData(combinedStats.liveData || {});
-        
-      } catch (combinedError) {
-        console.log('⚠️ Combined API failed, using separate calls:', combinedError);
-        
-        // Fallback to separate API calls
-        const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
-        
-        // Handle team stats data
-        let allEvents: any[] = [];
-        let names: { [riotId: string]: string } = {};
-        let liveDataFromAPI: any = {};
-        
-        if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
-          allEvents = memberStats.events;
-          if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
-            names = memberStats.memberNames as unknown as { [riotId: string]: string };
+      if (loadLiveData) {
+        // Only fetch live data when explicitly requested
+        try {
+          const combinedStats = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
+          
+          setTeamStatsData(combinedStats.events || []);
+          setMemberNames(combinedStats.memberNames || {});
+          setLiveData(combinedStats.liveData || {});
+          
+        } catch (combinedError) {
+          console.log('⚠️ Combined API failed, using separate calls:', combinedError);
+          
+          // Fallback to separate API calls
+          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
+          
+          // Handle team stats data
+          let allEvents: any[] = [];
+          let names: { [riotId: string]: string } = {};
+          let liveDataFromAPI: any = {};
+          
+          if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
+            allEvents = memberStats.events;
+            if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
+              names = memberStats.memberNames as unknown as { [riotId: string]: string };
+            }
+            if (memberStats.liveData && typeof memberStats.liveData === 'object') {
+              liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
+            }
+          } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
+            allEvents = Object.values(memberStats).flat();
+            Object.keys(memberStats).forEach(summonerName => {
+              names[summonerName] = summonerName;
+            });
           }
-          if (memberStats.liveData && typeof memberStats.liveData === 'object') {
-            liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
-          }
-        } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
-          allEvents = Object.values(memberStats).flat();
-          Object.keys(memberStats).forEach(summonerName => {
-            names[summonerName] = summonerName;
-          });
+          
+          setTeamStatsData(allEvents);
+          setMemberNames(names);
+          setLiveData(liveDataFromAPI);
         }
-        
-        setTeamStatsData(allEvents);
-        setMemberNames(names);
-        setLiveData(liveDataFromAPI);
+      } else {
+        // Just fetch basic team stats without live data
+        try {
+          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
+          
+          let allEvents: any[] = [];
+          let names: { [riotId: string]: string } = {};
+          
+          if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
+            allEvents = memberStats.events;
+            if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
+              names = memberStats.memberNames as unknown as { [riotId: string]: string };
+            }
+          } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
+            allEvents = Object.values(memberStats).flat();
+            Object.keys(memberStats).forEach(summonerName => {
+              names[summonerName] = summonerName;
+            });
+          }
+          
+          setTeamStatsData(allEvents);
+          setMemberNames(names);
+          // Don't set live data - keep existing or empty
+        } catch (err) {
+          console.error('Error fetching basic team stats:', err);
+          // Don't set error for basic stats failure
+        }
       }
       
     } catch (err) {
       console.error('Error fetching team stats data:', err);
       setTeamStatsError('Failed to load team stats data.');
     } finally {
-      setLiveDataLoading(false);
+      if (loadLiveData) {
+        setLiveDataLoading(false);
+      }
       setIsTeamStatsLoading(false);
-      // Now that live data is loaded, hide member placeholders
-      setShowMemberPlaceholders(false);
     }
   };
 
@@ -434,73 +773,83 @@ export function GroupDetailPage() {
     return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
   };
 
-  // Helper function to get current ELO for a member, only from live data
+  // Helper function to get most recent ELO for a member from date-based data
   const getCurrentElo = (member: MemberData | GroupMember): number | null => {
-    // If the member data already includes current_elo from the API, use it
-    if ('current_elo' in member && member.current_elo !== undefined) {
-      return member.current_elo;
-    }
-    
-    // Try to find live data for this member
-    if (liveData && Object.keys(liveData).length > 0) {
-      // Try to find the member in live data by summoner name
-      const liveDataKey = Object.keys(liveData).find(key => {
-        // Normalize both names for comparison
-        const normalizedLiveKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const normalizedMemberName = member.summoner_name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return normalizedLiveKey === normalizedMemberName;
+    // First try to find the most recent data from team stats
+    if (teamStatsData && teamStatsData.length > 0) {
+      // Find the most recent event for this member
+      const memberEvents = teamStatsData.filter(event => {
+        const eventSummonerName = memberNames[event.riot_id] || event.riot_id;
+        return eventSummonerName.toLowerCase() === member.summoner_name.toLowerCase();
       });
       
-      if (liveDataKey && liveData[liveDataKey] && liveData[liveDataKey].elo) {
-        console.log(`🎯 Using live ELO for ${member.summoner_name}: ${liveData[liveDataKey].elo}`);
-        return liveData[liveDataKey].elo;
+      if (memberEvents.length > 0) {
+        // Sort by date and get the most recent
+        const mostRecentEvent = memberEvents.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+        
+        console.log(`📊 Using most recent ELO for ${member.summoner_name}: ${mostRecentEvent.elo} (from ${mostRecentEvent.created_at})`);
+        return mostRecentEvent.elo;
       }
     }
     
-    // No live data available
-    console.log(`❌ No live ELO data for ${member.summoner_name}`);
+    // Fallback to stored ELO data from database (riot_accounts table)
+    if (member.elo && member.elo > 0) {
+      console.log(`📊 Using stored ELO for ${member.summoner_name}: ${member.elo}`);
+      return member.elo;
+    }
+    
+    // No ELO data available
+    console.log(`❌ No ELO data for ${member.summoner_name}`);
     return null;
   };
 
-  // Helper function to get current rank for a member, only from live data
+  // Helper function to convert ELO to approximate rank
+  const eloToRank = (elo: number): string => {
+    if (elo >= 2400) return 'MASTER';
+    if (elo >= 2000) return 'DIAMOND';
+    if (elo >= 1600) return 'PLATINUM';
+    if (elo >= 1200) return 'EMERALD';
+    if (elo >= 800) return 'GOLD';
+    if (elo >= 400) return 'SILVER';
+    if (elo >= 0) return 'BRONZE';
+    return 'UNRANKED';
+  };
+
+  // Helper function to get most recent rank for a member from date-based data
   const getCurrentRank = (member: MemberData | GroupMember): string | null => {
-    console.log(`🔍 Getting current rank for ${member.summoner_name}:`, {
-      memberRank: member.rank,
-      liveDataKeys: liveData ? Object.keys(liveData) : [],
-      liveData: liveData
-    });
+    console.log(`🔍 Getting most recent rank for ${member.summoner_name}`);
     
-    // If the member data already includes current_rank from the API, use it
-    if ('current_rank' in member && member.current_rank !== undefined && member.current_rank !== null) {
-      return String(member.current_rank);
+    // Prioritize stored rank data from database (riot_accounts table) as it has full rank + LP
+    if (member.rank && member.rank !== 'UNRANKED') {
+      console.log(`📊 Using stored rank for ${member.summoner_name}: ${member.rank}`);
+      return member.rank;
     }
     
-    // Try to find live data for this member
-    if (liveData && Object.keys(liveData).length > 0) {
-      // Try to find the member in live data by summoner name
-      const liveDataKey = Object.keys(liveData).find(key => {
-        // Normalize both names for comparison
-        const normalizedLiveKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
-        const normalizedMemberName = member.summoner_name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        return normalizedLiveKey === normalizedMemberName;
+    // Fallback to converting ELO from team stats to approximate rank
+    if (teamStatsData && teamStatsData.length > 0) {
+      // Find the most recent event for this member
+      const memberEvents = teamStatsData.filter(event => {
+        const eventSummonerName = memberNames[event.riot_id] || event.riot_id;
+        return eventSummonerName.toLowerCase() === member.summoner_name.toLowerCase();
       });
       
-      if (liveDataKey && liveData[liveDataKey]) {
-        const liveMemberData = liveData[liveDataKey];
-        if (liveMemberData.tier && liveMemberData.rank) {
-          // Construct the full rank string: "TIER RANK LP"
-          const tier = String(liveMemberData.tier).toUpperCase();
-          const rank = String(liveMemberData.rank);
-          const lp = liveMemberData.leaguePoints !== undefined ? ` ${liveMemberData.leaguePoints}LP` : '';
-          const liveRank = `${tier} ${rank}${lp}`;
-          console.log(`🎯 Using live rank for ${member.summoner_name}: ${liveRank}`);
-          return liveRank;
-        }
+      if (memberEvents.length > 0) {
+        // Sort by date and get the most recent
+        const mostRecentEvent = memberEvents.sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        )[0];
+        
+        // Convert ELO to rank for display
+        const rankFromElo = eloToRank(mostRecentEvent.elo);
+        console.log(`📊 Using converted rank for ${member.summoner_name}: ${rankFromElo} (from ${mostRecentEvent.created_at})`);
+        return rankFromElo;
       }
     }
     
-    // No live data available
-    console.log(`❌ No live rank data for ${member.summoner_name}`);
+    // No rank data available
+    console.log(`❌ No rank data for ${member.summoner_name}`);
     return null;
   };
 
@@ -567,17 +916,7 @@ export function GroupDetailPage() {
     }
   }, [groupInfo.description, groupInfo.instructions, members]);
 
-  // Show initial loading spinner until we get counts
-  if (isInitialLoading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-center">
-          <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-gray-600">Loading group details...</p>
-        </div>
-      </div>
-    );
-  }
+
 
   // Show error state if group fails to load
   if (groupError) {
@@ -622,46 +961,64 @@ export function GroupDetailPage() {
       <div className="w-full sm:max-w-7xl sm:mx-auto px-0 sm:px-6 lg:px-8 relative z-10 bg-white">
         {/* Back Button and Group Info */}
         <div className="absolute top-2 left-2 right-2 z-20">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <div className="flex justify-between items-center gap-2 sm:gap-4">
             <button
               onClick={() => navigate('/study-groups/groups')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
+              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 flex-shrink-0"
             >
               <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="text-sm sm:text-base">Back to Groups</span>
             </button>
             
             {/* Group Icon and Name - Show immediately when available */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center justify-between gap-3 flex-1 min-w-0">
               {group ? (
                 <>
-                  {group.image_url ? (
-                    <img
-                      src={group.image_url}
-                      alt={`${group.group_name} icon`}
-                      className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                      }}
-                    />
-                  ) : (
-                    <div 
-                      className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
-                      style={{ 
-                        backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                        color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                      }}
-                    >
-                      {group.group_name.charAt(0).toUpperCase()}
+                  <div className="flex items-center gap-3">
+                    {group.image_url ? (
+                      <img
+                        src={group.image_url}
+                        alt={`${group.group_name} icon`}
+                        className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <div 
+                        className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
+                        style={{ 
+                          backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                          color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                        }}
+                      >
+                        {group.group_name.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    
+                    {/* Group Name and Date */}
+                    <div className="min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
+                      <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
+                      <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
                     </div>
-                  )}
-                  
-                  {/* Group Name and Date */}
-                  <div className="min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
-                    <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
-                    <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
                   </div>
+                  
+                  {/* Update Ranks Button - Positioned on the right */}
+                  <button
+                    onClick={updateLiveData}
+                    disabled={isUpdatingData}
+                    className="flex items-center justify-center gap-2 text-blue-600 hover:text-blue-800 transition-all duration-200 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-blue-200 hover:border-blue-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex-shrink-0"
+                  >
+                    {isUpdatingData ? (
+                      <LoadingSpinner size="sm" className="w-4 h-4" />
+                    ) : (
+                      <Zap className="w-4 h-4" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {isUpdatingData ? (updateProgress || 'Updating...') : 'Update'}
+                    </span>
+                  </button>
                 </>
               ) : null}
             </div>
@@ -736,7 +1093,7 @@ export function GroupDetailPage() {
                     Members
                   </h4>
                   
-                  {showMemberPlaceholders || isMemberDataLoading ? (
+                  {showMemberPlaceholders || isMemberDataLoading || isUpdatingData ? (
                     <div className="relative">
                       <div 
                         className="space-y-3 h-64 sm:h-96 overflow-y-auto bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200"
@@ -815,7 +1172,7 @@ export function GroupDetailPage() {
                                   </div>
                                 </>
                               ) : (
-                                <span className="text-gray-500 italic">No current ranked data</span>
+                                <span className="text-gray-500 italic">No ranked data available</span>
                               )}
                             </div>
                           </div>
@@ -846,7 +1203,7 @@ export function GroupDetailPage() {
                                 </div>
                               </>
                             ) : (
-                              <span className="text-gray-500 italic">No current ranked data</span>
+                              <span className="text-gray-500 italic">No ranked data available</span>
                             )}
                           </div>
                         </div>
@@ -862,52 +1219,60 @@ export function GroupDetailPage() {
                 </div>
 
                 {/* Description */}
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
-                    Description
-                  </h4>
-                  <div className="relative">
-                    <div 
-                      id="description-container"
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
-                      onScroll={handleDescriptionScroll}
-                    >
-                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                        {groupInfo.description || 'No description available.'}
-                      </p>
-                    </div>
-                    {descriptionOverflow && !descriptionScrolled && (
-                      <div className="absolute bottom-2 right-2">
-                        <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+                {(isGroupInfoLoading || isUpdatingData) ? (
+                  <PlaceholderContentSection />
+                ) : (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                      <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                      Description
+                    </h4>
+                    <div className="relative">
+                      <div 
+                        id="description-container"
+                        className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
+                        onScroll={handleDescriptionScroll}
+                      >
+                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
+                          {groupInfo.description || 'No description available.'}
+                        </p>
                       </div>
-                    )}
+                      {descriptionOverflow && !descriptionScrolled && (
+                        <div className="absolute bottom-2 right-2">
+                          <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Application Instructions */}
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
-                    Application Instructions
-                  </h4>
-                  <div className="relative">
-                    <div 
-                      id="instructions-container"
-                      className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
-                      onScroll={handleInstructionsScroll}
-                    >
-                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                        {groupInfo.instructions || 'No application instructions available.'}
-                      </p>
-                    </div>
-                    {instructionsOverflow && !instructionsScrolled && (
-                      <div className="absolute bottom-2 right-2">
-                        <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+                {(isGroupInfoLoading || isUpdatingData) ? (
+                  <PlaceholderContentSection />
+                ) : (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                      <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
+                      Application Instructions
+                    </h4>
+                    <div className="relative">
+                      <div 
+                        id="instructions-container"
+                        className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
+                        onScroll={handleInstructionsScroll}
+                      >
+                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
+                          {groupInfo.instructions || 'No application instructions available.'}
+                        </p>
                       </div>
-                    )}
+                      {instructionsOverflow && !instructionsScrolled && (
+                        <div className="absolute bottom-2 right-2">
+                          <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
                 
                 {/* Meeting Schedule */}
                 <div>
@@ -950,7 +1315,7 @@ export function GroupDetailPage() {
             <div className="rounded-lg p-4 sm:p-6 bg-white border border-gray-200">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Team Statistics</h3>
               
-              {isTeamStatsLoading ? (
+              {(isTeamStatsLoading || isUpdatingData) ? (
                 <PlaceholderTeamStats />
               ) : teamStatsError ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
@@ -1285,4 +1650,4 @@ function getTextColor(backgroundColor: string): string {
   const b = parseInt(hex.substr(4, 2), 16);
   const brightness = (r * 299 + g * 587 + b * 114) / 1000;
   return brightness > 128 ? '#000000' : '#ffffff';
-} 
+}

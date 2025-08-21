@@ -171,70 +171,9 @@ export function TeamStatsChart({
         return filtered;
       }, [] as any[]);
     
-    // Add live data point if available (use improved key matching)
-    if (liveData) {
-      // Try direct match first
-      if (liveData[summonerName]) {
-        const livePoint = liveData[summonerName];
-        console.log(`✅ TeamStatsChart: Found live data for ${summonerName} (direct match):`, livePoint);
-        chartPoints.push({
-          x: 'Current',
-          y: livePoint.elo,
-          date: new Date().toISOString(),
-          timestamp: new Date().getTime(),
-          displayDate: 'Current',
-          displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          wins: livePoint.wins,
-          losses: livePoint.losses,
-          isLive: true
-        });
-      } else {
-        // Try to find a match using the mapping
-        const mappedMemberName = liveDataToMemberName[summonerName];
-        if (mappedMemberName && liveData[mappedMemberName]) {
-          const livePoint = liveData[mappedMemberName];
-          console.log(`✅ TeamStatsChart: Found live data for ${summonerName} (mapped to ${mappedMemberName}):`, livePoint);
-          chartPoints.push({
-            x: 'Current',
-            y: livePoint.elo,
-            date: new Date().toISOString(),
-            timestamp: new Date().getTime(),
-            displayDate: 'Current',
-            displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            wins: livePoint.wins,
-            losses: livePoint.losses,
-            isLive: true
-          });
-        } else {
-          // Try reverse lookup - find if this summoner name maps to any live data key
-          const matchingLiveDataKey = Object.keys(liveData).find(liveKey => {
-            const normalizedLiveKey = normalizeSummonerName(liveKey);
-            const normalizedSummonerName = normalizeSummonerName(summonerName);
-            return normalizedLiveKey === normalizedSummonerName;
-          });
-          
-          if (matchingLiveDataKey) {
-            const livePoint = liveData[matchingLiveDataKey];
-            console.log(`✅ TeamStatsChart: Found live data for ${summonerName} (normalized match to ${matchingLiveDataKey}):`, livePoint);
-            chartPoints.push({
-              x: 'Current',
-              y: livePoint.elo,
-              date: new Date().toISOString(),
-              timestamp: new Date().getTime(),
-              displayDate: 'Current',
-              displayTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              wins: livePoint.wins,
-              losses: livePoint.losses,
-              isLive: true
-            });
-          } else {
-            console.log(`❌ TeamStatsChart: No live data found for ${summonerName}`);
-          }
-        }
-      }
-    }
+    // Note: Live data is no longer added to charts - only date-based data is shown
     
-    // Only include series that have data points (historic or live)
+    // Only include series that have data points
     if (chartPoints.length === 0) {
       return null;
     }

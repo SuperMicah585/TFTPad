@@ -112,49 +112,9 @@ export function TeamAverageChart({
       isLive: false
     }));
     
-    // Add live data point if available (use improved key matching)
-    let foundLiveData = null;
-    if (liveData) {
-      // Try direct match first
-      if (liveData[summonerName]) {
-        foundLiveData = liveData[summonerName];
-        console.log(`✅ TeamAverageChart: Found live data for ${summonerName} (direct match):`, foundLiveData);
-      } else {
-        // Try to find a match using the mapping
-        const mappedMemberName = liveDataToMemberName[summonerName];
-        if (mappedMemberName && liveData[mappedMemberName]) {
-          foundLiveData = liveData[mappedMemberName];
-          console.log(`✅ TeamAverageChart: Found live data for ${summonerName} (mapped to ${mappedMemberName}):`, foundLiveData);
-        } else {
-          // Try reverse lookup - find if this summoner name maps to any live data key
-          const matchingLiveDataKey = Object.keys(liveData).find(liveKey => {
-            const normalizedLiveKey = normalizeSummonerName(liveKey);
-            const normalizedSummonerName = normalizeSummonerName(summonerName);
-            return normalizedLiveKey === normalizedSummonerName;
-          });
-          
-          if (matchingLiveDataKey) {
-            foundLiveData = liveData[matchingLiveDataKey];
-            console.log(`✅ TeamAverageChart: Found live data for ${summonerName} (normalized match to ${matchingLiveDataKey}):`, foundLiveData);
-          } else {
-            console.log(`❌ TeamAverageChart: No live data found for ${summonerName}`);
-          }
-        }
-      }
-    }
+    // Note: Live data is no longer added to charts - only date-based data is shown
     
-    if (foundLiveData) {
-      const livePoint = foundLiveData;
-      chartPoints.push({
-        x: 'Current',
-        y: livePoint.elo,
-        wins: livePoint.wins,
-        losses: livePoint.losses,
-        isLive: true
-      });
-    }
-    
-    // Only include series that have data points (historic or live)
+    // Only include series that have data points
     if (chartPoints.length === 0) {
       return null;
     }
@@ -168,7 +128,7 @@ export function TeamAverageChart({
 
   // Calculate average ELO data
   const calculateAverageChartData = () => {
-    // Get all unique dates from all members (including live data)
+    // Get all unique dates from all members
     const allDates = new Set<string>();
     memberChartData.forEach(series => {
       series.data.forEach(point => {

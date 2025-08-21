@@ -27,6 +27,15 @@ export function TeamStatsSummary({
     const hasHistoricData = teamStatsData && teamStatsData.length > 0;
     const hasLiveData = liveData && Object.keys(liveData).length > 0;
     
+    console.log('🔍 TeamStatsSummary Debug:', {
+      hasHistoricData,
+      hasLiveData,
+      teamStatsDataLength: teamStatsData?.length || 0,
+      liveDataKeys: Object.keys(liveData || {}),
+      teamStatsDataSample: teamStatsData?.slice(0, 2),
+      liveDataSample: Object.values(liveData || {}).slice(0, 2)
+    });
+    
     if (!hasHistoricData && !hasLiveData) {
       return null;
     }
@@ -90,13 +99,23 @@ export function TeamStatsSummary({
     // Calculate member count from the total study group members
     const totalMemberCount = Object.keys(memberNames).length;
 
-    return {
+    const result = {
       averageElo,
       totalWins,
       totalLosses,
       winRate,
       memberCount: totalMemberCount
     };
+
+    console.log('📊 TeamStatsSummary Calculated Stats:', result);
+    console.log('📊 TeamStatsSummary Member Data:', Object.values(memberLatestData).map(m => ({
+      summonerName: m.summoner_name || 'unknown',
+      elo: m.elo,
+      wins: m.wins,
+      losses: m.losses
+    })));
+
+    return result;
   };
 
   const currentStats = calculateCurrentTeamStats();
