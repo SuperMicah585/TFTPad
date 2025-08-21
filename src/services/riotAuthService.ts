@@ -113,5 +113,21 @@ export const riotAuthService = {
   // Check if user is authenticated
   isAuthenticated(): boolean {
     return !!this.getToken()
+  },
+
+  // Check if token is expired
+  isTokenExpired(): boolean {
+    const token = this.getToken()
+    if (!token) return true
+    
+    try {
+      // Decode the token without verification to check expiration
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const exp = payload.exp * 1000 // Convert to milliseconds
+      return Date.now() >= exp
+    } catch (error) {
+      console.error('Error checking token expiration:', error)
+      return true
+    }
   }
 } 

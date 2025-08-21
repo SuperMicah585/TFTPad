@@ -56,7 +56,19 @@ function getAuthHeaders(): Record<string, string> {
   }
   
   if (token) {
+    // Check if token is expired
+    if (riotAuthService.isTokenExpired()) {
+      console.log('🔐 API call - Token is expired, clearing it');
+      riotAuthService.removeToken()
+      // Redirect to login
+      window.location.href = '/login'
+      throw new Error('Token expired. Please log in again.')
+    }
+    
     headers['Authorization'] = `Bearer ${token}`
+    console.log('🔐 API call - Token found and valid, adding Authorization header');
+  } else {
+    console.log('🔐 API call - No token found, making unauthenticated request');
   }
   
   return headers
@@ -84,7 +96,20 @@ export async function apiCall<T>(
   )
 
   if (!response.ok) {
+    console.log(`🔐 API call failed - Status: ${response.status}, URL: ${url}`);
     const errorData = await response.json().catch(() => ({ error: 'Unknown error' }))
+    console.log(`🔐 API call failed - Error data:`, errorData);
+    
+    // If it's a 401 error and the error message indicates token expiration, try to refresh
+    if (response.status === 401 && (errorData.error?.includes('expired') || errorData.error?.includes('Token has expired'))) {
+      console.log('🔐 Token expired, attempting to refresh...');
+      // Clear the expired token
+      riotAuthService.removeToken();
+      // Redirect to login or show login modal
+      window.location.href = '/login';
+      throw new Error('Token expired. Please log in again.');
+    }
+    
     throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`)
   }
 

@@ -9,6 +9,8 @@ import { teamStatsService, type MemberData } from '../services/teamStatsService'
 import { api } from '../services/apiUtils';
 
 import { riotService } from '../services/riotService';
+import { riotAuthService } from '../services/riotAuthService';
+import { useAuth } from '../contexts/AuthContext';
 import { TeamStatsContent } from './TeamStatsContent';
 import { TFTStatsContent } from './TFTStatsContent';
 import type { StudyGroup } from '../services/studyGroupService';
@@ -104,6 +106,7 @@ function PlaceholderContentSection() {
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  const { userId } = useAuth();
   
   // Group state - now independent
   const [group, setGroup] = useState<StudyGroup | null>(null);
@@ -489,11 +492,14 @@ export function GroupDetailPage() {
       };
       
       try {
+        console.log(`🔐 Making API call to /api/rank-audit-events for ${member.summoner_name}`);
+        console.log(`🔐 Request data:`, auditData);
         const result = await api.post('/api/rank-audit-events', auditData);
         console.log(`✅ Created rank audit event for ${member.summoner_name}:`, result);
         return result;
       } catch (error) {
         console.error(`❌ Error creating rank audit event for ${member.summoner_name}:`, error);
+        console.error(`❌ Error details:`, error instanceof Error ? error.message : error);
         // Don't fail the entire process if one member fails
         return null;
       }
@@ -516,6 +522,9 @@ export function GroupDetailPage() {
     if (!groupId || isUpdatingData) return;
     
     console.log('🚀 Update button clicked, starting data refresh...');
+    console.log('🔐 Auth check - Token exists:', !!riotAuthService.getToken());
+    console.log('🔐 Auth check - User ID:', userId);
+    console.log('🔐 Auth check - Is authenticated:', riotAuthService.isAuthenticated());
     setIsUpdatingData(true);
     
     try {
