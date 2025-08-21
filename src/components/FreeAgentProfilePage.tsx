@@ -585,6 +585,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                     getRankedTftData={getRankedTftData}
                     getTurboTftData={getTurboTftData}
                     className="w-full"
+                    userId={user_id ? parseInt(user_id) : undefined}
                   />
                 )}
               </div>

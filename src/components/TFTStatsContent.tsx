@@ -2,6 +2,7 @@
 import { Award, Star, TrendingUp, TrendingDown } from 'lucide-react';
 import { PlayerEloChart } from './PlayerEloChart';
 import { LoadingSpinner } from './auth/LoadingSpinner';
+import { PlacementHistory } from './PlacementHistory';
 import type { PlayerRankAuditEvent } from '../services/playerStatsService';
 
 interface TFTStatsContentProps {
@@ -14,6 +15,7 @@ interface TFTStatsContentProps {
   getRankedTftData: () => any;
   getTurboTftData: () => any;
   className?: string;
+  userId?: number;
 }
 
 export function TFTStatsContent({
@@ -25,7 +27,8 @@ export function TFTStatsContent({
   playerStatsData,
   getRankedTftData,
   getTurboTftData,
-  className = ''
+  className = '',
+  userId
 }: TFTStatsContentProps) {
   if (leagueDataLoading) {
     return (
@@ -162,6 +165,15 @@ export function TFTStatsContent({
             </p>
           </div>
         </div>
+      )}
+
+      {/* Last 20 Games Placement History */}
+      {userId && (
+        <PlacementHistory 
+          key={`placement-history-${userId}`}
+          userId={userId}
+          className="w-full"
+        />
       )}
 
       {/* Player ELO Chart */}

@@ -2422,6 +2422,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                     getRankedTftData={getRankedTftData}
                     getTurboTftData={getTurboTftData}
                     className="w-full"
+                    userId={selectedPlayer?.user_id}
                   />
                 )}
                 

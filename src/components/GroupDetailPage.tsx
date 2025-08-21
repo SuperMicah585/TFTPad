@@ -979,7 +979,7 @@ export function GroupDetailPage() {
                       <img
                         src={group.image_url}
                         alt={`${group.group_name} icon`}
-                        className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
+                        className="hidden sm:block w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
                         onError={(e) => {
                           const target = e.target as HTMLImageElement;
                           target.style.display = 'none';
@@ -987,7 +987,7 @@ export function GroupDetailPage() {
                       />
                     ) : (
                       <div 
-                        className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
+                        className="hidden sm:flex w-8 h-8 sm:w-12 sm:h-12 rounded-lg items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
                         style={{ 
                           backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
                           color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
@@ -998,7 +998,7 @@ export function GroupDetailPage() {
                     )}
                     
                     {/* Group Name and Date */}
-                    <div className="min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
+                    <div className="hidden sm:block min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
                       <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
                       <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
                     </div>
@@ -1443,6 +1443,7 @@ export function GroupDetailPage() {
                   getRankedTftData={getRankedTftData}
                   getTurboTftData={getTurboTftData}
                   className="w-full"
+                  userId={selectedPlayer?.user_id}
                 />
 
                 
