@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { LoadingSpinner } from './auth/LoadingSpinner';
 import { fetchMatchHistory, type MatchHistoryEntry } from '../services/tftService';
 import { userService } from '../services/userService';
 
