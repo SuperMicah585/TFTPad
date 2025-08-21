@@ -244,7 +244,7 @@ export function GroupDetailPage() {
       }));
       
       setMembers(membersData);
-      setShowMemberPlaceholders(false); // Hide placeholders when real data loads
+      // Don't hide placeholders yet - wait for live data to load too
       
     } catch (err) {
       console.error('Error fetching members data:', err);
@@ -260,7 +260,7 @@ export function GroupDetailPage() {
           user_id: relationship.user_id
         }));
         setMembers(membersData);
-        setShowMemberPlaceholders(false);
+        // Don't hide placeholders yet - wait for live data to load too
       } catch (retryErr) {
         console.error('Retry failed:', retryErr);
         setShowMemberPlaceholders(false);
@@ -324,6 +324,8 @@ export function GroupDetailPage() {
     } finally {
       setLiveDataLoading(false);
       setIsTeamStatsLoading(false);
+      // Now that live data is loaded, hide member placeholders
+      setShowMemberPlaceholders(false);
     }
   };
 
