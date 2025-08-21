@@ -174,9 +174,21 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
           </div>
           Last 20 Games
         </h5>
-        <div className="flex justify-center items-center py-8">
-          <LoadingSpinner size="sm" className="mx-auto mb-2" />
-          <p className="text-gray-500 text-xs">Loading match history...</p>
+        
+        <div className="grid grid-cols-10 gap-1">
+          {Array.from({ length: 20 }, (_, index) => (
+            <div
+              key={`loading-${index}`}
+              className="w-6 h-6 bg-gray-200 rounded animate-pulse flex items-center justify-center"
+            >
+              <div className="w-2 h-2 bg-gray-300 rounded"></div>
+            </div>
+          ))}
+        </div>
+        
+        <div className="mt-3 pt-2 border-t border-gray-200 text-center">
+          <div className="w-16 h-4 bg-gray-200 rounded animate-pulse mx-auto mb-1"></div>
+          <div className="w-12 h-6 bg-gray-200 rounded animate-pulse mx-auto"></div>
         </div>
       </div>
     );
