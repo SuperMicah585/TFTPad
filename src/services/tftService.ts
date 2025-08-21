@@ -763,7 +763,7 @@ export function testTraitMapping() {
         'Vanguard'
     ];
     
-    console.log('Testing trait mapping for:', testTraitNames);
+
     
     // This would be called with actual trait data
     return testTraitNames;
@@ -1014,14 +1014,14 @@ function normalizeChampionName(name: string): string {
 }
 
 export function generateTeamPlannerCode(champions: string[]): string {
-    console.log('DEBUG: Original champions:', champions);
+
     
     // Sort champions by tier and name for consistent team codes
     const sortedChampions = champions
         .filter(championName => championName)
         .map(championName => {
             const normalized = normalizeChampionName(championName);
-            console.log(`DEBUG: ${championName} -> ${normalized}`);
+    
             return normalized;
         })
         .sort((a, b) => {
@@ -1041,14 +1041,14 @@ export function generateTeamPlannerCode(champions: string[]): string {
             return a.localeCompare(b);
         });
     
-    console.log('DEBUG: Sorted champions:', sortedChampions);
+
     
     const codes: string[] = [];
     
     // Process sorted champions
     for (const championName of sortedChampions) {
         const championData = TEAM_PLANNER_CODES.TFTSet15[championName as keyof typeof TEAM_PLANNER_CODES.TFTSet15];
-        console.log(`DEBUG: Looking up ${championName} -> Found: ${!!championData}, Code: ${championData?.teamPlannerCode || '000'}`);
+
         if (championData) {
             codes.push(championData.teamPlannerCode);
         } else {
@@ -1062,7 +1062,7 @@ export function generateTeamPlannerCode(champions: string[]): string {
     }
     
     const result = TFTSET15_CONFIG.teamPlannerCodePrefix + codes.join('') + 'TFTSet15';
-    console.log('DEBUG: Final code:', result);
+
     
     // Combine prefix + champion codes + set identifier
     return result;
@@ -1164,7 +1164,7 @@ export function parseMatchDataForGameTab(matchData: MatchData) {
       const championName = unit.character_id.replace('TFT15_', '');
       // Map tier to star level: tier 2 = normal, tier 3 = 3*, tier 4 = 4*
       const starLevel = unit.tier === 4 ? 4 : unit.tier === 3 ? 3 : unit.tier === 2 ? 2 : 1;
-      console.log(`Parsing unit: ${championName}, tier: ${unit.tier}, starLevel: ${starLevel}`);
+  
       return { name: championName, stars: starLevel };
     });
     

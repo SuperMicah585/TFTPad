@@ -124,7 +124,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
         try {
             // Check if champions data is loaded
             if (Object.keys(champions).length === 0) {
-                console.log('Champions data not loaded yet, waiting...');
+          
                 // Wait a bit for champions to load
                 await new Promise(resolve => setTimeout(resolve, 1000));
                 if (Object.keys(champions).length === 0) {
@@ -132,7 +132,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
                 }
             }
             
-            console.log('Champions data loaded, keys count:', Object.keys(champions).length);
+        
             
             const matchData = await fetchMatchData(matchId);
             const parsedData = parseMatchDataForGameTab(matchData);
@@ -155,9 +155,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
                 
                 player.champions.forEach((champion, unitIndex) => {
                     if (unitIndex < 9) { // Max 9 units per player
-                        console.log(`Processing champion: ${champion.name}, stars: ${champion.stars}`);
-                        console.log(`Champions object keys count:`, Object.keys(champions).length);
-                        console.log(`First few champion keys:`, Object.keys(champions).slice(0, 5));
+                        
                         
                         // Try to find the champion by searching for the TFT15_ prefixed name in the full path
                         const tft15Name = `TFT15_${champion.name}`;
@@ -173,10 +171,9 @@ export function TFTProvider({ children }: TFTProviderProps) {
                             }
                         }
                         
-                        console.log(`Looking for: ${tft15Name}`);
-                        console.log(`Found champion:`, !!championData);
+                        
                         if (foundKey) {
-                            console.log(`Found by key: ${foundKey}`);
+
                         }
                         
                         if (!championData) {
@@ -188,16 +185,14 @@ export function TFTProvider({ children }: TFTProviderProps) {
                                     break;
                                 }
                             }
-                            console.log(`Looking for direct name: ${champion.name}`);
-                            console.log(`Found by direct name:`, !!championData);
+                            
                             if (foundKey) {
-                                console.log(`Found by key: ${foundKey}`);
+  
                             }
                         }
                         
                         if (championData) {
-                            console.log(`Champion data for ${champion.name}:`, championData);
-                            console.log(`Image full:`, championData.image.full);
+                            
                             
                             // Construct the full image URL
                             const fullImageUrl = `https://ddragon.leagueoflegends.com/cdn/${version}/img/tft-champion/${championData.image.full}`;
@@ -213,12 +208,9 @@ export function TFTProvider({ children }: TFTProviderProps) {
                                 stars[championData.name] = champion.stars;
                             }
                             
-                            console.log(`Successfully mapped: ${champion.name} -> ${championData.name}`);
-                            console.log(`Image URL: ${fullImageUrl}`);
+
                         } else {
-                            console.log(`No champion data found for: ${champion.name}`);
-                            console.log(`Tried looking for: TFT15_${champion.name}, ${champion.name}`);
-                            console.log(`Available champion keys:`, Object.keys(champions).slice(0, 10));
+
                         }
                     }
                 });
@@ -266,7 +258,7 @@ export function TFTProvider({ children }: TFTProviderProps) {
                 if (champ) tier = champ.tier;
             }
             const poolSize = TIER_POOLS[tier as keyof typeof TIER_POOLS] || 1;
-            console.log(`ContestRate Debug: unitName='${unitName}', tier=${tier}, poolSize=${poolSize}, count=${count}`);
+    
             contestRates[unitName] = Math.round((count / poolSize) * 1000) / 10; // e.g. 23.3%
         });
         return contestRates;

@@ -21,18 +21,79 @@ interface GroupMember {
   user_id?: number;
 }
 
+// Placeholder Components
+
+function PlaceholderMemberCard() {
+  return (
+    <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 animate-pulse transition-opacity duration-300">
+      <div className="flex items-center gap-3">
+        {/* Profile icon placeholder */}
+        <div className="w-10 h-10 bg-gray-200 rounded-lg flex-shrink-0"></div>
+        
+        <div className="min-w-0">
+          {/* Name placeholder */}
+          <div className="h-4 bg-gray-200 rounded w-24 mb-1"></div>
+          {/* Rank placeholder */}
+          <div className="h-3 bg-gray-200 rounded w-16"></div>
+        </div>
+      </div>
+      
+      {/* ELO placeholder */}
+      <div className="flex items-center gap-2">
+        <div className="h-4 bg-gray-200 rounded w-12"></div>
+        <div className="w-5 h-5 bg-gray-200 rounded"></div>
+      </div>
+    </div>
+  );
+}
+
+
+
+function PlaceholderTeamStats() {
+  return (
+    <div className="space-y-4 animate-pulse transition-opacity duration-300">
+      {/* Chart placeholder */}
+      <div className="h-48 bg-gray-200 rounded-lg"></div>
+      
+      {/* Stats grid placeholder */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+      </div>
+      
+      {/* Table placeholder */}
+      <div className="space-y-2">
+        <div className="h-6 bg-gray-200 rounded w-1/3"></div>
+        <div className="space-y-1">
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-full"></div>
+          <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GroupDetailPage() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
   
-  // Group state
+  // Group state - now independent
   const [group, setGroup] = useState<StudyGroup | null>(null);
-  const [groupLoading, setGroupLoading] = useState(true);
   const [groupError, setGroupError] = useState<string | null>(null);
   
-  // Members state - now using MemberData type
+  // Members state - now independent
   const [members, setMembers] = useState<MemberData[]>([]);
-  const [membersLoading, setMembersLoading] = useState(true);
+  
+  // Placeholder loading state
+  const [memberCount, setMemberCount] = useState(0);
+  const [showMemberPlaceholders, setShowMemberPlaceholders] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isMemberDataLoading, setIsMemberDataLoading] = useState(false);
+  const [isTeamStatsLoading, setIsTeamStatsLoading] = useState(false);
   
   // Group info state
   const [groupInfo, setGroupInfo] = useState({ description: '', instructions: '' });
@@ -52,47 +113,15 @@ export function GroupDetailPage() {
   const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
   const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
   
-  // Team stats state
+  // Team stats state - now independent
   const [teamStatsData, setTeamStatsData] = useState<any[]>([]);
-  const [teamStatsLoading] = useState(false);
-  const [teamStatsError] = useState<string | null>(null);
+
+  const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
   const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
   const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
-  const [liveDataLoading] = useState(false);
+  const [liveDataLoading, setLiveDataLoading] = useState(false);
 
-  // Cache state
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  // Enhanced cache functions with localStorage
-  const getCachedData = (groupId: number) => {
-    try {
-      const cacheKey = `group-${groupId}-cache`;
-      const cached = localStorage.getItem(cacheKey);
-      if (cached) {
-        const { data, timestamp } = JSON.parse(cached);
-        if (Date.now() - timestamp < CACHE_DURATION) {
-          console.log('📦 Using cached data from localStorage for group:', groupId);
-          return data;
-        }
-      }
-    } catch (error) {
-      console.error('Cache read error:', error);
-    }
-    return null;
-  };
-
-  const setCachedData = (groupId: number, data: any) => {
-    try {
-      const cacheKey = `group-${groupId}-cache`;
-      localStorage.setItem(cacheKey, JSON.stringify({
-        data,
-        timestamp: Date.now()
-      }));
-      console.log('📦 Data cached to localStorage for group:', groupId);
-    } catch (error) {
-      console.error('Cache write error:', error);
-    }
-  };
 
   // Profile icon state for selected player
   const [selectedPlayerIconUrl, setSelectedPlayerIconUrl] = useState<string>('');
@@ -107,16 +136,55 @@ export function GroupDetailPage() {
   const [instructionsScrolled, setInstructionsScrolled] = useState(false);
   const [membersScrolled, setMembersScrolled] = useState(false);
 
-  // Fetch group data on mount
+  // Initialize page - start loading all components independently
   useEffect(() => {
     if (groupId) {
       // Scroll to top when navigating to this page
       window.scrollTo(0, 0);
-      fetchGroupData(parseInt(groupId));
+      
+      // Start loading immediately
+      fetchInitialCounts(parseInt(groupId));
     }
   }, [groupId]);
 
-
+  // Fetch initial counts to determine placeholder quantities
+  const fetchInitialCounts = async (id: number) => {
+    try {
+      // Get group data and member count in parallel with faster timeout
+      const [groupDetails, groupUsers] = await Promise.all([
+        studyGroupService.getStudyGroup(id), // Remove retry for faster initial load
+        studyGroupService.getStudyGroupUsers(id, false) // Don't update ranks for count
+      ]);
+      
+      // Set all initial data immediately
+      setGroup(groupDetails);
+      setGroupInfo({
+        description: groupDetails.description || '',
+        instructions: groupDetails.application_instructions || ''
+      });
+      setMemberCount(groupUsers.length);
+      
+      // Show the page with placeholders immediately
+      setIsInitialLoading(false);
+      setShowMemberPlaceholders(true);
+      setIsMemberDataLoading(true);
+      setIsTeamStatsLoading(true);
+      
+      // Start loading detailed member data and team stats in background
+      Promise.all([
+        fetchMembersData(id),
+        fetchTeamStatsData(id)
+      ]).catch(err => {
+        console.error('Background data loading failed:', err);
+        // Don't show error to user for background loading
+      });
+      
+    } catch (err) {
+      console.error('Error fetching initial data:', err);
+      setIsInitialLoading(false);
+      setGroupError('Failed to load group data. Please try refreshing the page.');
+    }
+  };
 
   // Fetch selected player icon when selectedPlayer changes
   useEffect(() => {
@@ -124,8 +192,6 @@ export function GroupDetailPage() {
       fetchSelectedPlayerIcon();
     }
   }, [selectedPlayer?.icon_id]);
-
-
 
   // Retry helper function with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -160,101 +226,32 @@ export function GroupDetailPage() {
     throw lastError!;
   };
 
-  const fetchGroupData = async (id: number) => {
-    setGroupLoading(true);
-    setGroupError(null);
-    
-    // Check if we have valid cached data in localStorage
-    const cachedData = getCachedData(id);
-    if (cachedData) {
-      console.log('📦 Using cached data from localStorage, skipping API calls');
-      
-      // Set all state synchronously to avoid race conditions
-      
-      setGroup(cachedData.group);
-      setGroupInfo({
-        description: cachedData.group.description || '',
-        instructions: cachedData.group.application_instructions || ''
-      });
-      setMembers(cachedData.members || []);
-      setTeamStatsData(cachedData.teamStatsData || []);
-      setMemberNames(cachedData.memberNames || {});
-      setLiveData(cachedData.liveData || {});
-      
-      // Set loading states to false after a small delay to ensure state updates complete
-      setTimeout(() => {
-        setGroupLoading(false);
-        setMembersLoading(false);
-      }, 0);
-      
-      return;
-    }
-    
+
+
+  // Independent members data fetching
+  const fetchMembersData = async (id: number) => {
     try {
-      // Fetch group details with retry
-      const groupDetails = await retryWithBackoff(() => studyGroupService.getStudyGroup(id));
+      // Use faster loading without retry for better UX
+      const groupUsers = await studyGroupService.getStudyGroupUsers(id, true); // Update ranks for full data
       
-      setGroup(groupDetails);
-      setGroupInfo({
-        description: groupDetails.description || '',
-        instructions: groupDetails.application_instructions || ''
-      });
+      const membersData = groupUsers.map(relationship => ({
+        summoner_name: relationship.summoner_name || 'Unknown User',
+        elo: relationship.elo || 0,
+        rank: relationship.rank || 'UNRANKED',
+        owner: relationship.owner,
+        icon_id: relationship.icon_id,
+        user_id: relationship.user_id
+      }));
       
-      // Try to fetch combined team stats including member data with current ELO
+      setMembers(membersData);
+      setShowMemberPlaceholders(false); // Hide placeholders when real data loads
+      
+    } catch (err) {
+      console.error('Error fetching members data:', err);
+      // Don't show error immediately, try once more with retry
       try {
-        const combinedStats = await retryWithBackoff(() => 
-          teamStatsService.getCombinedTeamStats(id, groupDetails.created_at)
-        );
-        
-        console.log('📊 Combined stats response:', combinedStats);
-        
-        // Set members with current ELO data if available
-        let finalMembers: any[] = [];
-        
-        if (combinedStats.members && Array.isArray(combinedStats.members) && combinedStats.members.length > 0) {
-          console.log('✅ Using combined API members:', combinedStats.members);
-          finalMembers = combinedStats.members;
-          setMembers(combinedStats.members);
-        } else {
-          console.log('⚠️ No members in combined API, falling back to separate calls');
-          // Fallback to separate API calls
-          const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id));
-          finalMembers = groupUsers.map(relationship => ({
-            summoner_name: relationship.summoner_name || 'Unknown User',
-            elo: relationship.elo || 0,
-            rank: relationship.rank || 'UNRANKED',
-            owner: relationship.owner,
-            icon_id: relationship.icon_id,
-            user_id: relationship.user_id
-          }));
-          setMembers(finalMembers);
-        }
-        
-        // Set team stats data
-        setTeamStatsData(combinedStats.events || []);
-        setMemberNames(combinedStats.memberNames || {});
-        setLiveData(combinedStats.liveData || {});
-        
-        // Cache the complete data with the actual members that were set
-        const dataToCache = {
-          group: groupDetails,
-          members: finalMembers,
-          teamStatsData: combinedStats.events || [],
-          memberNames: combinedStats.memberNames || {},
-          liveData: combinedStats.liveData || {}
-        };
-        setCachedData(id, dataToCache);
-        
-      } catch (combinedError) {
-        console.log('⚠️ Combined API failed, using separate calls:', combinedError);
-        
-        // Fallback to separate API calls
-        const [groupUsers, memberStats] = await Promise.all([
-          retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id)),
-          retryWithBackoff(() => teamStatsService.getMemberStats(id, groupDetails.created_at))
-        ]);
-        
-        const members = groupUsers.map(relationship => ({
+        const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id, true));
+        const membersData = groupUsers.map(relationship => ({
           summoner_name: relationship.summoner_name || 'Unknown User',
           elo: relationship.elo || 0,
           rank: relationship.rank || 'UNRANKED',
@@ -262,7 +259,39 @@ export function GroupDetailPage() {
           icon_id: relationship.icon_id,
           user_id: relationship.user_id
         }));
-        setMembers(members);
+        setMembers(membersData);
+        setShowMemberPlaceholders(false);
+      } catch (retryErr) {
+        console.error('Retry failed:', retryErr);
+        setShowMemberPlaceholders(false);
+      }
+    } finally {
+      setIsMemberDataLoading(false);
+    }
+  };
+
+  // Independent team stats data fetching
+  const fetchTeamStatsData = async (id: number) => {
+    setTeamStatsError(null);
+    setLiveDataLoading(true);
+    
+    try {
+      // Use the group data we already have instead of fetching again
+      const groupDetails = group || await studyGroupService.getStudyGroup(id);
+      
+      // Try to fetch combined team stats with faster loading
+      try {
+        const combinedStats = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
+        
+        setTeamStatsData(combinedStats.events || []);
+        setMemberNames(combinedStats.memberNames || {});
+        setLiveData(combinedStats.liveData || {});
+        
+      } catch (combinedError) {
+        console.log('⚠️ Combined API failed, using separate calls:', combinedError);
+        
+        // Fallback to separate API calls
+        const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
         
         // Handle team stats data
         let allEvents: any[] = [];
@@ -287,24 +316,14 @@ export function GroupDetailPage() {
         setTeamStatsData(allEvents);
         setMemberNames(names);
         setLiveData(liveDataFromAPI);
-        
-        // Cache the complete data (fallback)
-        const fallbackDataToCache = {
-          group: groupDetails,
-          members: members,
-          teamStatsData: allEvents,
-          memberNames: names,
-          liveData: liveDataFromAPI
-        };
-        setCachedData(id, fallbackDataToCache);
       }
       
     } catch (err) {
-      console.error('Error fetching group data:', err);
-      setGroupError('Failed to load group data after multiple attempts. Please try refreshing the page.');
+      console.error('Error fetching team stats data:', err);
+      setTeamStatsError('Failed to load team stats data.');
     } finally {
-      setGroupLoading(false);
-      setMembersLoading(false);
+      setLiveDataLoading(false);
+      setIsTeamStatsLoading(false);
     }
   };
 
@@ -546,22 +565,24 @@ export function GroupDetailPage() {
     }
   }, [groupInfo.description, groupInfo.instructions, members]);
 
-  if (groupLoading) {
+  // Show initial loading spinner until we get counts
+  if (isInitialLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <LoadingSpinner size="lg" className="mx-auto mb-4" />
-          <p className="text-gray-600">Loading group...</p>
+          <p className="text-gray-600">Loading group details...</p>
         </div>
       </div>
     );
   }
 
-  if (groupError || !group) {
+  // Show error state if group fails to load
+  if (groupError) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
-          <p className="text-red-600 mb-4">{groupError || 'Group not found'}</p>
+          <p className="text-red-600 mb-4">{groupError}</p>
           <button 
             onClick={() => navigate('/study-groups/groups')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -608,35 +629,39 @@ export function GroupDetailPage() {
               <span className="text-sm sm:text-base">Back to Groups</span>
             </button>
             
-            {/* Group Icon - Show on all screens but smaller on mobile */}
+            {/* Group Icon and Name - Show immediately when available */}
             <div className="flex items-center gap-3">
-              {group.image_url ? (
-                <img
-                  src={group.image_url}
-                  alt={`${group.group_name} icon`}
-                  className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div 
-                  className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
-                  style={{ 
-                    backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                  }}
-                >
-                  {group.group_name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              
-              {/* Group Name and Date */}
-              <div className="min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
-                <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
-                <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
-              </div>
+              {group ? (
+                <>
+                  {group.image_url ? (
+                    <img
+                      src={group.image_url}
+                      alt={`${group.group_name} icon`}
+                      className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div 
+                      className="w-8 h-8 sm:w-12 sm:h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
+                      style={{ 
+                        backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                        color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                      }}
+                    >
+                      {group.group_name.charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  
+                  {/* Group Name and Date */}
+                  <div className="min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
+                    <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
+                    <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
+                  </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>
@@ -646,32 +671,38 @@ export function GroupDetailPage() {
           {/* Group header with group image background - matching groups page format */}
           <div className="relative overflow-hidden">
             {/* Background Image */}
-            {group.image_url ? (
-              <div
-                className="w-full bg-cover bg-no-repeat opacity-60"
-                style={{
-                  backgroundImage: `url(${group.image_url})`,
-                  backgroundPosition: 'center top',
-                  paddingTop: '60%' // Creates aspect ratio for the image
-                }}
-              />
-            ) : (
-              <div 
-                className="w-full flex items-center justify-center opacity-60"
-                style={{ 
-                  backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                  paddingTop: '60%' // Creates aspect ratio for the fallback
-                }}
-              >
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-8xl font-bold opacity-20" style={{ 
-                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                  }}>
-                    {group.group_name.charAt(0).toUpperCase()}
+            {group ? (
+              <>
+                {group.image_url ? (
+                  <div
+                    className="w-full bg-cover bg-no-repeat opacity-60"
+                    style={{
+                      backgroundImage: `url(${group.image_url})`,
+                      backgroundPosition: 'center top',
+                      paddingTop: '60%' // Creates aspect ratio for the image
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className="w-full flex items-center justify-center opacity-60"
+                    style={{ 
+                      backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                      paddingTop: '60%' // Creates aspect ratio for the fallback
+                    }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="text-8xl font-bold opacity-20" style={{ 
+                        color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                      }}>
+                        {group.group_name.charAt(0).toUpperCase()}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            )}
+                                  )}
+                </>
+              ) : (
+                <div className="w-full bg-gradient-to-br from-gray-100 to-gray-200" style={{ paddingTop: '60%' }} />
+              )}
             {/* Fade overlay */}
             <div
               className="absolute inset-0"
@@ -703,11 +734,14 @@ export function GroupDetailPage() {
                     Members
                   </h4>
                   
-                  {membersLoading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-center">
-                        <LoadingSpinner size="md" className="mx-auto mb-2" />
-                        <p className="text-gray-500">Loading members...</p>
+                  {showMemberPlaceholders || isMemberDataLoading ? (
+                    <div className="relative">
+                      <div 
+                        className="space-y-3 h-64 sm:h-96 overflow-y-auto bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-200"
+                      >
+                        {Array.from({ length: memberCount }, (_, index) => (
+                          <PlaceholderMemberCard key={`placeholder-member-${index}`} />
+                        ))}
                       </div>
                     </div>
                   ) : (
@@ -882,10 +916,10 @@ export function GroupDetailPage() {
                   <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                     <div className="flex items-center gap-2 text-gray-700 text-xs">
                       <span className="font-medium">
-                        {Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}
+                        {group && Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group?.meeting_schedule}
                       </span>
                     </div>
-                    {(group.time || group.timezone) && (
+                    {group && (group.time || group.timezone) && (
                       <div className="flex items-center gap-2 text-gray-700 mt-2 text-xs">
                         <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
@@ -914,32 +948,26 @@ export function GroupDetailPage() {
             <div className="rounded-lg p-4 sm:p-6 bg-white border border-gray-200">
               <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">Team Statistics</h3>
               
-              {teamStatsLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-center">
-                    <LoadingSpinner size="md" className="mx-auto mb-2" />
-                    <p className="text-gray-500">Loading team stats...</p>
-                  </div>
-                </div>
+              {isTeamStatsLoading ? (
+                <PlaceholderTeamStats />
               ) : teamStatsError ? (
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
                   <p className="text-yellow-800 font-medium mb-2">No Team Stats Available</p>
                   <p className="text-yellow-600 text-sm">{teamStatsError}</p>
                 </div>
               ) : (teamStatsData.length > 0 || (liveData && Object.keys(liveData).length > 0)) ? (
-                                  <div className="space-y-6">
-                    {/* Team Stats Content */}
-                    <TeamStatsContent 
-                      teamStatsData={teamStatsData}
-                      teamStatsLoading={teamStatsLoading}
-                      teamStatsError={teamStatsError}
-                      memberNames={memberNames}
-                      liveData={liveData}
-                      liveDataLoading={liveDataLoading}
-                      className="w-full"
-                    />
-                    
-                  </div>
+                <div className="space-y-6">
+                  {/* Team Stats Content */}
+                  <TeamStatsContent 
+                    teamStatsData={teamStatsData}
+                    teamStatsLoading={isTeamStatsLoading}
+                    teamStatsError={teamStatsError}
+                    memberNames={memberNames}
+                    liveData={liveData}
+                    liveDataLoading={liveDataLoading}
+                    className="w-full"
+                  />
+                </div>
               ) : (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
                   <p className="text-gray-600">No team stats available yet.</p>

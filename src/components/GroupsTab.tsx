@@ -1,6 +1,6 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Users, Zap, Crown, ArrowRight, Calendar, Globe, SquareX, ChevronsLeft, FileText } from 'lucide-react'
+import { Users, Zap, Crown, Calendar, Globe, SquareX, ChevronsLeft, FileText, HelpCircle } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
@@ -97,7 +97,6 @@ function SortDropdown({
                         <div className="space-y-1">
                             <button
                                 onClick={() => {
-                                    console.log('SortDropdown: changing to created_at');
                                     onSortByChange('created_at');
                                     setIsOpen(false);
                                 }}
@@ -109,7 +108,6 @@ function SortDropdown({
                             </button>
                             <button
                                 onClick={() => {
-                                    console.log('SortDropdown: changing to avg_elo');
                                     onSortByChange('avg_elo');
                                     setIsOpen(false);
                                 }}
@@ -182,7 +180,10 @@ export function GroupsTab({
   sortBy,
   setSortBy,
   sortOrder,
-  setSortOrder
+  setSortOrder,
+  placeholderCount,
+  showPlaceholders,
+  isCountLoading
 }: {
   studyGroups: StudyGroup[]
   searchQuery: string
@@ -212,6 +213,9 @@ export function GroupsTab({
   setSortBy?: (sortBy: 'created_at' | 'avg_elo') => void
   sortOrder?: 'asc' | 'desc'
   setSortOrder?: (sortOrder: 'asc' | 'desc') => void
+  placeholderCount?: number
+  showPlaceholders?: boolean
+  isCountLoading?: boolean
 }) {
   const navigate = useNavigate();
   
@@ -224,7 +228,7 @@ export function GroupsTab({
   const [showFilters, setShowFilters] = useState(false);
   
   // Sort state - use props from parent component
-  console.log('GroupsTab received sort props:', { sortBy, setSortBy, sortOrder, setSortOrder });
+
   
   // Player modal state
   const [showPlayerModal, setShowPlayerModal] = useState(false);
@@ -259,7 +263,7 @@ export function GroupsTab({
   // Auto-fetch team stats when group changes and team-stats tab is active
   useEffect(() => {
     if (selectedGroup && activeTab === 'team-stats' && teamStatsData.length === 0) {
-      console.log('🔄 Auto-fetching team stats for group:', selectedGroup.id);
+  
       fetchTeamStats(selectedGroup.id, selectedGroup.created_at);
     }
   }, [selectedGroup, activeTab, teamStatsData.length]);
@@ -338,14 +342,12 @@ export function GroupsTab({
       setTeamStatsLoading(true);
       setTeamStatsError(null);
       
-      console.log('🚀 Starting to fetch team stats for group:', groupId, 'from date:', startDate);
+  
       
       // Get member stats for the group
       const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
       
-      console.log('📊 Received member stats:', memberStats);
-      console.log('📊 Member stats type:', typeof memberStats);
-      console.log('📊 Member stats keys:', Object.keys(memberStats || {}));
+      
       
       // Handle the new combined API response format
       let allEvents: any[] = [];
@@ -355,23 +357,23 @@ export function GroupsTab({
       if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
         // New combined format: {"events": [...], "memberNames": {...}, "liveData": {...}}
         allEvents = memberStats.events;
-        console.log('📈 Using new combined API format, events:', allEvents);
+
         
         // Get member names from API response if available
         if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
           names = memberStats.memberNames as unknown as { [riotId: string]: string };
-          console.log('👥 Member names from API:', names);
+  
         }
         
         // Get live data from API response if available
         if (memberStats.liveData && typeof memberStats.liveData === 'object') {
           liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
-          console.log('🎯 Live data from API:', liveDataFromAPI);
+  
         }
       } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
         // Old format: {summonerName: [events]}
         allEvents = Object.values(memberStats).flat();
-        console.log('📈 Using old API format, flattened events:', allEvents);
+
         
         // Create member names mapping from the API response
         Object.keys(memberStats).forEach(summonerName => {
@@ -379,19 +381,17 @@ export function GroupsTab({
         });
       } else {
         // No data available
-        console.log('⚠️ No member stats received');
+
         allEvents = [];
       }
       
-      console.log('📈 Final events for chart:', allEvents);
-      console.log('📈 Number of events:', allEvents.length);
+      
       
       setTeamStatsData(allEvents);
       setMemberNames(names);
       setLiveData(liveDataFromAPI);
       
-      console.log('👥 Member names mapping:', names);
-      console.log('🎯 Live data set:', liveDataFromAPI);
+      
       
     } catch (error) {
       console.error('❌ Error fetching team stats:', error);
@@ -588,16 +588,7 @@ export function GroupsTab({
           </div>
         </div>
         
-        {/* Loading and Error States */}
-        {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="text-center">
-              <LoadingSpinner size="lg" className="mx-auto mb-4" />
-              <p className="text-gray-600">Loading study groups...</p>
-            </div>
-          </div>
-        )}
-
+        {/* Error State */}
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center">
             <p className="text-red-800 font-medium mb-2">Error Loading Groups</p>
@@ -612,11 +603,30 @@ export function GroupsTab({
         )}
 
         {/* Groups Grid */}
-        {!loading && !error && (
+        {isCountLoading ? (
+          // Show loading spinner while getting count
+          <div className="flex justify-center items-center py-12">
+            <div className="text-center">
+              <LoadingSpinner size="lg" className="mx-auto mb-4" />
+              <p className="text-gray-600">Loading groups...</p>
+            </div>
+          </div>
+        ) : error ? (
+          // Error state handled above
+          null
+        ) : showPlaceholders || loading ? (
+          // Show placeholders based on count
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: placeholderCount || 6 }, (_, index) => (
+              <PlaceholderStudyGroupCard key={`placeholder-${index}`} />
+            ))}
+          </div>
+        ) : (
+          // Show actual groups
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {studyGroups.map((group, index) => (
               <div key={group.id || index} ref={index === studyGroups.length - 1 ? lastGroupRef : null}>
-                                                  <StudyGroupCard 
+                <StudyGroupCard 
                   group={group}
                   memberCounts={memberCounts}
                   onTileClick={handleTileClick}
@@ -637,7 +647,7 @@ export function GroupsTab({
         )}
 
         {/* No Results Message */}
-        {!loading && !error && studyGroups.length === 0 && (
+        {!isCountLoading && !loading && !error && !showPlaceholders && studyGroups.length === 0 && (
           <div className="text-center py-12 flex flex-col items-center justify-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-800 mb-2">No Study Groups Found</h3>
@@ -1201,6 +1211,50 @@ export function GroupsTab({
   )
 }
 
+// Placeholder Study Group Card Component
+function PlaceholderStudyGroupCard() {
+  return (
+    <div className="relative w-full">
+      <div className="relative bg-white rounded-xl shadow-lg overflow-hidden h-80 animate-pulse">
+        {/* Image Section - Fixed height */}
+        <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl">
+          {/* Placeholder for group image */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-300 mx-auto mb-2 border-4 border-white/40"></div>
+              <div className="w-8 h-8 bg-gray-300 rounded mx-auto"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Information Section - Fixed height */}
+        <div className="p-4 h-32 flex flex-col justify-between">
+          {/* Title and Date */}
+          <div className="flex-1">
+            {/* Group Title */}
+            <div className="h-5 bg-gray-200 rounded w-32 mb-1"></div>
+            
+            {/* Created Date */}
+            <div className="h-3 bg-gray-200 rounded w-24"></div>
+          </div>
+          
+          {/* Stats Row */}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-gray-200 rounded"></div>
+              <div className="h-3 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-gray-200 rounded"></div>
+              <div className="h-3 bg-gray-200 rounded w-12"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // Study Group Card Component
 function StudyGroupCard({ 
   group, 
@@ -1213,164 +1267,116 @@ function StudyGroupCard({
 }) {
   return (
     <div 
-      className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm h-full flex flex-col cursor-pointer group relative" 
-      style={{ backgroundColor: '#fefdfa', borderColor: '#f5f0e8' }}
+      className="relative w-full"
       onClick={() => onTileClick(group.id)}
     >
-      {/* Hover arrow */}
-      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <ArrowRight className="w-5 h-5" style={{ color: '#00c9ac' }} />
-      </div>
-      {/* Content */}
-      <div className="relative z-10 text-left">
-      {/* Desktop layout */}
-      <div className="hidden md:flex flex-col h-full text-left">
-        {/* Group header with icon and name */}
-        <div className="mb-3 text-left">
-          <div className="flex items-center gap-3 mb-2">
-            {/* Group Icon */}
-            {group.image_url ? (
-              <img
-                src={group.image_url}
-                alt={`${group.group_name} icon`}
-                className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                }}
-              />
-            ) : (
+      <div className="relative bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden h-80">
+        {/* Image Section - Fixed height */}
+        <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden">
+          {group.image_url ? (
+            /* Display uploaded image */
+            <img
+              src={group.image_url}
+              alt={`${group.group_name} group`}
+              className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+              onError={(e) => {
+                // Fallback to placeholder if image fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                target.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          {/* Placeholder for group image - shown when no image or image fails to load */}
+          <div className={`absolute inset-0 flex items-center justify-center ${group.image_url ? 'hidden' : ''}`}>
+            <div className="text-center">
               <div 
-                className="w-12 h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-lg"
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 border-4 border-white/20"
                 style={{ 
                   backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
                   color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
                 }}
               >
-                {group.group_name.charAt(0).toUpperCase()}
+                <span className="text-2xl font-bold">{group.group_name.charAt(0).toUpperCase()}</span>
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-gray-800 truncate">{group.group_name}</h3>
-              <p className="text-xs text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
+              <svg
+                className="w-8 h-8 text-white opacity-80 mx-auto"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </div>
           </div>
         </div>
-        
-        {/* Stats grid */}
-        <div className="space-y-3 mb-4 flex-1">
-          {/* Members and ELO in same row */}
-          <div className="flex gap-2">
-            <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
-              <Users className="w-4 h-4" />
-              <span>{memberCounts?.[group.id] || 0}</span>
-            </div>
+
+        {/* Information Section - Fixed height */}
+        <div className="p-4 h-32 flex flex-col justify-between">
+          {/* Title and Date */}
+          <div className="flex-1">
+            {/* Group Title */}
+            <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+              {group.group_name}
+            </h3>
             
-            <div className="flex items-center gap-1 text-gray-400 text-sm">
-              <Zap className="w-4 h-4 text-yellow-500" />
-              <span className="font-bold">{group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'}</span>
-            </div>
+            {/* Created Date */}
+            <p className="text-xs text-gray-500">
+              Created: {new Date(group.created_at).toLocaleDateString()}
+            </p>
           </div>
           
-          {/* Meeting schedule */}
-          <div className="flex items-center gap-2 text-gray-600 text-sm">
-            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-            <span className="font-medium truncate">{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
-          </div>
-          
-          {/* Time and timezone */}
-          {(group.time || group.timezone) && (
-            <div className="flex items-center gap-2 text-gray-600 text-sm">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          {/* Stats Row */}
+          <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+            <div className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
               </svg>
-              <span className="font-medium truncate">
-                {group.time ? (
-                  <>
-                    {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                    {group.timezone && ` (${group.timezone})`}
-                  </>
-                ) : (
-                  `Timezone: ${group.timezone}`
-                )}
+              <span className="font-medium text-blue-600 truncate">
+                {memberCounts?.[group.id] || 0} {memberCounts?.[group.id] === 1 ? 'Member' : 'Members'}
               </span>
             </div>
-          )}
-        </div>
-      </div>
-      
-      {/* Mobile layout */}
-      <div className="md:hidden text-left">
-        {/* Group header with icon and name */}
-        <div className="mb-3 text-left">
-          <div className="flex items-center gap-2 sm:gap-3 mb-2">
-            {/* Group Icon */}
-            {group.image_url ? (
-              <img
-                src={group.image_url}
-                alt={`${group.group_name} icon`}
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg object-cover border-2 border-gray-200 flex-shrink-0"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
+            <div className="flex items-center gap-1 group relative">
+              <svg className="w-4 h-4 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium text-yellow-600 truncate">
+                {group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'} ELO
+              </span>
+              <HelpCircle 
+                className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help transition-colors" 
+                onMouseEnter={(e) => {
+                  const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (tooltip) tooltip.classList.remove('hidden');
+                }}
+                onMouseLeave={(e) => {
+                  const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
+                  if (tooltip) tooltip.classList.add('hidden');
                 }}
               />
-            ) : (
-              <div 
-                className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-base flex-shrink-0"
-                style={{ 
-                  backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                  color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                }}
-              >
-                {group.group_name.charAt(0).toUpperCase()}
+              {/* ELO Info Tooltip */}
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden max-w-xs">
+                <div className="text-center">
+                  <div className="font-semibold mb-1">ELO Conversion</div>
+                  <div className="space-y-1 text-left">
+                    <div>Iron: 0-399</div>
+                    <div>Bronze: 400-799</div>
+                    <div>Silver: 800-1199</div>
+                    <div>Gold: 1200-1599</div>
+                    <div>Platinum: 1600-1999</div>
+                    <div>Emerald: 2000-2399</div>
+                    <div>Diamond: 2400-2799</div>
+                    <div>Master+: 2800+</div>
+                  </div>
+                </div>
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
               </div>
-            )}
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg font-bold text-gray-800 truncate">{group.group_name}</h3>
-              <p className="text-xs text-gray-500 truncate">Created: {new Date(group.created_at).toLocaleDateString()}</p>
             </div>
           </div>
         </div>
-        
-        {/* Group details */}
-        <div className="space-y-2 sm:space-y-3 text-left">
-          <div className="flex flex-col sm:flex-row gap-1 sm:gap-2">
-            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 font-semibold text-sm">
-              <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-              <span>Members: {memberCounts?.[group.id] || 0}</span>
-            </div>
-            <div className="flex items-center gap-1 text-gray-400 text-sm">
-              <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
-              <span className="font-semibold">{group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'}</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-sm">
-            <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
-            <span className="truncate">{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
-          </div>
-          
-          {/* Time and timezone */}
-          {(group.time || group.timezone) && (
-            <div className="flex items-center gap-1 sm:gap-2 text-gray-600 text-sm">
-              <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-              </svg>
-              <span className="truncate">
-                {group.time ? (
-                  <>
-                    {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                    {group.timezone && ` (${group.timezone})`}
-                  </>
-                ) : (
-                  `Timezone: ${group.timezone}`
-                )}
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
       </div>
     </div>
   )

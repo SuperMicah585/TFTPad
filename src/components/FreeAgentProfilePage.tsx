@@ -14,6 +14,25 @@ import { riotService } from '../services/riotService';
 
 interface FreeAgentProfilePageProps {}
 
+// Placeholder Components
+
+function PlaceholderStatsSection() {
+  return (
+    <div className="space-y-4 animate-pulse">
+      {/* Stats grid placeholder */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+        <div className="h-20 bg-gray-200 rounded-lg"></div>
+      </div>
+      
+      {/* Chart placeholder */}
+      <div className="h-48 bg-gray-200 rounded-lg"></div>
+    </div>
+  );
+}
+
 export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   const { user_id } = useParams<{ user_id: string }>();
   const navigate = useNavigate();
@@ -21,18 +40,20 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   
   // Agent data state
   const [agent, setAgent] = useState<FreeAgent | null>(null);
-  const [agentLoading, setAgentLoading] = useState(true);
   const [agentError, setAgentError] = useState<string | null>(null);
   
   // League data state
   const [leagueData, setLeagueData] = useState<any[]>([]);
-  const [leagueDataLoading, setLeagueDataLoading] = useState(false);
   const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
   
   // Player stats state
   const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
-  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
   const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
+  
+  // Optimized loading states
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isLeagueDataLoading, setIsLeagueDataLoading] = useState(false);
+  const [isPlayerStatsLoading, setIsPlayerStatsLoading] = useState(false);
   
   // Invitation modal state
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -56,9 +77,37 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     if (user_id) {
       // Scroll to top when navigating to this page
       window.scrollTo(0, 0);
-      fetchAgentData(parseInt(user_id));
+      fetchInitialData(parseInt(user_id));
     }
   }, [user_id]);
+
+  // Fetch initial data with optimized loading
+  const fetchInitialData = async (id: number) => {
+    try {
+      // Get agent data immediately
+      const agentData = await freeAgentService.getFreeAgentById(id);
+      setAgent(agentData);
+      
+      // Show the page with placeholders
+      setIsInitialLoading(false);
+      setIsLeagueDataLoading(true);
+      setIsPlayerStatsLoading(true);
+      
+      // Start loading additional data in background
+      Promise.all([
+        fetchAgentLeagueData(id),
+        ...(agentData.riot_id ? [fetchPlayerStats(agentData.riot_id)] : [])
+      ]).catch(err => {
+        console.error('Background data loading failed:', err);
+        // Don't show error to user for background loading
+      });
+      
+    } catch (err) {
+      console.error('Error fetching initial agent data:', err);
+      setIsInitialLoading(false);
+      setAgentError('Failed to load agent data. Please try refreshing the page.');
+    }
+  };
 
   // Fetch user's study groups for the dropdown
   useEffect(() => {
@@ -127,28 +176,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     throw lastError!;
   };
 
-  const fetchAgentData = async (id: number) => {
-    setAgentLoading(true);
-    setAgentError(null);
-    
-    try {
-      // Get the agent's free agent profile with retry
-      const agentData = await retryWithBackoff(() => freeAgentService.getFreeAgentById(id));
-      setAgent(agentData);
-      
-      // Fetch league data and player stats
-      await Promise.all([
-        fetchAgentLeagueData(id),
-        // Only fetch player stats if we have a riot_id
-        ...(agentData.riot_id ? [fetchPlayerStats(agentData.riot_id)] : [])
-      ]);
-    } catch (err) {
-      console.error('Error fetching agent data:', err);
-      setAgentError('Failed to load agent data after multiple attempts. Please try refreshing the page.');
-    } finally {
-      setAgentLoading(false);
-    }
-  };
+
 
   const fetchUserStudyGroups = async () => {
     if (!userId) return;
@@ -162,18 +190,17 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   };
 
   const fetchAgentLeagueData = async (agentId: number) => {
-    setLeagueDataLoading(true);
     setLeagueDataError(null);
     
     try {
-      // Get the agent's Riot account to get their puuid with retry
-      const riotAccount = await retryWithBackoff(() => userService.getUserRiotAccount(agentId));
+      // Get the agent's Riot account to get their puuid
+      const riotAccount = await userService.getUserRiotAccount(agentId);
       if (!riotAccount || !riotAccount.riot_id) {
         setLeagueDataError('No Riot account found for this user');
         return;
       }
 
-      // Fetch league data using the riot_id (which contains the PUUID) with retry
+      // Fetch league data using the riot_id (which contains the PUUID)
       const fetchLeagueData = async () => {
         const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
         const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${agentId}`);
@@ -183,32 +210,58 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         return response.json();
       };
       
-      const data = await retryWithBackoff(fetchLeagueData);
+      const data = await fetchLeagueData();
       setLeagueData(data);
     } catch (error) {
       console.error('Error fetching agent league data:', error);
-      setLeagueDataError('Failed to load league data after multiple attempts');
-      setLeagueData([]);
+      // Try once more with retry
+      try {
+        const riotAccount = await retryWithBackoff(() => userService.getUserRiotAccount(agentId));
+        if (!riotAccount || !riotAccount.riot_id) {
+          setLeagueDataError('No Riot account found for this user');
+          return;
+        }
+        
+        const fetchLeagueData = async () => {
+          const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+          const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${agentId}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch league data: ${response.status}`);
+          }
+          return response.json();
+        };
+        
+        const data = await retryWithBackoff(fetchLeagueData);
+        setLeagueData(data);
+      } catch (retryError) {
+        setLeagueDataError('Failed to load league data');
+        setLeagueData([]);
+      }
     } finally {
-      setLeagueDataLoading(false);
+      setIsLeagueDataLoading(false);
     }
   };
 
   const fetchPlayerStats = async (riotId: string) => {
-    setPlayerStatsLoading(true);
     setPlayerStatsError(null);
     
     try {
-      const stats = await retryWithBackoff(() => playerStatsService.getPlayerStats(riotId));
+      const stats = await playerStatsService.getPlayerStats(riotId);
       console.log('📊 Player stats received:', stats);
       // Extract the events array from the PlayerStatsData object
       setPlayerStatsData(stats?.events || []);
     } catch (error) {
       console.error('Error fetching player stats:', error);
-      setPlayerStatsError('Failed to load player stats after multiple attempts');
-      setPlayerStatsData([]);
+      // Try once more with retry
+      try {
+        const stats = await retryWithBackoff(() => playerStatsService.getPlayerStats(riotId));
+        setPlayerStatsData(stats?.events || []);
+      } catch (retryError) {
+        setPlayerStatsError('Failed to load player stats');
+        setPlayerStatsData([]);
+      }
     } finally {
-      setPlayerStatsLoading(false);
+      setIsPlayerStatsLoading(false);
     }
   };
 
@@ -297,7 +350,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
 
   // Check overflow when agent data is loaded
   useEffect(() => {
-    if (agent && !agentLoading) {
+    if (agent && !isInitialLoading) {
       // Add a small delay to ensure content is rendered
       const timeoutId = setTimeout(() => {
         const descriptionElement = document.getElementById('description-container');
@@ -308,9 +361,10 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       
       return () => clearTimeout(timeoutId);
     }
-  }, [agent, agentLoading]);
+  }, [agent, isInitialLoading]);
 
-  if (agentLoading) {
+  // Show initial loading spinner until we get agent data
+  if (isInitialLoading) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
@@ -321,9 +375,10 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     );
   }
 
+  // Show error state if agent fails to load
   if (agentError || !agent) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center ">
+      <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{agentError || 'Profile not found'}</p>
           <button 
@@ -517,17 +572,21 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
               {/* Right Column - TFT Stats Section */}
               <div className="space-y-4 sm:space-y-6">
                 <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">TFT Statistics</h3>
-                <TFTStatsContent
-                  leagueDataLoading={leagueDataLoading}
-                  leagueDataError={leagueDataError}
-                  playerLeagueData={leagueData}
-                  playerStatsLoading={playerStatsLoading}
-                  playerStatsError={playerStatsError}
-                  playerStatsData={playerStatsData}
-                  getRankedTftData={getRankedTftData}
-                  getTurboTftData={getTurboTftData}
-                  className="w-full"
-                />
+                {isLeagueDataLoading || isPlayerStatsLoading ? (
+                  <PlaceholderStatsSection />
+                ) : (
+                  <TFTStatsContent
+                    leagueDataLoading={isLeagueDataLoading}
+                    leagueDataError={leagueDataError}
+                    playerLeagueData={leagueData}
+                    playerStatsLoading={isPlayerStatsLoading}
+                    playerStatsError={playerStatsError}
+                    playerStatsData={playerStatsData}
+                    getRankedTftData={getRankedTftData}
+                    getTurboTftData={getTurboTftData}
+                    className="w-full"
+                  />
+                )}
               </div>
             </div>
           </div>

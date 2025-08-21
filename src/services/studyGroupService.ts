@@ -40,7 +40,7 @@ async function retryWithBackoff<T>(
         maxDelay
       );
       
-      console.log(`API request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms...`);
+      
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -178,8 +178,11 @@ export const studyGroupService = {
   },
 
   // Get users in a specific study group
-  async getStudyGroupUsers(groupId: number): Promise<UserStudyGroup[]> {
-    const response = await retryWithBackoff(() => fetch(`${API_ENDPOINT}/study-groups/${groupId}/users`));
+  async getStudyGroupUsers(groupId: number, updateRanks: boolean = true): Promise<UserStudyGroup[]> {
+    const url = new URL(`${API_ENDPOINT}/study-groups/${groupId}/users`);
+    url.searchParams.append('update_ranks', updateRanks.toString());
+    
+    const response = await retryWithBackoff(() => fetch(url.toString()));
     if (!response.ok) {
       throw new Error(`Failed to fetch study group users: ${response.statusText}`);
     }

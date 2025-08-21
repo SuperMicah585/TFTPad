@@ -28,23 +28,34 @@ export function Header() {
                    <Link 
                        to="/study-groups/groups" 
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
-                           location.pathname.startsWith('/study-groups') || location.pathname === '/'
+                           location.pathname.startsWith('/study-groups/groups')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
-                       Study Groups
+                       Groups
                    </Link>
                    <Link 
-                       to="/tracker" 
+                       to="/study-groups/free-agents" 
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
-                           location.pathname.startsWith('/tracker')
+                           location.pathname.startsWith('/study-groups/free-agents')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
-                       Tracker
+                       Free Agents
                    </Link>
+                   <Link 
+                       to="/study-groups/my-groups" 
+                       className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
+                           location.pathname.startsWith('/study-groups/my-groups')
+                               ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
+                               : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
+                       }`}
+                   >
+                       My Groups
+                   </Link>
+
                    <Link 
                        to="/blog" 
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
@@ -143,24 +154,36 @@ export function Header() {
                            to="/study-groups/groups" 
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                               location.pathname.startsWith('/study-groups') || location.pathname === '/'
+                               location.pathname.startsWith('/study-groups/groups')
                                    ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
-                           Study Groups
+                           Groups
                        </Link>
                        <Link 
-                           to="/tracker" 
+                           to="/study-groups/free-agents" 
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                               location.pathname.startsWith('/tracker')
+                               location.pathname.startsWith('/study-groups/free-agents')
                                    ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
-                           Tracker
+                           Free Agents
                        </Link>
+                       <Link 
+                           to="/study-groups/my-groups" 
+                           onClick={() => setIsMobileMenuOpen(false)}
+                           className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                               location.pathname.startsWith('/study-groups/my-groups')
+                                   ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
+                                   : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
+                           }`}
+                       >
+                           My Groups
+                       </Link>
+
                        <Link 
                            to="/blog" 
                            onClick={() => setIsMobileMenuOpen(false)}

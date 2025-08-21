@@ -14,9 +14,7 @@ export class StorageService {
    */
   async uploadImage(file: File, path: string): Promise<UploadResult> {
     try {
-      console.log('StorageService: Starting upload to bucket:', this.bucketName);
-      console.log('StorageService: Upload path:', path);
-      console.log('StorageService: File size:', file.size);
+      
       
       // Create FormData to send the file
       const formData = new FormData();
@@ -37,8 +35,7 @@ export class StorageService {
       }
       
       const result = await response.json();
-      console.log('StorageService: Upload result:', result);
-      console.log('StorageService: New image URL:', result.url);
+
       return { data: { path: result.path, url: result.url }, error: null };
     } catch (error) {
       console.error('StorageService: Upload error:', error);

@@ -65,7 +65,7 @@ function ProfileContent() {
   const [daysDraft, setDaysDraft] = useState<string[]>([])
   const [timeDraft, setTimeDraft] = useState('')
   const [timezoneDraft, setTimezoneDraft] = useState('')
-  const [removingAccount, setRemovingAccount] = useState(false)
+
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState('')
@@ -233,28 +233,7 @@ function ProfileContent() {
     setIsEditingDays(false)
   }
 
-  // Handle remove Riot account
-  const handleRemoveAccount = async () => {
-    if (!userId || !riotAccount) return
-    
-    if (!window.confirm('Are you sure you want to remove your Riot account? This action cannot be undone.')) {
-      return
-    }
-    
-    setRemovingAccount(true)
-    try {
-      await userService.deleteUserRiotAccount(userId)
-      setRiotAccount(null)
-      setLeagueData([])
-      // Refresh profile icon
-      await refreshProfileIcon()
-    } catch (err) {
-      console.error('Error removing Riot account:', err)
-      alert('Failed to remove Riot account. Please try again.')
-    } finally {
-      setRemovingAccount(false)
-    }
-  }
+
 
   // Handle delete account button click - show modal
   const handleDeleteButtonClick = () => {
@@ -486,22 +465,7 @@ function ProfileContent() {
                     )}
                   </div>
                   
-                  <div className="flex gap-3">
-                    <button
-                      onClick={() => setShowRiotModal(true)}
-                      disabled={!userId}
-                      className="flex-1 bg-[#00c9ac] hover:bg-[#00b89a] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg text-sm"
-                    >
-                      Change Account
-                    </button>
-                    <button
-                      onClick={handleRemoveAccount}
-                      disabled={!userId || removingAccount}
-                      className="flex-1 bg-[#ff8889] hover:bg-[#ff7778] text-white font-semibold py-2 px-4 rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg text-sm"
-                    >
-                      {removingAccount ? 'Unlinking...' : 'Unlink Account'}
-                    </button>
-                  </div>
+
                 </div>
               )}
 

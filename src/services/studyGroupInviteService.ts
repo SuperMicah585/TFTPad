@@ -36,7 +36,7 @@ async function retryWithBackoff<T>(
         maxDelay
       );
       
-      console.log(`API request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms...`);
+      
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

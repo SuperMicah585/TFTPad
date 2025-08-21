@@ -40,7 +40,7 @@ async function retryWithBackoff<T>(
         maxDelay
       );
       
-      console.log(`API request failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${Math.round(delay)}ms...`);
+      
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -125,11 +125,7 @@ export const teamStatsService = {
     queryParams.append('group_id', groupId.toString());
     queryParams.append('start_date', startDate);
 
-    console.log('🔍 Fetching team stats with params:', {
-      groupId,
-      startDate,
-      url: `${API_ENDPOINT}/team-stats/members?${queryParams}`
-    });
+
 
     const response = await retryWithBackoff(() => 
       fetch(`${API_ENDPOINT}/team-stats/members?${queryParams}`)
@@ -141,7 +137,7 @@ export const teamStatsService = {
     }
     
     const data = await response.json();
-    console.log('✅ Team stats API response:', data);
+
     
     return data;
   },
@@ -153,11 +149,7 @@ export const teamStatsService = {
     queryParams.append('start_date', startDate);
     queryParams.append('include_members', 'true'); // Flag to include member data
 
-    console.log('🔍 Fetching combined team stats with params:', {
-      groupId,
-      startDate,
-      url: `${API_ENDPOINT}/team-stats/members?${queryParams}`
-    });
+
 
     const response = await retryWithBackoff(() => 
       fetch(`${API_ENDPOINT}/team-stats/members?${queryParams}`)
@@ -169,7 +161,7 @@ export const teamStatsService = {
     }
     
     const data = await response.json();
-    console.log('✅ Combined team stats API response:', data);
+
     
     return data;
   }

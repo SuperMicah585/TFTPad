@@ -90,7 +90,7 @@ class LivePlayerService {
 
   async getLivePlayerStats(groupId: number): Promise<LivePlayerStats> {
     try {
-      console.log('🚀 Fetching live player stats for group:', groupId);
+  
       
       // First, get all members of the group
       const membersResponse = await fetch(`${API_BASE_URL}/api/study-groups/${groupId}/users`);
@@ -100,7 +100,7 @@ class LivePlayerService {
       
       const membersData = await membersResponse.json();
       const members = membersData.study_group_users || membersData;
-      console.log('👥 Group members:', members);
+      
       
       const liveStats: LivePlayerStats = {};
       
@@ -133,7 +133,7 @@ class LivePlayerService {
           }
           
           const leagueData = await leagueResponse.json();
-          console.log(`📊 League data for ${member.summoner_name}:`, leagueData);
+
           
           // Find Ranked TFT data (not Turbo)
           const rankedData = leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT');
@@ -160,14 +160,14 @@ class LivePlayerService {
           };
           
           liveStats[member.summoner_name] = liveData;
-          console.log(`✅ Live stats for ${member.summoner_name}:`, liveData);
+
           
         } catch (error) {
           console.error(`❌ Error fetching live data for ${member.summoner_name}:`, error);
         }
       }
       
-      console.log('🎯 Final live stats:', liveStats);
+
       return liveStats;
       
     } catch (error) {

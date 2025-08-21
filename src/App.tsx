@@ -18,7 +18,9 @@ import './App.css'
 import { Link } from 'react-router-dom'
 
 import { GameIdModal } from './components/GameIdModal'
-import { StudyGroupsPage } from './components/StudyGroupsPage'
+import { GroupsPage } from './components/GroupsPage'
+import { FreeAgentsPage } from './components/FreeAgentsPage'
+import { MyGroupsPage } from './components/MyGroupsPage'
 import { GroupDetailPage } from './components/GroupDetailPage'
 import { FreeAgentProfilePage } from './components/FreeAgentProfilePage'
 import { PageViewTracker } from './components/PageViewTracker'
@@ -291,12 +293,12 @@ function App() {
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/study-groups" element={<Navigate to="/study-groups/groups" replace />} />
-              <Route path="/study-groups/groups" element={<StudyGroupsPage />} />
+              <Route path="/study-groups/groups" element={<GroupsPage />} />
               <Route path="/study-groups/groups/:groupId" element={<GroupDetailPage />} />
-              <Route path="/study-groups/my-groups" element={<StudyGroupsPage />} />
-              <Route path="/study-groups/free-agents" element={<StudyGroupsPage />} />
+              <Route path="/study-groups/my-groups" element={<MyGroupsPage />} />
+              <Route path="/study-groups/free-agents" element={<FreeAgentsPage />} />
               <Route path="/study-groups/free-agents/:user_id" element={<FreeAgentProfilePage />} />
-              <Route path="/study-groups/invitations" element={<StudyGroupsPage />} />
+              <Route path="/study-groups/invitations" element={<GroupsPage />} />
               <Route path="/blog/defensive-stats" element={<BlogPost title="Defensive Stats" content={<DefensiveStats />} />} />
               <Route path="/blog/champion-pool" element={<BlogPost title="Champion Pool" content={<ChampionPool />} />} />
               <Route path="/blog/econ" element={<BlogPost title="Econ" content={<Econ />} />} />

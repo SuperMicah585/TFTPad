@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { UserCheck, Mail, Users, Zap, Crown, ArrowRight, Calendar, Upload, Eye, SquareX, ChevronsLeft, Award, Star, TrendingUp, TrendingDown, Clock, Globe, FileText, Image, Settings, AlertTriangle, LogOut } from 'lucide-react'
+import { UserCheck, Mail, Users, Crown, Calendar, Upload, Eye, SquareX, ChevronsLeft, Award, Star, TrendingUp, TrendingDown, Clock, Globe, FileText, Image, Settings, AlertTriangle, LogOut } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
@@ -66,50 +66,74 @@ interface GroupSettings {
 
 const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
 
-export function MyGroupsTab() {
+export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) {
   const { userId } = useAuth()
   const [myGroups, setMyGroups] = useState<MyGroup[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [invitations, setInvitations] = useState<StudyGroupInvite[]>([])
   const [invitationsLoading, setInvitationsLoading] = useState(false)
+  
+  // Placeholder state
+  const [placeholderCount, setPlaceholderCount] = useState<number>(0) // Start with 0, wait for real count
+  const [showPlaceholders, setShowPlaceholders] = useState(false) // Don't show placeholders until we have count
+  const [isDataLoading, setIsDataLoading] = useState(false) // Track if we're actively fetching data
+  const [isCountLoading, setIsCountLoading] = useState(false) // Track if we're fetching the count
   
   // Cache state
   const [lastFetched, setLastFetched] = useState<number | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
+  // Update loading states when auth loading state changes
+  useEffect(() => {
+    if (authLoading) {
+      setIsCountLoading(true) // Show loading spinner during auth
+    } else {
+      setIsCountLoading(false)
+    }
+  }, [authLoading])
+
   // Fetch user's study groups
   useEffect(() => {
     const fetchMyGroups = async () => {
-      if (!userId) {
-        setLoading(false)
+      if (!userId && !authLoading) {
+        setShowPlaceholders(false) // Hide placeholders if not logged in and not loading
+        setIsCountLoading(false)
         return
       }
 
       // Check if we have valid cached data
       const isCacheValid = lastFetched && (Date.now() - lastFetched < CACHE_DURATION)
       if (isCacheValid && myGroups.length > 0) {
-        setLoading(false)
         return
       }
 
       try {
-        setLoading(true)
         setError(null)
+        setIsCountLoading(true) // Show loading spinner while getting count
         
-        // Get user's study group relationships
-        const userStudyGroups = await studyGroupService.getUserStudyGroupsByUser(userId)
+        // Get the count of user's study groups first
+        let userStudyGroups: any[] = []
+        if (userId) {
+          userStudyGroups = await studyGroupService.getUserStudyGroupsByUser(userId)
+          setPlaceholderCount(userStudyGroups.length)
+          setIsCountLoading(false) // Hide loading spinner, got the count
+          
+          // Now show placeholders with correct count and start loading data
+          setShowPlaceholders(true)
+          setIsDataLoading(true)
+        }
         
         // Transform the data to match the expected format
         const transformedGroups = await Promise.all(
-          userStudyGroups.map(async (userGroup) => {
+          userStudyGroups.map(async (userGroup: any) => {
             const group = userGroup.study_group
             if (!group) return null
             
             try {
-              // Get members for this group
-              const groupMembers = await studyGroupService.getStudyGroupUsers(group.id)
+              // Get members for this group (this runs in parallel for all groups)
+              // Disable rank updates for faster loading
+              const groupMembers = await studyGroupService.getStudyGroupUsers(group.id, false)
               
               // Transform members to match expected format
               const members = groupMembers.map(member => ({
@@ -167,13 +191,18 @@ export function MyGroupsTab() {
         )
         
         // Filter out null values and set the groups
-        setMyGroups(transformedGroups.filter(group => group !== null))
+        const validGroups = transformedGroups.filter(group => group !== null)
+        setMyGroups(validGroups)
         setLastFetched(Date.now())
+        setIsDataLoading(false)
+        setShowPlaceholders(false) // Hide placeholders once real data is loaded
       } catch (err) {
         console.error('Failed to fetch my groups:', err)
         setError('Failed to load your groups. Please try again later.')
-      } finally {
-        setLoading(false)
+        setShowPlaceholders(false) // Hide placeholders on error
+        setMyGroups([]) // Clear any existing groups on error
+        setIsDataLoading(false)
+        setIsCountLoading(false)
       }
     }
 
@@ -911,11 +940,11 @@ export function MyGroupsTab() {
           </div>
         </div>
 
-        {loading ? (
+        {isCountLoading ? (
           <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
             <LoadingSpinner size="lg" className="mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-orange-800 mb-2">Loading Your Groups</h3>
-            <p className="text-orange-700">Please wait while we fetch your study groups...</p>
+            <p className="text-orange-700">Getting your group information...</p>
           </div>
         ) : error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
@@ -934,6 +963,12 @@ export function MyGroupsTab() {
             >
               Try Again
             </button>
+          </div>
+        ) : (showPlaceholders || isDataLoading) ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: placeholderCount }, (_, index) => (
+              <PlaceholderGroupCard key={`placeholder-${index}`} />
+            ))}
           </div>
         ) : myGroups.length === 0 ? (
           <div className="text-center flex-1 flex flex-col items-center justify-center">
@@ -2510,6 +2545,50 @@ function getTextColor(backgroundColor: string): string {
   return '#ffffff'; // White for dark backgrounds
 }
 
+// Placeholder Group Card Component
+function PlaceholderGroupCard() {
+  return (
+    <div className="relative w-full">
+      <div className="relative bg-white rounded-xl shadow-lg overflow-hidden h-80 animate-pulse">
+        {/* Image Section - Fixed height */}
+        <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl">
+          {/* Placeholder for group image */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-300 mx-auto mb-2 border-4 border-white/40"></div>
+              <div className="w-8 h-8 bg-gray-300 rounded mx-auto"></div>
+            </div>
+          </div>
+        </div>
+
+        {/* Information Section - Fixed height */}
+        <div className="p-4 h-32 flex flex-col justify-between">
+          {/* Title and Date */}
+          <div className="flex-1">
+            {/* Group Title */}
+            <div className="h-5 bg-gray-200 rounded w-32 mb-1"></div>
+            
+            {/* Created Date */}
+            <div className="h-3 bg-gray-200 rounded w-24"></div>
+          </div>
+          
+          {/* Stats Row */}
+          <div className="flex items-center justify-between mt-2">
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-gray-200 rounded"></div>
+              <div className="h-3 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-4 bg-gray-200 rounded"></div>
+              <div className="h-3 bg-gray-200 rounded w-12"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // My Group Card Component
 function MyGroupCard({ 
   group, 
@@ -2520,179 +2599,94 @@ function MyGroupCard({
 }) {
   return (
     <div 
-      className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative" 
-      style={{ backgroundColor: '#fefdfa', borderColor: '#f5f0e8' }}
+      className="relative w-full"
       onClick={() => onTileClick(group)}
     >
-      {/* Hover arrow */}
-      <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-        <ArrowRight className="w-5 h-5" style={{ color: '#00c9ac' }} />
-      </div>
-      
-      {/* Content */}
-      <div className="relative z-10 text-left w-full">
-        {/* Desktop layout */}
-        <div className="hidden md:flex flex-col text-left w-full">
-          {/* Group header with icon and name */}
-          <div className="mb-3 text-left w-full">
-            <div className="flex items-center gap-3 mb-2">
-              {/* Group Icon */}
-              {group.image_url ? (
-                <img
-                  src={group.image_url}
-                  alt={`${group.name} icon`}
-                  className="w-12 h-12 rounded-lg object-cover border-2 border-gray-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div 
-                  className="w-12 h-12 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-lg"
-                  style={{ 
-                    backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                  }}
-                >
-                  {group.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg font-bold text-gray-800 truncate">{group.name}</h3>
-                  {/* Crown icon for captains only */}
-                  {group.role === 'captain' && (
-                    <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                  )}
-                </div>
-                <p className="text-xs text-gray-500">Created: {new Date(group.created_date).toLocaleDateString()}</p>
+      <div className="relative bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer group overflow-hidden h-80">
+        {/* Image Section - Fixed height */}
+        <div className="relative h-48 bg-gradient-to-br from-gray-100 to-gray-200 rounded-t-xl overflow-hidden">
+          {group.image_url ? (
+            /* Display uploaded image */
+            <img
+              src={group.image_url}
+              alt={`${group.name} group`}
+              className="w-full h-full object-cover transition-transform duration-300 ease-in-out group-hover:scale-110"
+              onError={(e) => {
+                // Fallback to placeholder if image fails to load
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                target.nextElementSibling?.classList.remove('hidden');
+              }}
+            />
+          ) : null}
+          {/* Placeholder for group image - shown when no image or image fails to load */}
+          <div className={`absolute inset-0 flex items-center justify-center ${group.image_url ? 'hidden' : ''}`}>
+            <div className="text-center">
+              <div 
+                className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-2 border-4 border-white/20"
+                style={{ 
+                  backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                  color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                }}
+              >
+                <span className="text-2xl font-bold">{group.name.charAt(0).toUpperCase()}</span>
               </div>
+              <svg
+                className="w-8 h-8 text-white opacity-80 mx-auto"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"
+                  clipRule="evenodd"
+                />
+              </svg>
             </div>
           </div>
           
-          {/* Stats grid */}
-          <div className="space-y-3 w-full">
-            {/* Members and ELO in same row */}
-            <div className="flex gap-2 w-full">
-              <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
-                <Users className="w-4 h-4" />
-                <span>{group.members.length}</span>
-              </div>
-              
-              <div className="flex items-center gap-1 text-gray-400 text-sm">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                <span className="font-bold">{group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'}</span>
-              </div>
+          {/* Role indicator overlay */}
+          {group.role === 'captain' && (
+            <div className="absolute top-3 right-3 bg-yellow-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+              <Crown className="w-3 h-3" />
+              Captain
             </div>
-            
-            {/* Meeting schedule */}
-            <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-              <span className="font-medium truncate flex-1">{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
-            </div>
-            
-            {/* Time and timezone */}
-            {(group.time || group.timezone) && (
-              <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                <span className="font-medium truncate flex-1">
-                  {group.time ? (
-                    <>
-                      {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                      {group.timezone && ` (${group.timezone})`}
-                    </>
-                  ) : (
-                    `Timezone: ${group.timezone}`
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
+          )}
         </div>
-        
-        {/* Mobile layout */}
-        <div className="md:hidden text-left w-full">
-          {/* Group header with icon and name */}
-          <div className="mb-3 text-left w-full">
-            <div className="flex items-center gap-3 mb-2">
-              {/* Group Icon */}
-              {group.image_url ? (
-                <img
-                  src={group.image_url}
-                  alt={`${group.name} icon`}
-                  className="w-10 h-10 rounded-lg object-cover border-2 border-gray-200"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.style.display = 'none';
-                  }}
-                />
-              ) : (
-                <div 
-                  className="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-gray-200 font-bold text-base"
-                  style={{ 
-                    backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                    color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                  }}
-                >
-                  {group.name.charAt(0).toUpperCase()}
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <h3 className="text-lg font-bold text-gray-800">{group.name}</h3>
-                  {/* Role Tag */}
-                  <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
-                    group.role === 'captain' 
-                      ? 'bg-yellow-100 text-yellow-800 border-yellow-200' 
-                      : 'bg-blue-100 text-blue-800 border-blue-200'
-                  }`}>
-                    {group.role === 'captain' ? 'Captain' : 'Member'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500">Created: {new Date(group.created_date).toLocaleDateString()}</p>
-              </div>
-            </div>
+
+        {/* Information Section - Fixed height */}
+        <div className="p-4 h-32 flex flex-col justify-between">
+          {/* Title and Date */}
+          <div className="flex-1">
+            {/* Group Title */}
+            <h3 className="text-lg font-bold text-gray-900 mb-1 line-clamp-1">
+              {group.name}
+            </h3>
+            
+            {/* Created Date */}
+            <p className="text-xs text-gray-500">
+              Created: {new Date(group.created_date).toLocaleDateString()}
+            </p>
           </div>
           
-          {/* Group details */}
-          <div className="space-y-3 text-left w-full">
-            <div className="flex gap-2 w-full">
-              <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
-                <Users className="w-4 h-4" />
-                <span>Members: {group.members.length}</span>
-              </div>
-              <div className="flex items-center gap-1 text-gray-400 text-sm">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                <span className="font-semibold">{group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'}</span>
-              </div>
+          {/* Stats Row */}
+          <div className="flex items-center justify-between text-xs text-gray-500 mt-2">
+            <div className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+              </svg>
+              <span className="font-medium text-blue-600 truncate">
+                {group.members.length} {group.members.length === 1 ? 'Member' : 'Members'}
+              </span>
             </div>
-            
-            <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-              <span className="truncate flex-1">{Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group.meeting_schedule}</span>
+            <div className="flex items-center gap-1">
+              <svg className="w-4 h-4 text-yellow-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd" />
+              </svg>
+              <span className="font-medium text-yellow-600 truncate">
+                {group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'} ELO
+              </span>
             </div>
-            
-            {/* Time and timezone */}
-            {(group.time || group.timezone) && (
-              <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                <span className="truncate flex-1">
-                  {group.time ? (
-                    <>
-                      {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                      {group.timezone && ` (${group.timezone})`}
-                    </>
-                  ) : (
-                    `Timezone: ${group.timezone}`
-                  )}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
