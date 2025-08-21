@@ -66,6 +66,91 @@ export function TeamStatsContent({
     );
   }
 
+  // Calculate chart data for Team Summary (same logic as Team Average Performance chart)
+  const calculateChartData = () => {
+    if (!hasHistoricData) return null;
+
+    // Group data by summoner name
+    const groupedData: { [summonerName: string]: RankAuditEvent[] } = {};
+    teamStatsData.forEach(event => {
+      const summonerName = memberNames[event.riot_id] || event.riot_id;
+      if (!groupedData[summonerName]) {
+        groupedData[summonerName] = [];
+      }
+      groupedData[summonerName].push(event);
+    });
+
+    // Create member chart data
+    const memberChartData = Object.keys(groupedData).map((summonerName) => {
+      const events = groupedData[summonerName];
+      
+      // Start with historical data
+      let chartPoints = events.map(event => ({
+        x: event.created_at.split('T')[0],
+        y: event.elo,
+        wins: event.wins,
+        losses: event.losses,
+        isLive: false
+      }));
+      
+      // Only include series that have data points
+      if (chartPoints.length === 0) {
+        return null;
+      }
+      
+      return {
+        id: summonerName,
+        data: chartPoints
+      };
+    }).filter(series => series !== null);
+
+    // Get all unique dates from all members
+    const allDates = new Set<string>();
+    memberChartData.forEach(series => {
+      series.data.forEach(point => {
+        allDates.add(point.x as string);
+      });
+    });
+
+    // Sort dates chronologically
+    const sortedDates = Array.from(allDates).sort();
+    
+    if (sortedDates.length === 0) return null;
+
+    // Note: mostRecentDate is no longer used since we're getting latest data from each member
+
+    // Calculate data using the most recent entry from each member
+    const membersLatestData = memberChartData
+      .map(series => {
+        // Get the most recent data point for this member
+        const sortedData = series.data.sort((a, b) => new Date(a.x).getTime() - new Date(b.x).getTime());
+        return sortedData[sortedData.length - 1];
+      })
+      .filter(point => point !== undefined);
+
+    if (membersLatestData.length === 0) return null;
+
+    const totalElo = membersLatestData.reduce((sum, point) => sum + (point?.y as number), 0);
+    const averageElo = Math.round(totalElo / membersLatestData.length);
+
+    const totalWins = membersLatestData.reduce((sum, point) => {
+      return sum + ((point as any).wins || 0);
+    }, 0);
+    
+    const totalLosses = membersLatestData.reduce((sum, point) => {
+      return sum + ((point as any).losses || 0);
+    }, 0);
+
+    return {
+      totalWins,
+      totalLosses,
+      averageElo,
+      memberCount: membersLatestData.length
+    };
+  };
+
+  const chartData = calculateChartData();
+
   return (
     <div className={`space-y-6 ${className}`}>
       {/* Team Stats Summary */}
@@ -76,6 +161,7 @@ export function TeamStatsContent({
         memberNames={memberNames}
         liveData={liveData}
         liveDataLoading={liveDataLoading}
+        chartData={chartData}
         className="w-full"
       />
 

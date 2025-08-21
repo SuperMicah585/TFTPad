@@ -10,6 +10,7 @@ interface TeamStatsSummaryProps {
   memberNames: { [riotId: string]: string };
   liveData: { [summonerName: string]: LivePlayerData };
   liveDataLoading: boolean;
+  chartData?: { totalWins: number; totalLosses: number; averageElo: number; memberCount: number } | null;
   className?: string;
 }
 
@@ -20,102 +21,44 @@ export function TeamStatsSummary({
   memberNames,
   liveData,
   liveDataLoading,
+  chartData,
   className = ''
 }: TeamStatsSummaryProps) {
   // Calculate current team stats
   const calculateCurrentTeamStats = () => {
+    // If chart data is provided, use it directly for consistency
+    if (chartData) {
+      const winRate = chartData.totalWins + chartData.totalLosses > 0 
+        ? ((chartData.totalWins / (chartData.totalWins + chartData.totalLosses)) * 100).toFixed(1)
+        : '0.0';
+
+      return {
+        averageElo: chartData.averageElo,
+        totalWins: chartData.totalWins,
+        totalLosses: chartData.totalLosses,
+        winRate,
+        memberCount: chartData.memberCount
+      };
+    }
+
+    // Fallback to original calculation if no chart data provided
     const hasHistoricData = teamStatsData && teamStatsData.length > 0;
     const hasLiveData = liveData && Object.keys(liveData).length > 0;
-    
-    console.log('🔍 TeamStatsSummary Debug:', {
-      hasHistoricData,
-      hasLiveData,
-      teamStatsDataLength: teamStatsData?.length || 0,
-      liveDataKeys: Object.keys(liveData || {}),
-      teamStatsDataSample: teamStatsData?.slice(0, 2),
-      liveDataSample: Object.values(liveData || {}).slice(0, 2)
-    });
     
     if (!hasHistoricData && !hasLiveData) {
       return null;
     }
 
-    // Get the most recent data point for each member
-    const memberLatestData: { [summonerName: string]: any } = {};
-    
-    // Group data by member (only if historic data exists)
-    const groupedData: { [summonerName: string]: RankAuditEvent[] } = {};
-    if (hasHistoricData) {
-      teamStatsData.forEach(event => {
-        const summonerName = memberNames[event.riot_id] || event.riot_id;
-        if (!groupedData[summonerName]) {
-          groupedData[summonerName] = [];
-        }
-        groupedData[summonerName].push(event);
-      });
-    }
-
-    // Get latest data for each member (only if historic data exists)
-    if (hasHistoricData) {
-      Object.keys(groupedData).forEach(summonerName => {
-        const events = groupedData[summonerName];
-        const latestEvent = events.sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-        )[0];
-        
-        memberLatestData[summonerName] = latestEvent;
-      });
-    }
-
-    // Add live data if available (this will override historical data or be the only data)
-    if (hasLiveData) {
-      Object.keys(liveData).forEach(summonerName => {
-        memberLatestData[summonerName] = liveData[summonerName];
-      });
-    }
-
-    // Calculate totals
-    const members = Object.values(memberLatestData);
-    if (members.length === 0) return null;
-
-    const totalElo = members.reduce((sum, member) => sum + (member.elo || 0), 0);
-    const averageElo = Math.round(totalElo / members.length);
-    
-    // Prioritize live data for wins and losses
-    const totalWins = members.reduce((sum, member) => {
-      // Use live data wins if available, otherwise use historical data
-      return sum + (member.wins || 0);
-    }, 0);
-    
-    const totalLosses = members.reduce((sum, member) => {
-      // Use live data losses if available, otherwise use historical data
-      return sum + (member.losses || 0);
-    }, 0);
-    
-    const winRate = totalWins + totalLosses > 0 
-      ? ((totalWins / (totalWins + totalLosses)) * 100).toFixed(1)
-      : '0.0';
-
     // Calculate member count from the total study group members
     const totalMemberCount = Object.keys(memberNames).length;
 
-    const result = {
-      averageElo,
-      totalWins,
-      totalLosses,
-      winRate,
+    return {
+      averageElo: 0,
+      totalWins: 0,
+      totalLosses: 0,
+      winRate: '0.0',
       memberCount: totalMemberCount
     };
-
-    console.log('📊 TeamStatsSummary Calculated Stats:', result);
-    console.log('📊 TeamStatsSummary Member Data:', Object.values(memberLatestData).map(m => ({
-      summonerName: m.summoner_name || 'unknown',
-      elo: m.elo,
-      wins: m.wins,
-      losses: m.losses
-    })));
-
-    return result;
   };
 
   const currentStats = calculateCurrentTeamStats();

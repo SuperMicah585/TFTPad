@@ -7,6 +7,7 @@ import { studyGroupService } from '../services/studyGroupService';
 import { userService } from '../services/userService';
 import { playerStatsService } from '../services/playerStatsService';
 import { teamStatsService, type MemberData } from '../services/teamStatsService';
+import { livePlayerService } from '../services/livePlayerService';
 import { api } from '../services/apiUtils';
 
 import { riotService } from '../services/riotService';
@@ -181,12 +182,17 @@ export function GroupDetailPage() {
     }
   }, [groupId]);
 
-  // Fetch initial counts to determine placeholder quantities
+  // Fetch initial counts to determine placeholder quantities - NO CACHING
   const fetchInitialCounts = async (id: number) => {
     try {
-      // Get group data and member count in parallel with faster timeout
+      // Clear cache before fetching to ensure fresh data
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
+      
+      // Get group data and member count in parallel with no caching
       const [groupDetails, groupUsers] = await Promise.all([
-        studyGroupService.getStudyGroup(id), // Remove retry for faster initial load
+        // Direct API call to bypass caching
+        fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/study-groups/${id}`).then(res => res.json()),
         studyGroupService.getStudyGroupUsers(id, false) // Don't update ranks for count
       ]);
       
@@ -210,7 +216,17 @@ export function GroupDetailPage() {
       ]).then(async () => {
         // After loading team stats, check if we need to create initial rank audit events
         try {
-          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
+          // Direct API call to bypass caching
+          const queryParams = new URLSearchParams();
+          queryParams.append('group_id', id.toString());
+          queryParams.append('start_date', groupDetails.created_at);
+          
+          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch member stats: ${response.statusText}`);
+          }
+          const memberStats = await response.json();
+          
           if (!memberStats.events || memberStats.events.length === 0) {
             console.log('📊 No rank audit events found, creating initial events...');
             // Get members with riot_id and create initial rank audit events
@@ -362,19 +378,27 @@ export function GroupDetailPage() {
     }
   };
 
-  // Function to fetch updated group information
+  // Function to fetch updated group information - NO CACHING
   const fetchUpdatedGroupInfo = async (id: number) => {
     console.log('🔄 Starting group info update for group ID:', id);
     setIsGroupInfoLoading(true);
     try {
+      // Clear cache before fetching to ensure fresh data
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
+      
       // Step 1: Update the database with fresh data from Riot Games API
       console.log('📡 Step 1: Updating database with fresh rank data from Riot API...');
       const updatedGroupUsers = await studyGroupService.getStudyGroupUsers(id, true); // updateRanks = true
       console.log('📊 Database updated with fresh data for', updatedGroupUsers.length, 'members');
       
-      // Step 2: Fetch the updated group details from database
+      // Step 2: Fetch the updated group details from database (no caching)
       console.log('📡 Step 2: Fetching updated group details from database...');
-      const updatedGroupDetails = await studyGroupService.getStudyGroup(id);
+      const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/study-groups/${id}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch study group: ${response.statusText}`);
+      }
+      const updatedGroupDetails = await response.json();
       console.log('📊 Updated group details fetched from database');
       
       // Step 3: Update the UI with the fresh data
@@ -421,11 +445,10 @@ export function GroupDetailPage() {
       console.error('❌ Error fetching updated group info:', error);
       return [];
     } finally {
-      // Add a small delay to make the loading state visible and ensure database operations complete
-      setTimeout(() => {
-        setIsGroupInfoLoading(false);
-        console.log('🏁 Group info loading finished');
-      }, 1000);
+      // Ensure database operations are complete before finishing
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setIsGroupInfoLoading(false);
+      console.log('🏁 Group info loading finished');
     }
   };
 
@@ -574,9 +597,20 @@ export function GroupDetailPage() {
         console.log(`📊 Rank audit events created: ${auditResults} successful`);
       }
       
-      // Step 4: Final refresh of team stats to show updated data
+      // Step 4: Wait a moment for database operations to fully complete
+      setUpdateProgress('Waiting for database operations to complete...');
+      console.log('📡 Step 4: Waiting for database operations to complete...');
+      await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds for DB operations
+      
+      // Step 5: Clear cache to ensure fresh data
+      setUpdateProgress('Clearing cache for fresh data...');
+      console.log('📡 Step 5: Clearing cache to ensure fresh data...');
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
+      
+      // Step 6: Final refresh of team stats to show updated data
       setUpdateProgress('Refreshing team stats...');
-      console.log('📡 Step 4: Refreshing team stats with updated data...');
+      console.log('📡 Step 6: Refreshing team stats with updated data...');
       await fetchTeamStatsData(parseInt(groupId), false); // Don't fetch live data again, just refresh from database
       
       setUpdateProgress('Update completed successfully!');
@@ -594,7 +628,7 @@ export function GroupDetailPage() {
     }
   };
 
-  // Independent team stats data fetching
+  // Independent team stats data fetching - NO CACHING for GroupDetailPage
   const fetchTeamStatsData = async (id: number, loadLiveData: boolean = false) => {
     setTeamStatsError(null);
     if (loadLiveData) {
@@ -602,13 +636,27 @@ export function GroupDetailPage() {
     }
     
     try {
+      // Clear cache before fetching to ensure fresh data
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
+      
       // Use the group data we already have instead of fetching again
       const groupDetails = group || await studyGroupService.getStudyGroup(id);
       
       if (loadLiveData) {
         // Only fetch live data when explicitly requested
         try {
-          const combinedStats = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
+          // Force fresh data by clearing cache and using direct API calls
+          const queryParams = new URLSearchParams();
+          queryParams.append('group_id', id.toString());
+          queryParams.append('start_date', groupDetails.created_at);
+          queryParams.append('include_members', 'true');
+          
+          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch combined team stats: ${response.statusText}`);
+          }
+          const combinedStats = await response.json();
           
           setTeamStatsData(combinedStats.events || []);
           setMemberNames(combinedStats.memberNames || {});
@@ -617,8 +665,16 @@ export function GroupDetailPage() {
         } catch (combinedError) {
           console.log('⚠️ Combined API failed, using separate calls:', combinedError);
           
-          // Fallback to separate API calls
-          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
+          // Fallback to separate API calls with no caching
+          const queryParams = new URLSearchParams();
+          queryParams.append('group_id', id.toString());
+          queryParams.append('start_date', groupDetails.created_at);
+          
+          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch member stats: ${response.statusText}`);
+          }
+          const memberStats = await response.json();
           
           // Handle team stats data
           let allEvents: any[] = [];
@@ -647,7 +703,16 @@ export function GroupDetailPage() {
       } else {
         // Just fetch basic team stats without live data
         try {
-          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
+          // Force fresh data by using direct API calls
+          const queryParams = new URLSearchParams();
+          queryParams.append('group_id', id.toString());
+          queryParams.append('start_date', groupDetails.created_at);
+          
+          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
+          if (!response.ok) {
+            throw new Error(`Failed to fetch member stats: ${response.statusText}`);
+          }
+          const memberStats = await response.json();
           
           let allEvents: any[] = [];
           let names: { [riotId: string]: string } = {};

@@ -136,7 +136,7 @@ export function TeamStatsChart({
         const date = new Date(event.created_at);
         console.log('Processing date:', event.created_at, '-> formatted:', date.toLocaleDateString());
         return {
-          x: date.toLocaleDateString(), // Use just the date for now
+          x: date, // Use actual Date object for proper chronological sorting
           y: event.elo,
           date: event.created_at,
           timestamp: date.getTime(), // Keep timestamp for sorting
@@ -184,10 +184,14 @@ export function TeamStatsChart({
     };
   }).filter(series => series !== null);
 
-  // Simplify x-axis values since we no longer have multiple points per day
+  // Keep x-axis as Date objects for proper chronological sorting
   chartData.forEach(series => {
     series.data.forEach(point => {
-      point.x = point.isLive ? 'Current' : point.displayDate;
+      // Keep x as Date object for proper sorting, but ensure displayDate is available for tooltips
+      if (point.isLive) {
+        point.x = 'Current';
+      }
+      // For non-live data, x remains as Date object
     });
   });
   
@@ -264,12 +268,15 @@ export function TeamStatsChart({
       </div>
       <div style={{ height: height }}>
         <ResponsiveLine
-          curve="natural"
+          curve="monotoneX"
           data={chartData}
           margin={{ top: 50, right: 80, bottom: 100, left: 80 }}
           colors={chartData.map((_, index) => `hsl(${index * 60}, 70%, 50%)`)}
           xScale={{ 
-            type: 'point'
+            type: 'time',
+            format: '%Y-%m-%d',
+            useUTC: false,
+            precision: 'day'
           }}
           yScale={{ 
             type: 'linear', 
@@ -284,7 +291,8 @@ export function TeamStatsChart({
             legendPosition: 'middle',
             tickRotation: -45,
             tickSize: 5,
-            tickPadding: 8
+            tickPadding: 8,
+            format: '%m/%d/%Y'
           }}
           axisLeft={{ 
             legend: 'ELO Rating', 
@@ -308,7 +316,9 @@ export function TeamStatsChart({
                 <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <span className="whitespace-nowrap">{point.data.x}</span>
+                <span className="whitespace-nowrap">
+                  {point.data.isLive ? point.data.x : point.data.displayDate}
+                </span>
                 {point.data.isLive && (
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1">
                     <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

@@ -1,10 +1,12 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { createPortal } from 'react-dom'
 import { Users, Zap, Crown, Calendar, Globe, SquareX, ChevronsLeft, FileText, HelpCircle } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
 import { teamStatsService } from '../services/teamStatsService'
+import { livePlayerService } from '../services/livePlayerService'
 
 import { riotService } from '../services/riotService'
 import { TeamStatsContent } from './TeamStatsContent'
@@ -337,15 +339,25 @@ export function GroupsTab({
     }
   };
 
-  const fetchTeamStats = async (groupId: number, startDate: string) => {
+    const fetchTeamStats = async (groupId: number, startDate: string) => {
     try {
       setTeamStatsLoading(true);
       setTeamStatsError(null);
       
-  
+      // Clear cache and use direct API call - NO CACHING
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
       
-      // Get member stats for the group
-      const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
+      // Direct API call to bypass caching
+      const queryParams = new URLSearchParams();
+      queryParams.append('group_id', groupId.toString());
+      queryParams.append('start_date', startDate);
+      
+      const response = await fetch(`${API_BASE_URL}/api/team-stats/members?${queryParams}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch member stats: ${response.statusText}`);
+      }
+      const memberStats = await response.json();
       
       
       
@@ -1266,8 +1278,50 @@ function StudyGroupCard({
   memberCounts?: MemberCounts
   onTileClick: (groupId: number) => void
 }) {
+  const [showEloTooltip, setShowEloTooltip] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const eloHelpRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const handleEloHelpMouseEnter = () => {
+    if (eloHelpRef.current && cardRef.current) {
+      const helpRect = eloHelpRef.current.getBoundingClientRect();
+      const cardRect = cardRef.current.getBoundingClientRect();
+      const tooltipHeight = 200; // Approximate height of the tooltip
+      const viewportHeight = window.innerHeight;
+      
+      // Check if there's enough space above the card
+      const spaceAbove = cardRect.top;
+      const spaceBelow = viewportHeight - cardRect.bottom;
+      
+      // Position tooltip above or below based on available space
+      let y;
+      
+      if (spaceAbove >= tooltipHeight + 20) {
+        // Position above the card
+        y = cardRect.top - 10;
+      } else if (spaceBelow >= tooltipHeight + 20) {
+        // Position below the card
+        y = cardRect.bottom + 10;
+      } else {
+        // Position in the middle of the viewport if not enough space
+        y = Math.max(10, viewportHeight / 2 - tooltipHeight / 2);
+      }
+      
+      setTooltipPosition({
+        x: helpRect.left + helpRect.width / 2,
+        y: y
+      });
+    }
+    setShowEloTooltip(true);
+  };
+
+  const handleEloHelpMouseLeave = () => {
+    setShowEloTooltip(false);
+  };
   return (
     <div 
+      ref={cardRef}
       className="relative w-full"
       onClick={() => onTileClick(group.id)}
     >
@@ -1347,38 +1401,48 @@ function StudyGroupCard({
               <span className="font-medium text-yellow-600 truncate">
                 {group.avg_elo ? group.avg_elo.toLocaleString() : 'N/A'} ELO
               </span>
-              <HelpCircle 
-                className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help transition-colors" 
-                onMouseEnter={(e) => {
-                  const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (tooltip) tooltip.classList.remove('hidden');
-                }}
-                onMouseLeave={(e) => {
-                  const tooltip = e.currentTarget.nextElementSibling as HTMLElement;
-                  if (tooltip) tooltip.classList.add('hidden');
-                }}
-              />
-              {/* ELO Info Tooltip */}
-              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-50 hidden max-w-xs">
-                <div className="text-center">
-                  <div className="font-semibold mb-1">ELO Conversion</div>
-                  <div className="space-y-1 text-left">
-                    <div>Iron: 0-399</div>
-                    <div>Bronze: 400-799</div>
-                    <div>Silver: 800-1199</div>
-                    <div>Gold: 1200-1599</div>
-                    <div>Platinum: 1600-1999</div>
-                    <div>Emerald: 2000-2399</div>
-                    <div>Diamond: 2400-2799</div>
-                    <div>Master+: 2800+</div>
-                  </div>
-                </div>
-                <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+              <div ref={eloHelpRef}>
+                <HelpCircle 
+                  className="w-3 h-3 text-gray-400 hover:text-gray-600 cursor-help transition-colors" 
+                  onMouseEnter={handleEloHelpMouseEnter}
+                  onMouseLeave={handleEloHelpMouseLeave}
+                />
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ELO Tooltip Portal */}
+      {showEloTooltip && createPortal(
+        <div 
+          className="fixed z-[99999] px-3 py-2 bg-gray-900 text-white text-xs rounded-lg shadow-lg max-w-xs"
+          style={{
+            left: tooltipPosition.x,
+            top: tooltipPosition.y,
+            transform: 'translateX(-50%)',
+            pointerEvents: 'none',
+            maxHeight: '80vh',
+            overflowY: 'auto'
+          }}
+        >
+          <div className="text-center">
+            <div className="font-semibold mb-1">ELO Conversion</div>
+            <div className="space-y-1 text-left">
+              <div>Iron: 0-399</div>
+              <div>Bronze: 400-799</div>
+              <div>Silver: 800-1199</div>
+              <div>Gold: 1200-1599</div>
+              <div>Platinum: 1600-1999</div>
+              <div>Emerald: 2000-2399</div>
+              <div>Diamond: 2400-2799</div>
+              <div>Master+: 2800+</div>
+            </div>
+          </div>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

@@ -5,6 +5,7 @@ import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
 import { studyGroupInviteService, type StudyGroupInvite } from '../services/studyGroupInviteService'
 import { teamStatsService } from '../services/teamStatsService'
+import { livePlayerService } from '../services/livePlayerService'
 
 import { playerStatsService } from '../services/playerStatsService'
 import { TeamStatsContent } from './TeamStatsContent'
@@ -74,8 +75,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [invitationsLoading, setInvitationsLoading] = useState(false)
   
   // Placeholder state
-  const [placeholderCount, setPlaceholderCount] = useState<number>(0) // Start with 0, wait for real count
-  const [showPlaceholders, setShowPlaceholders] = useState(false) // Don't show placeholders until we have count
+  const [placeholderCount, setPlaceholderCount] = useState<number>(2) // Start with 2 placeholders
+  const [showPlaceholders, setShowPlaceholders] = useState(true) // Show placeholders immediately
   const [isDataLoading, setIsDataLoading] = useState(false) // Track if we're actively fetching data
   const [isCountLoading, setIsCountLoading] = useState(false) // Track if we're fetching the count
   
@@ -87,7 +88,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   // Update loading states when auth loading state changes
   useEffect(() => {
     if (authLoading) {
-      setIsCountLoading(true) // Show loading spinner during auth
+      setIsCountLoading(true) // Track loading during auth
+      setShowPlaceholders(true) // Show placeholders during auth
     } else {
       setIsCountLoading(false)
     }
@@ -110,85 +112,56 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
 
       try {
         setError(null)
-        setIsCountLoading(true) // Show loading spinner while getting count
+        setIsCountLoading(true) // Track loading state
         
         // Get the count of user's study groups first
         let userStudyGroups: any[] = []
         if (userId) {
           userStudyGroups = await studyGroupService.getUserStudyGroupsByUser(userId)
-          setPlaceholderCount(userStudyGroups.length)
+          setPlaceholderCount(Math.max(userStudyGroups.length, 2)) // At least 2 placeholders
           setIsCountLoading(false) // Hide loading spinner, got the count
           
-          // Now show placeholders with correct count and start loading data
-          setShowPlaceholders(true)
+          // Keep placeholders visible while processing data
           setIsDataLoading(true)
         }
         
-        // Transform the data to match the expected format
-        const transformedGroups = await Promise.all(
-          userStudyGroups.map(async (userGroup: any) => {
-            const group = userGroup.study_group
-            if (!group) return null
-            
-            try {
-              // Get members for this group (this runs in parallel for all groups)
-              // Disable rank updates for faster loading
-              const groupMembers = await studyGroupService.getStudyGroupUsers(group.id, false)
-              
-              // Transform members to match expected format
-              const members = groupMembers.map(member => ({
-                summoner_name: member.summoner_name || 'Unknown User',
-                elo: member.elo || 0,
-                rank: member.rank || 'UNRANKED',
-                owner: member.owner, // Preserve the owner field to identify captain
-                icon_id: member.icon_id || undefined,
-                user_id: member.user_id || undefined
-              }))
-              
-              // Calculate average ELO
-              const totalElo = members.reduce((sum, member) => sum + member.elo, 0);
-              const avgElo = members.length > 0 ? Math.round(totalElo / members.length) : 0;
-              
-              return {
-                id: group.id,
-                name: group.group_name,
-                role: userGroup.owner === 1 ? "captain" : "member", // Use owner field to determine role
-                members: members,
-                total_elo: totalElo,
-                avg_elo: avgElo,
-                created_date: group.created_at,
-                description: group.description || "",
-                max_members: 20, // Default - we'll need to add this field
-                current_members: members.length,
-                meeting_schedule: group.meeting_schedule || [],
-                application_instructions: group.application_instructions || "",
-                time: group.time || "",
-                timezone: group.timezone || "",
-                image_url: group.image_url || ""
-              }
-            } catch (memberError) {
-              console.error(`Failed to fetch members for group ${group.id}:`, memberError)
-              // Return group with empty members instead of failing completely
-              return {
-                id: group.id,
-                name: group.group_name,
-                role: userGroup.owner === 1 ? "captain" : "member",
-                members: [],
-                total_elo: 0,
-                avg_elo: 0,
-                created_date: group.created_at,
-                description: group.description || "",
-                max_members: 20,
-                current_members: 0,
-                meeting_schedule: group.meeting_schedule || [],
-                application_instructions: group.application_instructions || "",
-                time: group.time || "",
-                timezone: group.timezone || "",
-                image_url: group.image_url || ""
-              }
-            }
-          })
-        )
+        // Transform the data to match the expected format (using enhanced data from backend)
+        const transformedGroups = userStudyGroups.map((userGroup: any) => {
+          const group = userGroup.study_group
+          if (!group) return null
+          
+          // Use the enhanced member data from the backend
+          const members = (userGroup.members || []).map((member: any) => ({
+            summoner_name: member.summoner_name || 'Unknown User',
+            elo: member.elo || 0,
+            rank: member.rank || 'UNRANKED',
+            owner: member.owner, // Preserve the owner field to identify captain
+            icon_id: member.icon_id || undefined,
+            user_id: member.user_id || undefined
+          }))
+          
+          // Calculate average ELO
+          const totalElo = members.reduce((sum: number, member: any) => sum + member.elo, 0);
+          const avgElo = members.length > 0 ? Math.round(totalElo / members.length) : 0;
+          
+          return {
+            id: group.id,
+            name: group.group_name,
+            role: userGroup.owner === 1 ? "captain" : "member", // Use owner field to determine role
+            members: members,
+            total_elo: totalElo,
+            avg_elo: avgElo,
+            created_date: group.created_at,
+            description: group.description || "",
+            max_members: 20, // Default - we'll need to add this field
+            current_members: members.length,
+            meeting_schedule: group.meeting_schedule || [],
+            application_instructions: group.application_instructions || "",
+            time: group.time || "",
+            timezone: group.timezone || "",
+            image_url: group.image_url || ""
+          }
+        })
         
         // Filter out null values and set the groups
         const validGroups = transformedGroups.filter(group => group !== null)
@@ -739,8 +712,20 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       
       console.log('🚀 Starting to fetch team stats for group:', groupId, 'from date:', startDate);
       
-      // Get member stats for the group
-      const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
+      // Clear cache and use direct API call - NO CACHING
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
+      
+      // Direct API call to bypass caching
+      const queryParams = new URLSearchParams();
+      queryParams.append('group_id', groupId.toString());
+      queryParams.append('start_date', startDate);
+      
+      const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch member stats: ${response.statusText}`);
+      }
+      const memberStats = await response.json();
       
       console.log('📊 Received member stats:', memberStats);
       console.log('📊 Member stats type:', typeof memberStats);
@@ -935,18 +920,12 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              {!userId ? 'Login to Create Group' : !riotAccount ? 'Link Riot Account to Create Group' : 'Create New Group'}
+              {!userId ? 'Login Required' : !riotAccount ? 'Link Riot Account' : 'Create New Group'}
             </button>
           </div>
         </div>
 
-        {isCountLoading ? (
-          <div className="bg-orange-50 border border-orange-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
-            <LoadingSpinner size="lg" className="mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-orange-800 mb-2">Loading Your Groups</h3>
-            <p className="text-orange-700">Getting your group information...</p>
-          </div>
-        ) : error ? (
+        {error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
             <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
@@ -964,7 +943,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
               Try Again
             </button>
           </div>
-        ) : (showPlaceholders || isDataLoading) ? (
+        ) : (showPlaceholders || isDataLoading || isCountLoading) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: placeholderCount }, (_, index) => (
               <PlaceholderGroupCard key={`placeholder-${index}`} />
@@ -2872,8 +2851,20 @@ function InvitationCard({
       setTeamStatsLoading(true);
       setTeamStatsError(null);
       
-      // Get member stats for the group
-      const memberStats = await teamStatsService.getMemberStats(groupId, startDate);
+      // Clear cache and use direct API call - NO CACHING
+      teamStatsService.clearCache();
+      livePlayerService.clearCache();
+      
+      // Direct API call to bypass caching
+      const queryParams = new URLSearchParams();
+      queryParams.append('group_id', groupId.toString());
+      queryParams.append('start_date', startDate);
+      
+      const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch member stats: ${response.statusText}`);
+      }
+      const memberStats = await response.json();
       
       // Handle the new combined API response format
       let allEvents: any[] = [];

@@ -158,6 +158,19 @@ export function TeamAverageChart({
       const totalLosses = membersOnDate.reduce((sum, point) => {
         return sum + ((point as any).losses || 0);
       }, 0);
+      
+      // Log details for the most recent date
+      if (date === sortedDates[sortedDates.length - 1]) {
+        console.log('📊 Team Average - Most recent date calculation:', {
+          date: date,
+          membersOnDate: membersOnDate.map(p => ({
+            wins: (p as any).wins,
+            losses: (p as any).losses
+          })),
+          totalWins: totalWins,
+          totalLosses: totalLosses
+        });
+      }
 
       // Check if this date has any live data points
       const hasLiveData = membersOnDate.some(point => (point as any).isLive);
@@ -182,6 +195,17 @@ export function TeamAverageChart({
   const averageChartData = calculateAverageChartData();
   console.log('📊 Team Average chart data:', averageChartData);
   console.log('📊 Team Average live data points:', averageChartData[0]?.data.filter(point => (point as any).isLive));
+  
+  // Log the latest data point details
+  if (averageChartData[0] && averageChartData[0].data.length > 0) {
+    const latestPoint = averageChartData[0].data[averageChartData[0].data.length - 1];
+    console.log('📊 Team Average - Latest point:', {
+      date: latestPoint.x,
+      totalWins: latestPoint.totalWins,
+      totalLosses: latestPoint.totalLosses,
+      memberCount: latestPoint.memberCount
+    });
+  }
   console.log('📊 Member chart data (input for average):', memberChartData);
   console.log('📊 Member chart data with live points:', memberChartData.map(series => ({
     id: series.id,
