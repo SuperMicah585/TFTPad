@@ -67,14 +67,27 @@ GET /api/team-stats?group_id={group_id}&start_date={start_date}
 }
 ```
 
-### 2. Get Member Stats
+### 2. Get Member Stats (Optimized)
 ```
-GET /api/team-stats/members?group_id={group_id}&start_date={start_date}
+GET /api/team-stats/members?group_id={group_id}&start_date={start_date}&include_members={include_members}
 ```
 
 **Parameters:**
 - `group_id` (required): Study group ID
 - `start_date` (required): ISO date string for filtering events
+- `include_members` (optional): Set to 'true' to include live data from Riot API (default: false)
+
+**Performance Optimization:**
+- Uses a single JOIN query to fetch group members and their Riot accounts
+- Reduces database round trips from 2 queries to 1 query
+- **Backend data optimization:**
+  - Deduplicates same-day entries (keeps highest ELO)
+  - Limits to 50 most recent events per user
+  - Pre-sorts data chronologically
+  - Filters out invalid events
+  - Adds summoner_name to each event
+- Improves response time and reduces payload size
+- Requires foreign key constraint between user_to_study_group and riot_accounts
 
 **Response:**
 ```json
@@ -128,11 +141,20 @@ GET /api/team-stats/members?group_id={group_id}&start_date={start_date}
 ## Setup Instructions
 
 ### 1. Database Setup
-Run the SQL script to create the `rank_audit_events` table:
+Run the SQL scripts to set up the required tables and optimizations:
 
 ```bash
-# Execute the SQL script in your Supabase database
+# Execute the SQL scripts in your Supabase database
 # File: create_rank_audit_events_table.sql
+# File: add_foreign_key_constraint.sql (for performance optimization)
+```
+
+**Required Optimization:**
+To enable the optimized JOIN query, you must run the foreign key constraint script:
+```sql
+-- This adds a foreign key between user_to_study_group and riot_accounts
+-- Enables single-query JOIN operations for better performance
+-- REQUIRED for the API to function properly
 ```
 
 ### 2. Backend Setup

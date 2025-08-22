@@ -7,7 +7,7 @@ import { RiotConnectModal } from './auth/RiotConnectModal'
 import { Footer } from './Footer'
 import { LoadingSpinner } from './auth/LoadingSpinner'
 import { userService } from '../services/userService'
-import { tftService } from '../services/tftService'
+// tftService removed - TFT functionality was removed
 import { Calendar, User, Clock, Star, Award, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface RiotAccount {
@@ -92,15 +92,8 @@ function ProfileContent() {
             // Continue with fetching other data even if icon update fails
           }
           
-          // Fetch league data
-          try {
-            const league = await tftService.getTftLeagueData(account.riot_id, userId)
-            setLeagueData(league)
-          } catch (leagueError) {
-            console.error('Error fetching league data:', leagueError)
-            setLeagueDataError('Failed to load TFT league data. Please try again later.')
-            setLeagueData([])
-          }
+          // TFT league data functionality removed
+          setLeagueData([])
         }
       } catch (accountError) {
         console.error('Error fetching Riot account:', accountError)

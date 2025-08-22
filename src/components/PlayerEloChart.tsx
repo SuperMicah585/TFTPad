@@ -84,7 +84,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
               y: event.elo,
               date: event.created_at,
               timestamp: date.getTime(), // Keep timestamp for sorting
-              displayDate: date.toLocaleDateString(),
+              displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
               displayTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               wins: event.wins,
               losses: event.losses,
@@ -119,15 +119,52 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
     }
   ];
 
-  // Create sparse tick values for x-axis - only show the date name, not the index
-  const allDates = chartData[0].data.map(point => point.displayDate);
-  const uniqueDates = [...new Set(allDates)];
-  const sparseTickValues = uniqueDates.map(date => {
-    if (date === 'Current') return 'Current';
-    // Find the first data point for this date and use its exact x value
-    const firstPointForDate = chartData[0].data.find(point => point.displayDate === date);
-    return firstPointForDate ? firstPointForDate.x : date;
-  });
+  // Calculate smart tick values for x-axis (max 10 labels with even visual spacing)
+  const calculateSmartTickValues = () => {
+    const allDates = chartData[0].data.map(point => point.displayDate);
+    const uniqueDates = [...new Set(allDates)];
+    
+    if (uniqueDates.length <= 10) {
+      // If 10 or fewer dates, show all
+      return uniqueDates.map(date => {
+        if (date === 'Current') return 'Current';
+        // Find the first data point for this date and use its exact x value
+        const firstPointForDate = chartData[0].data.find(point => point.displayDate === date);
+        return firstPointForDate ? firstPointForDate.x : date;
+      });
+    }
+
+    // If more than 10 dates, show evenly spaced labels by index (visual spacing)
+    const step = Math.floor(uniqueDates.length / 9); // 9 intervals = 10 labels
+    const smartTicks = [];
+    
+    for (let i = 0; i < uniqueDates.length; i += step) {
+      const date = uniqueDates[i];
+      if (date === 'Current') {
+        smartTicks.push('Current');
+      } else {
+        // Find the first data point for this date and use its exact x value
+        const firstPointForDate = chartData[0].data.find(point => point.displayDate === date);
+        smartTicks.push(firstPointForDate ? firstPointForDate.x : date);
+      }
+      if (smartTicks.length >= 10) break;
+    }
+    
+    // Always include the last date
+    if (smartTicks[smartTicks.length - 1] !== uniqueDates[uniqueDates.length - 1]) {
+      const lastDate = uniqueDates[uniqueDates.length - 1];
+      if (lastDate === 'Current') {
+        smartTicks[smartTicks.length - 1] = 'Current';
+      } else {
+        const firstPointForDate = chartData[0].data.find(point => point.displayDate === lastDate);
+        smartTicks[smartTicks.length - 1] = firstPointForDate ? firstPointForDate.x : lastDate;
+      }
+    }
+    
+    return smartTicks;
+  };
+
+  const smartTickValues = calculateSmartTickValues();
 
   console.log('Chart data being passed to Nivo:', chartData);
 
@@ -176,8 +213,8 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
             legend: 'Date',
             legendOffset: 70,
             legendPosition: 'middle',
-            // Show sparse labels - only show the date name, not the index
-            tickValues: sparseTickValues,
+            // Show smart labels - max 10 labels at even intervals
+            tickValues: smartTickValues,
             // Custom tick format to show just the date part
             format: (value) => {
               if (value === 'Current') return 'Current';

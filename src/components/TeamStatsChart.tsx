@@ -140,7 +140,7 @@ export function TeamStatsChart({
           y: event.elo,
           date: event.created_at,
           timestamp: date.getTime(), // Keep timestamp for sorting
-          displayDate: date.toLocaleDateString(),
+          displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
           displayTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           wins: event.wins,
           losses: event.losses,
@@ -223,6 +223,44 @@ export function TeamStatsChart({
     });
   });
 
+  // Calculate smart tick values for x-axis (max 10 labels with even visual spacing)
+  const calculateSmartTickValues = () => {
+    // Get all unique dates from all series
+    const allDates = new Set<Date>();
+    chartData.forEach(series => {
+      series.data.forEach(point => {
+        if (point.x instanceof Date) {
+          allDates.add(point.x);
+        }
+      });
+    });
+
+    const sortedDates = Array.from(allDates).sort((a, b) => a.getTime() - b.getTime());
+    
+    if (sortedDates.length <= 10) {
+      // If 10 or fewer dates, show all
+      return sortedDates;
+    }
+
+    // If more than 10 dates, show evenly spaced labels by index (visual spacing)
+    const step = Math.floor(sortedDates.length / 9); // 9 intervals = 10 labels
+    const smartTicks = [];
+    
+    for (let i = 0; i < sortedDates.length; i += step) {
+      smartTicks.push(sortedDates[i]);
+      if (smartTicks.length >= 10) break;
+    }
+    
+    // Always include the last date
+    if (smartTicks[smartTicks.length - 1] !== sortedDates[sortedDates.length - 1]) {
+      smartTicks[smartTicks.length - 1] = sortedDates[sortedDates.length - 1];
+    }
+    
+    return smartTicks;
+  };
+
+  const smartTickValues = calculateSmartTickValues();
+
   // Check if we have any valid data points after filtering
   const hasValidData = chartData.length > 0 && chartData.some(series => series && series.data.length > 0);
 
@@ -274,7 +312,7 @@ export function TeamStatsChart({
           colors={chartData.map((_, index) => `hsl(${index * 60}, 70%, 50%)`)}
           xScale={{ 
             type: 'time',
-            format: '%Y-%m-%d',
+            format: '%m-%d',
             useUTC: false,
             precision: 'day'
           }}
@@ -292,7 +330,8 @@ export function TeamStatsChart({
             tickRotation: -45,
             tickSize: 5,
             tickPadding: 8,
-            format: '%m/%d/%Y'
+            format: '%m/%d',
+            tickValues: smartTickValues
           }}
           axisLeft={{ 
             legend: 'ELO Rating', 

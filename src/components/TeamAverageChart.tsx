@@ -104,13 +104,17 @@ export function TeamAverageChart({
     const memberName = truncateName(summonerName);
     
     // Start with historical data
-    let chartPoints = events.map(event => ({
-      x: event.created_at.split('T')[0],
-      y: event.elo,
-      wins: event.wins,
-      losses: event.losses,
-      isLive: false
-    }));
+    let chartPoints = events.map(event => {
+      const date = new Date(event.created_at);
+      return {
+        x: date, // Use Date object for time scale
+        y: event.elo,
+        wins: event.wins,
+        losses: event.losses,
+        isLive: false,
+        displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
+      };
+    });
     
     // Note: Live data is no longer added to charts - only date-based data is shown
     
@@ -129,20 +133,27 @@ export function TeamAverageChart({
   // Calculate average ELO data
   const calculateAverageChartData = () => {
     // Get all unique dates from all members
-    const allDates = new Set<string>();
+    const allDates = new Set<Date>();
     memberChartData.forEach(series => {
       series.data.forEach(point => {
-        allDates.add(point.x as string);
+        if (point.x instanceof Date) {
+          allDates.add(point.x);
+        }
       });
     });
 
     // Sort dates chronologically
-    const sortedDates = Array.from(allDates).sort();
+    const sortedDates = Array.from(allDates).sort((a, b) => a.getTime() - b.getTime());
 
     // Calculate average ELO for each date
     const averageData = sortedDates.map(date => {
       const membersOnDate = memberChartData
-        .map(series => series.data.find(point => point.x === date))
+        .map(series => series.data.find(point => {
+          if (point.x instanceof Date) {
+            return point.x.toDateString() === date.toDateString();
+          }
+          return false;
+        }))
         .filter(point => point !== undefined);
 
       if (membersOnDate.length === 0) return null;
@@ -160,9 +171,9 @@ export function TeamAverageChart({
       }, 0);
       
       // Log details for the most recent date
-      if (date === sortedDates[sortedDates.length - 1]) {
+      if (date.toDateString() === sortedDates[sortedDates.length - 1].toDateString()) {
         console.log('📊 Team Average - Most recent date calculation:', {
-          date: date,
+          date: date.toDateString(),
           membersOnDate: membersOnDate.map(p => ({
             wins: (p as any).wins,
             losses: (p as any).losses
@@ -181,7 +192,8 @@ export function TeamAverageChart({
         memberCount: membersOnDate.length,
         totalWins: totalWins,
         totalLosses: totalLosses,
-        isLive: hasLiveData
+        isLive: hasLiveData,
+        displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
       };
     }).filter(point => point !== null);
 
@@ -222,6 +234,38 @@ export function TeamAverageChart({
     });
   }
 
+  // Calculate smart tick values for x-axis (max 10 labels with even visual spacing)
+  const calculateSmartTickValues = () => {
+    if (!averageChartData[0] || averageChartData[0].data.length === 0) {
+      return [];
+    }
+
+    const allDates = averageChartData[0].data.map(point => point.x as Date);
+    
+    if (allDates.length <= 10) {
+      // If 10 or fewer dates, show all
+      return allDates;
+    }
+
+    // If more than 10 dates, show evenly spaced labels by index (visual spacing)
+    const step = Math.floor(allDates.length / 9); // 9 intervals = 10 labels
+    const smartTicks = [];
+    
+    for (let i = 0; i < allDates.length; i += step) {
+      smartTicks.push(allDates[i]);
+      if (smartTicks.length >= 10) break;
+    }
+    
+    // Always include the last date
+    if (smartTicks[smartTicks.length - 1] !== allDates[allDates.length - 1]) {
+      smartTicks[smartTicks.length - 1] = allDates[allDates.length - 1];
+    }
+    
+    return smartTicks;
+  };
+
+  const smartTickValues = calculateSmartTickValues();
+
   return (
     <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 ${className}`}>
       <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2 text-xs">
@@ -240,7 +284,10 @@ export function TeamAverageChart({
           data={averageChartData}
           margin={{ top: 120, right: 80, bottom: 100, left: 80 }}
           xScale={{ 
-            type: 'point'
+            type: 'time',
+            format: '%m-%d',
+            useUTC: false,
+            precision: 'day'
           }}
           yScale={{ 
             type: 'linear', 
@@ -255,7 +302,9 @@ export function TeamAverageChart({
             legendPosition: 'middle',
             tickRotation: -45,
             tickSize: 5,
-            tickPadding: 8
+            tickPadding: 8,
+            format: '%m/%d',
+            tickValues: smartTickValues
           }}
           axisLeft={{ 
             legend: 'Average ELO', 
@@ -300,7 +349,7 @@ export function TeamAverageChart({
                   <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  <span className="whitespace-nowrap">{point.data.x}</span>
+                  <span className="whitespace-nowrap">{point.data.displayDate || (point.data.x instanceof Date ? point.data.x.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }) : String(point.data.x))}</span>
                   {point.data.isLive && (
                     <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>

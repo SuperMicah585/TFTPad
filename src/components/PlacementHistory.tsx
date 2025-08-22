@@ -1,6 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { fetchMatchHistory, type MatchHistoryEntry } from '../services/tftService';
 import { userService } from '../services/userService';
+
+// Define the MatchHistoryEntry type locally since we removed tftService
+interface MatchHistoryEntry {
+  matchId: string;
+  timestamp: number;
+  placement: number;
+  gameLength: number;
+  champions: string[];
+}
 
 // Global cache to prevent multiple components from loading the same user's data
 const globalLoadingCache = new Set<number>();
@@ -36,28 +44,10 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
   
   console.log('🎨 PlacementHistory: Component rendered - userId:', userId, 'instanceId:', instanceId.current);
 
-  // Retry function with exponential backoff for rate limiting
-  const fetchMatchHistoryWithRetry = useCallback(async (puuid: string, region: string, maxRetries = 3): Promise<MatchHistoryEntry[]> => {
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      try {
-        return await fetchMatchHistory(puuid, region);
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : '';
-        
-        // If it's a rate limit error and we haven't exceeded max retries
-        if (errorMessage.includes('429') && attempt < maxRetries) {
-          const delay = Math.pow(2, attempt) * 1000; // Exponential backoff: 1s, 2s, 4s
-          console.log(`Rate limited, retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
-          await new Promise(resolve => setTimeout(resolve, delay));
-          continue;
-        }
-        
-        // For other errors or if we've exceeded retries, throw the error
-        throw error;
-      }
-    }
-    
-    throw new Error('Max retries exceeded');
+  // Placeholder function since TFT service was removed
+  const fetchMatchHistoryWithRetry = useCallback(async (): Promise<MatchHistoryEntry[]> => {
+    // Return empty array since TFT functionality was removed
+    return [];
   }, []);
 
   const loadMatchHistory = useCallback(async () => {
@@ -103,7 +93,7 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
       }
 
       // Fetch match history with retry logic
-      const matchHistory = await fetchMatchHistoryWithRetry(account.riot_id, account.region);
+      const matchHistory = await fetchMatchHistoryWithRetry();
       
       // Take only the last 20 matches
       const last20Matches = matchHistory.slice(0, 20);

@@ -20,14 +20,7 @@ function getPageTitle(pathname: string): string {
       return 'TFTPad - Study Groups - Free Agents';
     case '/study-groups/invitations':
       return 'TFTPad - Study Groups - Invitations';
-    case '/tracker':
-      return 'TFTPad - Tracker';
-    case '/tracker/game':
-      return 'TFTPad - Tracker - Game';
-    case '/tracker/units':
-      return 'TFTPad - Tracker - Units';
-    case '/tracker/comps':
-      return 'TFTPad - Tracker - Comps';
+    // Tracker routes removed - TFT functionality was removed
     case '/blog/defensive-stats':
       return 'TFTPad - Defensive Stats';
     case '/blog/champion-pool':
