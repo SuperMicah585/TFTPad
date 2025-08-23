@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SquareX, Crown, ChevronsLeft, Users, Calendar, Zap, FileText, ChevronDown } from 'lucide-react';
+import { SquareX, Crown, ChevronsLeft, Users, Calendar, Zap, FileText, ChevronDown, UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { LoadingSpinner } from './auth/LoadingSpinner';
 
 import { studyGroupService } from '../services/studyGroupService';
@@ -9,6 +9,7 @@ import { playerStatsService } from '../services/playerStatsService';
 import { teamStatsService, type MemberData } from '../services/teamStatsService';
 import { livePlayerService } from '../services/livePlayerService';
 import { api } from '../services/apiUtils';
+import { studyGroupRequestService, type StudyGroupRequest } from '../services/studyGroupRequestService';
 
 import { riotService } from '../services/riotService';
 import { riotAuthService } from '../services/riotAuthService';
@@ -163,6 +164,12 @@ export function GroupDetailPage() {
   const [selectedPlayerIconError, setSelectedPlayerIconError] = useState(false);
   const [selectedPlayerIconLoading, setSelectedPlayerIconLoading] = useState(false);
 
+  // Study group request state
+  const [userRequest, setUserRequest] = useState<StudyGroupRequest | null>(null);
+  const [isRequestLoading, setIsRequestLoading] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [isUserMember, setIsUserMember] = useState(false);
+
   // Overflow detection state
   const [descriptionOverflow, setDescriptionOverflow] = useState(false);
   const [instructionsOverflow, setInstructionsOverflow] = useState(false);
@@ -181,6 +188,81 @@ export function GroupDetailPage() {
       fetchInitialCounts(parseInt(groupId));
     }
   }, [groupId]);
+
+  // Check if user is a member and has any pending requests
+  useEffect(() => {
+    if (groupId && userId && members.length > 0) {
+      checkUserStatus(parseInt(groupId), userId);
+    }
+  }, [groupId, userId, members]);
+
+  // Check user's status in the group
+  const checkUserStatus = async (groupId: number, userId: number) => {
+    try {
+      // Check if user is already a member
+      const isMember = members.some(member => member.user_id === userId);
+      setIsUserMember(isMember);
+
+      if (!isMember) {
+        // Check if user has a pending request
+        const request = await studyGroupRequestService.checkUserRequest(groupId, userId);
+        setUserRequest(request);
+      } else {
+        setUserRequest(null);
+      }
+    } catch (error) {
+      console.error('Error checking user status:', error);
+      setRequestError('Failed to check user status');
+    }
+  };
+
+  // Handle request to join group
+  const handleRequestToJoin = async () => {
+    if (!groupId || !userId) return;
+
+    setIsRequestLoading(true);
+    setRequestError(null);
+
+    try {
+      const request = await studyGroupRequestService.createRequest({
+        study_group_id: parseInt(groupId),
+        user_id: userId
+      });
+      
+      setUserRequest(request);
+      alert('Request to join group sent successfully!');
+    } catch (error) {
+      console.error('Error creating request:', error);
+      setRequestError(error instanceof Error ? error.message : 'Failed to send request');
+      alert('Failed to send request. Please try again.');
+    } finally {
+      setIsRequestLoading(false);
+    }
+  };
+
+  // Handle cancel request
+  const handleCancelRequest = async () => {
+    if (!userRequest) return;
+
+    if (!confirm('Are you sure you want to cancel your request to join this group?')) {
+      return;
+    }
+
+    setIsRequestLoading(true);
+    setRequestError(null);
+
+    try {
+      await studyGroupRequestService.cancelRequest(userRequest.id);
+      setUserRequest(null);
+      alert('Request cancelled successfully!');
+    } catch (error) {
+      console.error('Error cancelling request:', error);
+      setRequestError(error instanceof Error ? error.message : 'Failed to cancel request');
+      alert('Failed to cancel request. Please try again.');
+    } finally {
+      setIsRequestLoading(false);
+    }
+  };
 
   // Fetch initial counts to determine placeholder quantities - NO CACHING
   const fetchInitialCounts = async (id: number) => {
@@ -1386,6 +1468,81 @@ export function GroupDetailPage() {
                     )}
                   </div>
                 </div>
+
+                {/* Request to Join Section - Only show if user is logged in and not a member */}
+                {userId && !isUserMember && (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                      <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
+                      Join Group
+                    </h4>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      {requestError && (
+                        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-600 text-sm">{requestError}</p>
+                        </div>
+                      )}
+                      
+                      {userRequest ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-2 text-sm">
+                            <CheckCircle className="w-4 h-4 text-yellow-500" />
+                            <span className="text-gray-700">Request pending - waiting for captain's response</span>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            Request sent on {new Date(userRequest.created_at).toLocaleDateString()}
+                          </div>
+                          <button
+                            onClick={handleCancelRequest}
+                            disabled={isRequestLoading}
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isRequestLoading ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <XCircle className="w-4 h-4" />
+                            )}
+                            {isRequestLoading ? 'Cancelling...' : 'Cancel Request'}
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          <p className="text-sm text-gray-700">
+                            Interested in joining this study group? Send a request to the captain.
+                          </p>
+                          <button
+                            onClick={handleRequestToJoin}
+                            disabled={isRequestLoading}
+                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isRequestLoading ? (
+                              <LoadingSpinner size="sm" />
+                            ) : (
+                              <UserPlus className="w-4 h-4" />
+                            )}
+                            {isRequestLoading ? 'Sending Request...' : 'Request to Join'}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* User is already a member */}
+                {userId && isUserMember && (
+                  <div>
+                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                      Group Membership
+                    </h4>
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                      <div className="flex items-center gap-2 text-sm">
+                        <CheckCircle className="w-4 h-4 text-green-500" />
+                        <span className="text-green-700 font-medium">You are a member of this group</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

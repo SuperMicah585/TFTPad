@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react'
-import { UserCheck, Mail, Users, Crown, Calendar, Upload, Eye, SquareX, ChevronsLeft, Award, Star, TrendingUp, TrendingDown, Clock, Globe, FileText, Image, Settings, AlertTriangle, LogOut } from 'lucide-react'
+import { UserCheck, Mail, Users, Crown, Calendar, Upload, Eye, SquareX, ChevronsLeft, Award, Star, TrendingUp, TrendingDown, Clock, Globe, FileText, Image, Settings, AlertTriangle, LogOut, UserPlus, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
 import { studyGroupInviteService, type StudyGroupInvite } from '../services/studyGroupInviteService'
+import { studyGroupRequestService, type StudyGroupRequest } from '../services/studyGroupRequestService'
 import { teamStatsService } from '../services/teamStatsService'
 import { livePlayerService } from '../services/livePlayerService'
 
@@ -73,6 +74,11 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [error, setError] = useState<string | null>(null)
   const [invitations, setInvitations] = useState<StudyGroupInvite[]>([])
   const [invitationsLoading, setInvitationsLoading] = useState(false)
+  
+  // Study group requests state
+  const [groupRequests, setGroupRequests] = useState<{ [groupId: number]: StudyGroupRequest[] }>({})
+  const [requestsLoading, setRequestsLoading] = useState<{ [groupId: number]: boolean }>({})
+  const [respondingToRequest, setRespondingToRequest] = useState<number | null>(null)
   
   // Placeholder state
   const [placeholderCount, setPlaceholderCount] = useState<number>(2) // Start with 2 placeholders
@@ -530,6 +536,50 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     } catch (error) {
       console.error('Error responding to invitation:', error);
       alert(error instanceof Error ? error.message : 'Failed to respond to invitation');
+    }
+  };
+
+  // Fetch requests for a specific group
+  const fetchGroupRequests = async (groupId: number) => {
+    try {
+      setRequestsLoading(prev => ({ ...prev, [groupId]: true }));
+      const requests = await studyGroupRequestService.getGroupRequests(groupId);
+      setGroupRequests(prev => ({ ...prev, [groupId]: requests }));
+    } catch (error) {
+      console.error('Error fetching group requests:', error);
+    } finally {
+      setRequestsLoading(prev => ({ ...prev, [groupId]: false }));
+    }
+  };
+
+  // Handle responding to a study group request
+  const handleRespondToRequest = async (requestId: number, response: 'approve' | 'reject') => {
+    setRespondingToRequest(requestId);
+    
+    try {
+      await studyGroupRequestService.respondToRequest(requestId, response);
+      
+      // Remove the request from all groups
+      setGroupRequests(prev => {
+        const updated = { ...prev };
+        Object.keys(updated).forEach(groupId => {
+          updated[parseInt(groupId)] = updated[parseInt(groupId)].filter(req => req.id !== requestId);
+        });
+        return updated;
+      });
+      
+      // Refresh groups if approved
+      if (response === 'approve') {
+        setRefreshTrigger(prev => prev + 1);
+        setMyGroups([]);
+      }
+      
+      alert(`Request ${response}ed successfully!`);
+    } catch (error) {
+      console.error('Error responding to request:', error);
+      alert(error instanceof Error ? error.message : 'Failed to respond to request');
+    } finally {
+      setRespondingToRequest(null);
     }
   };
 
@@ -1415,7 +1465,13 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   Group Info
                 </button>
                 <button
-                  onClick={() => setActiveSection('manage')}
+                  onClick={() => {
+                    setActiveSection('manage');
+                    // Fetch requests when manage tab is opened for captains
+                    if (selectedGroup?.role === 'captain') {
+                      fetchGroupRequests(selectedGroup.id);
+                    }
+                  }}
                   className={`flex-1 py-2 px-3 rounded-md font-medium transition-colors focus:outline-none text-xs sm:text-sm ${
                     activeSection === 'manage'
                       ? 'bg-white text-purple-800 shadow-sm'
@@ -1564,35 +1620,37 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   </div>
                 )}
 
-                {activeSection === 'manage' && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
-                      <Settings className="w-5 h-5 text-purple-600" />
-                      Group Settings
-                    </h4>
-                    <div className="space-y-4">
-                      <div>
-                        <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <Users className="w-4 h-4 text-blue-600" />
-                          Group Name
-                        </label>
-                        <input
-                          type="text"
-                          id="groupName"
-                          value={groupSettings.name}
-                          onChange={(e) => setGroupSettings({...groupSettings, name: e.target.value})}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-400"
-                          placeholder="Group name"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                          Meeting Schedule
-                        </label>
-                        <div className="grid grid-cols-2 gap-2 ml-4">
-                          {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
-                                                          <label key={day} className="flex items-center">
+                                {activeSection === 'manage' && (
+                  <div className="space-y-4">
+                    {/* Group Settings Section */}
+                    <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                      <h4 className="font-semibold text-purple-800 mb-3 flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-purple-600" />
+                        Group Settings
+                      </h4>
+                      <div className="space-y-4">
+                        <div>
+                          <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Users className="w-4 h-4 text-blue-600" />
+                            Group Name
+                          </label>
+                          <input
+                            type="text"
+                            id="groupName"
+                            value={groupSettings.name}
+                            onChange={(e) => setGroupSettings({...groupSettings, name: e.target.value})}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-400"
+                            placeholder="Group name"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
+                            Meeting Schedule
+                          </label>
+                          <div className="grid grid-cols-2 gap-2 ml-4">
+                            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
+                              <label key={day} className="flex items-center">
                                 <input
                                   type="checkbox"
                                   checked={groupSettings.meeting_schedule.includes(day)}
@@ -1608,47 +1666,129 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                                 />
                                 {day}
                               </label>
-                          ))}
+                            ))}
+                          </div>
                         </div>
+                        <div>
+                          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-green-600" />
+                            Group Description
+                          </label>
+                          <textarea
+                            id="description"
+                            value={groupSettings.description}
+                            onChange={(e) => setGroupSettings({...groupSettings, description: e.target.value})}
+                            rows={3}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-400 resize-vertical"
+                            placeholder="Group description"
+                          />
+                        </div>
+                        <div>
+                          <label htmlFor="applicationInstructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-orange-600" />
+                            Application Instructions
+                          </label>
+                          <textarea
+                            id="applicationInstructions"
+                            value={groupSettings.application_instructions}
+                            onChange={(e) => setGroupSettings({...groupSettings, application_instructions: e.target.value})}
+                            rows={4}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-400 resize-vertical"
+                            placeholder="What should potential members include in their application?"
+                          />
+                        </div>
+                        <button
+                          onClick={() => {
+                            console.log("Saving group settings:", groupSettings);
+                            setShowSettings(false);
+                          }}
+                          className="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                        >
+                          Save Settings
+                        </button>
                       </div>
-                      <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-green-600" />
-                          Group Description
-                        </label>
-                        <textarea
-                          id="description"
-                          value={groupSettings.description}
-                          onChange={(e) => setGroupSettings({...groupSettings, description: e.target.value})}
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-400 resize-vertical"
-                          placeholder="Group description"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="applicationInstructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-orange-600" />
-                          Application Instructions
-                        </label>
-                        <textarea
-                          id="applicationInstructions"
-                          value={groupSettings.application_instructions}
-                          onChange={(e) => setGroupSettings({...groupSettings, application_instructions: e.target.value})}
-                          rows={4}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-400 resize-vertical"
-                          placeholder="What should potential members include in their application?"
-                        />
-                      </div>
-                      <button
-                        onClick={() => {
-                          console.log("Saving group settings:", groupSettings);
-                          setShowSettings(false);
-                        }}
-                        className="w-full bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                      >
-                        Save Settings
-                      </button>
                     </div>
+
+                    {/* Pending Requests Section - Only show for captains */}
+                    {selectedGroup?.role === 'captain' && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-blue-800 flex items-center gap-2">
+                            <UserPlus className="w-5 h-5 text-blue-600" />
+                            Pending Requests
+                          </h4>
+                          <button
+                            onClick={() => fetchGroupRequests(selectedGroup.id)}
+                            disabled={requestsLoading[selectedGroup.id]}
+                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                          >
+                            {requestsLoading[selectedGroup.id] ? 'Loading...' : 'Refresh'}
+                          </button>
+                        </div>
+                        
+                        {requestsLoading[selectedGroup.id] ? (
+                          <div className="text-center py-4">
+                            <LoadingSpinner size="sm" className="mx-auto mb-2" />
+                            <p className="text-blue-700 text-sm">Loading requests...</p>
+                          </div>
+                        ) : groupRequests[selectedGroup.id]?.length > 0 ? (
+                          <div className="space-y-3">
+                            {groupRequests[selectedGroup.id].map((request) => (
+                              <div key={request.id} className="bg-white rounded-lg p-3 border border-blue-100">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <span className="font-medium text-gray-800">
+                                        {request.user?.summoner_name || 'Unknown User'}
+                                      </span>
+                                      {request.user?.rank && (
+                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
+                                          {request.user.rank}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-gray-500">
+                                      Requested on {new Date(request.created_at).toLocaleDateString()}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={() => handleRespondToRequest(request.id, 'approve')}
+                                      disabled={respondingToRequest === request.id}
+                                      className="flex items-center gap-1 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {respondingToRequest === request.id ? (
+                                        <LoadingSpinner size="sm" />
+                                      ) : (
+                                        <CheckCircle className="w-3 h-3" />
+                                      )}
+                                      {respondingToRequest === request.id ? 'Approving...' : 'Approve'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleRespondToRequest(request.id, 'reject')}
+                                      disabled={respondingToRequest === request.id}
+                                      className="flex items-center gap-1 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      {respondingToRequest === request.id ? (
+                                        <LoadingSpinner size="sm" />
+                                      ) : (
+                                        <XCircle className="w-3 h-3" />
+                                      )}
+                                      {respondingToRequest === request.id ? 'Rejecting...' : 'Reject'}
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-4">
+                            <UserPlus className="w-8 h-8 text-blue-400 mx-auto mb-2" />
+                            <p className="text-blue-700 text-sm">No pending requests</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
 
@@ -1766,16 +1906,22 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   Group Info
                 </button>
                 {(selectedGroup.role === 'captain' || selectedGroup.role === 'member') && (
-                  <button 
-                    onClick={() => setActiveSection('manage')}
-                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                      activeSection === 'manage' 
-                        ? 'text-[#564ec7] border-[#564ec7]' 
-                        : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
-                    }`}
-                  >
-                    Manage
-                  </button>
+                                  <button 
+                  onClick={() => {
+                    setActiveSection('manage');
+                    // Fetch requests when manage tab is opened for captains
+                    if (selectedGroup?.role === 'captain') {
+                      fetchGroupRequests(selectedGroup.id);
+                    }
+                  }}
+                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
+                    activeSection === 'manage' 
+                      ? 'text-[#564ec7] border-[#564ec7]' 
+                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
+                  }`}
+                >
+                  Manage
+                </button>
                 )}
                 <button 
                   onClick={() => {
@@ -1902,6 +2048,86 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                     {/* Captain-only content */}
                     {selectedGroup.role === 'captain' && (
                       <>
+                        {/* Pending Requests Section */}
+                        <div className="w-full">
+                          <div className="flex items-center justify-between mb-2">
+                            <h5 className="font-medium text-gray-800 text-left flex items-center gap-2">
+                              <UserPlus className="w-4 h-4 text-blue-600" />
+                              Pending Requests
+                            </h5>
+                            <button
+                              onClick={() => fetchGroupRequests(selectedGroup.id)}
+                              disabled={requestsLoading[selectedGroup.id]}
+                              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
+                            >
+                              {requestsLoading[selectedGroup.id] ? 'Loading...' : 'Refresh'}
+                            </button>
+                          </div>
+                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                            {requestsLoading[selectedGroup.id] ? (
+                              <div className="text-center py-4">
+                                <LoadingSpinner size="sm" className="mx-auto mb-2" />
+                                <p className="text-gray-700 text-sm">Loading requests...</p>
+                              </div>
+                            ) : groupRequests[selectedGroup.id]?.length > 0 ? (
+                              <div className="space-y-3">
+                                {groupRequests[selectedGroup.id].map((request) => (
+                                  <div key={request.id} className="bg-white rounded-lg p-3 border border-gray-200">
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <span className="font-medium text-gray-800 truncate">
+                                            {request.user?.summoner_name || 'Unknown User'}
+                                          </span>
+                                          {request.user?.rank && (
+                                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded flex-shrink-0">
+                                              {request.user.rank}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="text-xs text-gray-500">
+                                          Requested on {new Date(request.created_at).toLocaleDateString()}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-2 flex-shrink-0">
+                                        <button
+                                          onClick={() => handleRespondToRequest(request.id, 'approve')}
+                                          disabled={respondingToRequest === request.id}
+                                          className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {respondingToRequest === request.id ? (
+                                            <LoadingSpinner size="sm" />
+                                          ) : (
+                                            <CheckCircle className="w-3 h-3" />
+                                          )}
+                                          {respondingToRequest === request.id ? 'Approving...' : 'Approve'}
+                                        </button>
+                                        <button
+                                          onClick={() => handleRespondToRequest(request.id, 'reject')}
+                                          disabled={respondingToRequest === request.id}
+                                          className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          {respondingToRequest === request.id ? (
+                                            <LoadingSpinner size="sm" />
+                                          ) : (
+                                            <XCircle className="w-3 h-3" />
+                                          )}
+                                          {respondingToRequest === request.id ? 'Rejecting...' : 'Reject'}
+                                        </button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-4">
+                                <UserPlus className="w-6 h-6 text-gray-400 mx-auto mb-2" />
+                                <p className="text-gray-700 text-sm">No pending requests</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
                         {/* Switch Captain Section */}
                     <div className="w-full">
                       <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">

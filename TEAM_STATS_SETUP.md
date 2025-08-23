@@ -11,7 +11,7 @@ The Team Stats feature allows users to view rank progression data for all member
 - **Team Stats Tab**: New tab in group modals showing rank progression
 - **Line Graph**: Visual representation of ELO changes over time
 - **Member Tracking**: Individual member progress tracking
-- **Date Filtering**: Data filtered from group creation date onwards
+- **Data Limiting**: Shows all available data up to 50 events per user (removed study group creation date filter)
 
 ## Database Schema
 
@@ -45,7 +45,7 @@ GET /api/team-stats?group_id={group_id}&start_date={start_date}
 
 **Parameters:**
 - `group_id` (required): Study group ID
-- `start_date` (required): ISO date string for filtering events
+- `start_date` (optional): ISO date string for filtering events (kept for compatibility, but no longer used for filtering)
 
 **Response:**
 ```json
@@ -74,7 +74,7 @@ GET /api/team-stats/members?group_id={group_id}&start_date={start_date}&include_
 
 **Parameters:**
 - `group_id` (required): Study group ID
-- `start_date` (required): ISO date string for filtering events
+- `start_date` (optional): ISO date string for filtering events (kept for compatibility, but no longer used for filtering)
 - `include_members` (optional): Set to 'true' to include live data from Riot API (default: false)
 
 **Performance Optimization:**
