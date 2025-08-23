@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SquareX, Crown, Users, Calendar, Zap, FileText, ChevronDown, UserPlus, CheckCircle, XCircle } from 'lucide-react';
+import { SquareX, Crown, Users, Calendar, Zap, FileText, ChevronDown, UserPlus, CheckCircle, XCircle, ChevronsLeft } from 'lucide-react';
 import { LoadingSpinner } from './auth/LoadingSpinner';
 
 import { studyGroupService } from '../services/studyGroupService';
@@ -1163,11 +1163,14 @@ export function GroupDetailPage() {
                     </div>
                   )}
                   
-                  {/* Group Name and Date */}
-                  <div className="hidden sm:block min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
-                    <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
-                    <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
-                  </div>
+                  {/* Back Button */}
+                  <button
+                    onClick={() => navigate('/study-groups')}
+                    className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
+                  >
+                    <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <span className="text-sm sm:text-base">Back to Study Groups</span>
+                  </button>
                   
                   {/* Request to Join Button - Only show if user is logged in, not a member, and status is loaded */}
                   {userId && !isUserMember && !isUserStatusLoading && (
@@ -1211,15 +1214,7 @@ export function GroupDetailPage() {
                     </div>
                   )}
                   
-                  {/* Loading state for user status check */}
-                  {userId && isUserStatusLoading && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium flex-shrink-0">
-                        <LoadingSpinner size="sm" />
-                        <span className="text-sm font-medium">Checking membership...</span>
-                      </div>
-                    </div>
-                  )}
+                  {/* Loading state for user status check - removed to avoid showing users we're checking membership */}
                 </>
               ) : null}
             </div>
@@ -1290,8 +1285,20 @@ export function GroupDetailPage() {
                 background: 'linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.05) 50%, rgba(255,255,255,0.2) 75%, rgba(255,255,255,0.6) 90%, rgba(255,255,255,1) 100%)'
               }}
             />
-            {/* Content overlay - Empty since content moved to header */}
-            <div className="absolute inset-0 flex items-start justify-start p-6 pt-20">
+            {/* Content overlay - Group name in center */}
+            <div className="absolute inset-0 flex items-center justify-center p-6" style={{ marginTop: '-20%' }}>
+              {group && (
+                <div className="text-center">
+                  <div className="bg-white/95 backdrop-blur-sm px-3 sm:px-8 py-2 sm:py-4 rounded-xl shadow-xl border border-gray-200">
+                    <h1 className="text-xl sm:text-4xl lg:text-5xl font-bold text-gray-800 mb-0 sm:mb-2">
+                      {group.group_name}
+                    </h1>
+                    <p className="hidden sm:block text-xs sm:text-base text-gray-600">
+                      Created: {new Date(group.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
