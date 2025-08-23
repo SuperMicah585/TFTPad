@@ -86,16 +86,15 @@ function App() {
           {/* Main Content Area */}
           <div className="flex-1 relative z-10">
             <Routes>
-              <Route path="/" element={<Navigate to="/study-groups/groups" replace />} />
+              <Route path="/" element={<Navigate to="/study-groups" replace />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/study-groups" element={<Navigate to="/study-groups/groups" replace />} />
-              <Route path="/study-groups/groups" element={<GroupsPage />} />
-              <Route path="/study-groups/groups/:groupId" element={<GroupDetailPage />} />
-              <Route path="/study-groups/my-groups" element={<MyGroupsPage />} />
-              <Route path="/study-groups/free-agents" element={<FreeAgentsPage />} />
-              <Route path="/study-groups/free-agents/:user_id" element={<FreeAgentProfilePage />} />
-              <Route path="/study-groups/invitations" element={<GroupsPage />} />
+              <Route path="/study-groups" element={<GroupsPage />} />
+              <Route path="/study-groups/:groupId" element={<GroupDetailPage />} />
+              <Route path="/my-groups" element={<MyGroupsPage />} />
+              <Route path="/free-agents" element={<FreeAgentsPage />} />
+              <Route path="/free-agents/:user_id" element={<FreeAgentProfilePage />} />
+              <Route path="/invitations" element={<GroupsPage />} />
               <Route path="/blog/defensive-stats" element={<BlogPost title="Defensive Stats" content={<DefensiveStats />} />} />
               <Route path="/blog/champion-pool" element={<BlogPost title="Champion Pool" content={<ChampionPool />} />} />
               <Route path="/blog/econ" element={<BlogPost title="Econ" content={<Econ />} />} />

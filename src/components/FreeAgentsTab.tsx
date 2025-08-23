@@ -1099,7 +1099,7 @@ function FreeAgentCard({
   return (
     <div 
       className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative h-full bg-gray-50 border-gray-200" 
-      onClick={() => navigate(`/study-groups/free-agents/${agent.id}`)}
+                      onClick={() => navigate(`/free-agents/${agent.id}`)}
     >
       {/* Hover arrow */}
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">

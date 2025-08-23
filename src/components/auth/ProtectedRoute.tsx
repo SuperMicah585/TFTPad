@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
   redirectTo?: string
 }
 
-export function ProtectedRoute({ children, redirectTo = '/study-groups/groups' }: ProtectedRouteProps) {
+export function ProtectedRoute({ children, redirectTo = '/study-groups' }: ProtectedRouteProps) {
   const { user, userId, loading } = useAuth()
 
   if (loading) {

@@ -312,7 +312,7 @@ export function StudyGroupsPage() {
   useEffect(() => {
     if (activeTab === 'my-groups' && !userId) {
       setActiveTab('groups');
-      navigate('/study-groups/groups');
+              navigate('/study-groups');
       setShowLoginModal(true);
     }
   }, [activeTab, userId, navigate]);

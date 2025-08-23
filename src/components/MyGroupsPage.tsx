@@ -74,7 +74,7 @@ export function MyGroupsPage() {
         onClose={() => {
           setShowLoginModal(false);
           // Redirect to groups page when modal is closed
-          navigate('/study-groups/groups');
+          navigate('/study-groups');
         }}
         onSuccess={() => {
           setShowLoginModal(false);

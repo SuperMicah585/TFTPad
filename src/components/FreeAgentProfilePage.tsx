@@ -382,7 +382,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         <div className="text-center">
           <p className="text-red-600 mb-4">{agentError || 'Profile not found'}</p>
           <button 
-            onClick={() => navigate('/study-groups/free-agents')}
+            onClick={() => navigate('/free-agents')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
             Back to Free Agents
@@ -420,7 +420,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         {/* Back Button */}
         <div className="mt-4 sm:mt-6 mb-4 sm:mb-6 px-4 sm:px-0">
           <button
-            onClick={() => navigate('/study-groups/free-agents')}
+            onClick={() => navigate('/free-agents')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
           >
             <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />

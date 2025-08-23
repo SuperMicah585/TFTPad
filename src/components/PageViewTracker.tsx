@@ -11,14 +11,12 @@ function getPageTitle(pathname: string): string {
     case '/contact':
       return 'TFTPad - Contact';
     case '/study-groups':
-      return 'TFTPad - Study Groups';
-    case '/study-groups/groups':
       return 'TFTPad - Study Groups - Browse Groups';
-    case '/study-groups/my-groups':
+    case '/my-groups':
       return 'TFTPad - Study Groups - My Groups & Invitations';
-    case '/study-groups/free-agents':
+    case '/free-agents':
       return 'TFTPad - Study Groups - Free Agents';
-    case '/study-groups/invitations':
+    case '/invitations':
       return 'TFTPad - Study Groups - Invitations';
     // Tracker routes removed - TFT functionality was removed
     case '/blog/defensive-stats':

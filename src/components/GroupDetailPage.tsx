@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SquareX, Crown, ChevronsLeft, Users, Calendar, Zap, FileText, ChevronDown, UserPlus, CheckCircle, XCircle } from 'lucide-react';
+import { SquareX, Crown, Users, Calendar, Zap, FileText, ChevronDown, UserPlus, CheckCircle, XCircle } from 'lucide-react';
 import { LoadingSpinner } from './auth/LoadingSpinner';
 
 import { studyGroupService } from '../services/studyGroupService';
@@ -1087,12 +1087,12 @@ export function GroupDetailPage() {
       <div className="min-h-screen bg-white flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">{groupError}</p>
-          <button 
-            onClick={() => navigate('/study-groups/groups')}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            Back to Groups
-          </button>
+                      <button 
+              onClick={() => navigate('/study-groups')}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Back to Study Groups
+            </button>
         </div>
       </div>
     );
@@ -1125,66 +1125,102 @@ export function GroupDetailPage() {
         {/* Back Button and Group Info */}
         <div className="absolute top-2 left-2 right-2 z-20">
           <div className="flex justify-between items-center gap-2 sm:gap-4">
-            <button
-              onClick={() => navigate('/study-groups/groups')}
-              className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 flex-shrink-0"
-            >
-              <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="text-sm sm:text-base">Back to Groups</span>
-            </button>
-            
             {/* Group Icon and Name - Show immediately when available */}
-            <div className="flex items-center justify-between gap-3 flex-1 min-w-0">
+            <div className="flex items-center gap-3">
               {group ? (
                 <>
-                  <div className="flex items-center gap-3">
-                    {group.image_url ? (
-                      <img
-                        src={group.image_url}
-                        alt={`${group.group_name} icon`}
-                        className="hidden sm:block w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.style.display = 'none';
-                        }}
-                      />
-                    ) : (
-                      <div 
-                        className="hidden sm:flex w-8 h-8 sm:w-12 sm:h-12 rounded-lg items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
-                        style={{ 
-                          backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
-                          color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
-                        }}
-                      >
-                        {group.group_name.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                    
-                    {/* Group Name and Date */}
-                    <div className="hidden sm:block min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
-                      <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
-                      <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
+                  {group.image_url ? (
+                    <img
+                      src={group.image_url}
+                      alt={`${group.group_name} icon`}
+                      className="hidden sm:block w-8 h-8 sm:w-12 sm:h-12 rounded-lg object-cover border-2 border-gray-200"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                      }}
+                    />
+                  ) : (
+                    <div 
+                      className="hidden sm:flex w-8 h-8 sm:w-12 sm:h-12 rounded-lg items-center justify-center border-2 border-gray-200 font-bold text-sm sm:text-lg"
+                      style={{ 
+                        backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5],
+                        color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][group.id % 5])
+                      }}
+                    >
+                      {group.group_name.charAt(0).toUpperCase()}
                     </div>
+                  )}
+                  
+                  {/* Group Name and Date */}
+                  <div className="hidden sm:block min-w-0 bg-gray-50 border border-gray-200 rounded-lg p-2 sm:p-3">
+                    <h1 className="text-lg sm:text-xl font-bold text-gray-800">{group.group_name}</h1>
+                    <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
                   </div>
                   
-                  {/* Update Ranks Button - Positioned on the right */}
-                  <button
-                    onClick={updateLiveData}
-                    disabled={isUpdatingData}
-                    className="flex items-center justify-center gap-2 text-blue-600 hover:text-blue-800 transition-all duration-200 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-blue-200 hover:border-blue-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex-shrink-0"
-                  >
-                    {isUpdatingData ? (
-                      <LoadingSpinner size="sm" className="w-4 h-4" />
-                    ) : (
-                      <Zap className="w-4 h-4" />
-                    )}
-                    <span className="text-sm font-medium">
-                      {isUpdatingData ? (updateProgress || 'Updating...') : 'Update'}
-                    </span>
-                  </button>
+                  {/* Request to Join Button - Only show if user is logged in and not a member */}
+                  {userId && !isUserMember && (
+                    <div className="flex items-center gap-2">
+                      {requestError && (
+                        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
+                          <p className="text-red-600 text-xs">{requestError}</p>
+                        </div>
+                      )}
+                      {userRequest ? (
+                        <button
+                          onClick={handleCancelRequest}
+                          disabled={isRequestLoading}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                        >
+                          {isRequestLoading ? (
+                            <LoadingSpinner size="sm" />
+                          ) : (
+                            <XCircle className="w-4 h-4" />
+                          )}
+                          <span className="text-sm font-medium">
+                            {isRequestLoading ? 'Cancelling...' : 'Cancel Request'}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={handleRequestToJoin}
+                          disabled={isRequestLoading}
+                          className="flex items-center justify-center gap-2 px-4 py-2 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                        >
+                          {isRequestLoading ? (
+                            <LoadingSpinner size="sm" />
+                          ) : (
+                            <UserPlus className="w-4 h-4" />
+                          )}
+                          <span className="text-sm font-medium">
+                            {isRequestLoading ? 'Sending Request...' : 'Request to Join'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </>
               ) : null}
             </div>
+            
+
+            
+            {/* Update Ranks Button - Positioned on the right */}
+            {group && (
+              <button
+                onClick={updateLiveData}
+                disabled={isUpdatingData}
+                className="flex items-center justify-center gap-2 text-blue-600 hover:text-blue-800 transition-all duration-200 bg-white/95 backdrop-blur-sm rounded-lg px-3 py-2 border border-blue-200 hover:border-blue-300 hover:shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 flex-shrink-0"
+              >
+                {isUpdatingData ? (
+                  <LoadingSpinner size="sm" className="w-4 h-4" />
+                ) : (
+                  <Zap className="w-4 h-4" />
+                )}
+                <span className="text-sm font-medium">
+                  {isUpdatingData ? (updateProgress || 'Updating...') : 'Update'}
+                </span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -1469,64 +1505,7 @@ export function GroupDetailPage() {
                   </div>
                 </div>
 
-                {/* Request to Join Section - Only show if user is logged in and not a member */}
-                {userId && !isUserMember && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                      <UserPlus className="w-3 h-3 sm:w-4 sm:h-4 text-blue-600" />
-                      Join Group
-                    </h4>
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      {requestError && (
-                        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-red-600 text-sm">{requestError}</p>
-                        </div>
-                      )}
-                      
-                      {userRequest ? (
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            <CheckCircle className="w-4 h-4 text-yellow-500" />
-                            <span className="text-gray-700">Request pending - waiting for captain's response</span>
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            Request sent on {new Date(userRequest.created_at).toLocaleDateString()}
-                          </div>
-                          <button
-                            onClick={handleCancelRequest}
-                            disabled={isRequestLoading}
-                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isRequestLoading ? (
-                              <LoadingSpinner size="sm" />
-                            ) : (
-                              <XCircle className="w-4 h-4" />
-                            )}
-                            {isRequestLoading ? 'Cancelling...' : 'Cancel Request'}
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <p className="text-sm text-gray-700">
-                            Interested in joining this study group? Send a request to the captain.
-                          </p>
-                          <button
-                            onClick={handleRequestToJoin}
-                            disabled={isRequestLoading}
-                            className="flex items-center justify-center gap-2 w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isRequestLoading ? (
-                              <LoadingSpinner size="sm" />
-                            ) : (
-                              <UserPlus className="w-4 h-4" />
-                            )}
-                            {isRequestLoading ? 'Sending Request...' : 'Request to Join'}
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
+
 
                 {/* User is already a member */}
                 {userId && isUserMember && (

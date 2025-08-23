@@ -26,19 +26,19 @@ export function Header() {
                {/* Desktop Navigation - Centered */}
                <nav className="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2">
                    <Link 
-                       to="/study-groups/groups" 
+                       to="/study-groups" 
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
-                           location.pathname.startsWith('/study-groups/groups')
+                           location.pathname.startsWith('/study-groups')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
-                       Groups
+                       Study Groups
                    </Link>
                    <Link 
-                       to="/study-groups/free-agents" 
+                       to="/free-agents" 
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
-                           location.pathname.startsWith('/study-groups/free-agents')
+                           location.pathname.startsWith('/free-agents')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
@@ -46,14 +46,14 @@ export function Header() {
                        Free Agents
                    </Link>
                    <Link 
-                       to="/study-groups/my-groups" 
+                       to="/my-groups" 
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
-                           location.pathname.startsWith('/study-groups/my-groups')
+                           location.pathname.startsWith('/my-groups')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                        }`}
                    >
-                       My Groups
+                       My Study Groups
                    </Link>
 
                    <Link 
@@ -151,21 +151,21 @@ export function Header() {
                <div className="md:hidden mt-4 pb-4 border-t border-gray-700">
                    <nav className="flex flex-col space-y-2 pt-4">
                        <Link 
-                           to="/study-groups/groups" 
+                           to="/study-groups" 
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                               location.pathname.startsWith('/study-groups/groups')
+                               location.pathname.startsWith('/study-groups')
                                    ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
-                           Groups
+                           Study Groups
                        </Link>
                        <Link 
-                           to="/study-groups/free-agents" 
+                           to="/free-agents" 
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                               location.pathname.startsWith('/study-groups/free-agents')
+                               location.pathname.startsWith('/free-agents')
                                    ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
@@ -173,15 +173,15 @@ export function Header() {
                            Free Agents
                        </Link>
                        <Link 
-                           to="/study-groups/my-groups" 
+                           to="/my-groups" 
                            onClick={() => setIsMobileMenuOpen(false)}
                            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                               location.pathname.startsWith('/study-groups/my-groups')
+                               location.pathname.startsWith('/my-groups')
                                    ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
                                    : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
                            }`}
                        >
-                           My Groups
+                           My Study Groups
                        </Link>
 
                        <Link 

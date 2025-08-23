@@ -177,7 +177,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         setShowPlaceholders(false) // Hide placeholders once real data is loaded
       } catch (err) {
         console.error('Failed to fetch my groups:', err)
-        setError('Failed to load your groups. Please try again later.')
+        setError('Failed to load your study groups. Please try again later.')
         setShowPlaceholders(false) // Hide placeholders on error
         setMyGroups([]) // Clear any existing groups on error
         setIsDataLoading(false)
@@ -225,6 +225,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [showCombinedModal, setShowCombinedModal] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState<MyGroup | null>(null);
   const [members, setMembers] = useState<GroupMember[]>([]);
+  const [membersLoading, setMembersLoading] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
   const [captain, setCaptain] = useState("");
   const [activeSection, setActiveSection] = useState<'members' | 'info' | 'manage' | 'team-stats'>('members');
@@ -896,9 +897,14 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
 
 
 
-  // Helper function to get current rank for a member, only from live data
+  // Helper function to get current rank for a member, prioritizing stored rank data
   const getCurrentRank = (member: GroupMember): string | null => {
-    // Try to find live data for this member
+    // Prioritize stored rank data from database (riot_accounts table) as it has full rank + LP
+    if (member.rank && member.rank !== 'UNRANKED') {
+      return member.rank;
+    }
+    
+    // Fallback to live data if available
     if (liveData && Object.keys(liveData).length > 0) {
       // Try to find the member in live data by summoner name
       const liveDataKey = Object.keys(liveData).find(key => {
@@ -916,14 +922,12 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           const rank = String(liveMemberData.rank);
           const lp = liveMemberData.leaguePoints !== undefined ? ` ${liveMemberData.leaguePoints}LP` : '';
           const liveRank = `${tier} ${rank}${lp}`;
-          console.log(`🎯 Using live rank for ${member.summoner_name}: ${liveRank}`);
           return liveRank;
         }
       }
     }
     
-    // No live data available
-    console.log(`❌ No live rank data for ${member.summoner_name}`);
+    // No rank data available
     return null;
   };
 
@@ -933,7 +937,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-gray-800">My Groups</h2>
+              <h2 className="text-2xl font-bold text-gray-800">My Study Groups</h2>
               <div className="relative group">
                 <UserCheck 
                   size={20} 
@@ -980,7 +984,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
             <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Groups</h3>
+            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Study Groups</h3>
             <p className="text-red-700 mb-4">{error}</p>
             <button 
               onClick={() => {
@@ -1002,13 +1006,13 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         ) : myGroups.length === 0 ? (
           <div className="text-center flex-1 flex flex-col items-center justify-center">
             <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Groups Yet</h3>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Study Groups Yet</h3>
             <p className="text-gray-600 mb-4">You haven't joined any study groups yet.</p>
             <button 
-              onClick={() => window.location.href = '/study-groups/groups'}
+              onClick={() => window.location.href = '/study-groups'}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
-              Browse Groups
+              Browse Study Groups
             </button>
           </div>
         ) : (
@@ -1017,9 +1021,10 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
               <MyGroupCard 
                 key={group.id} 
                 group={group} 
-                onTileClick={(group) => {
+                onTileClick={async (group) => {
                   setSelectedGroup(group);
-                  setMembers(group.members);
+                  setMembers(group.members); // Set initial members from cache
+                  
                   // Find the captain (member with owner = 1)
                   const captainMember = group.members.find((m: GroupMember) => m.owner === 1);
                   const currentCaptain = captainMember?.summoner_name || 'Unknown Captain';
@@ -1038,6 +1043,26 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   setTeamStatsData([]);
                   setTeamStatsError(null);
                   setMemberNames({});
+                  
+                  // Fetch fresh member data with updated ranks (same as Group Information page)
+                  setMembersLoading(true);
+                  try {
+                    const freshMembers = await studyGroupService.getStudyGroupUsers(group.id, false); // Don't update ranks, use stored data
+                    const membersData = freshMembers.map(relationship => ({
+                      summoner_name: relationship.summoner_name || 'Unknown User',
+                      elo: relationship.elo || 0,
+                      rank: relationship.rank || 'UNRANKED',
+                      owner: relationship.owner,
+                      icon_id: relationship.icon_id,
+                      user_id: relationship.user_id
+                    }));
+                    setMembers(membersData);
+                  } catch (error) {
+                    console.error('Error fetching fresh member data:', error);
+                    // Keep the cached data if fresh fetch fails
+                  } finally {
+                    setMembersLoading(false);
+                  }
                 }}
               />
             ))}
@@ -1329,7 +1354,13 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                 </button>
               </div>
               <div className="space-y-2">
-                {members.map((member: GroupMember, index: number) => (
+                {membersLoading ? (
+                  <div className="text-center py-4">
+                    <LoadingSpinner size="sm" className="mx-auto mb-2" />
+                    <p className="text-gray-600 text-sm">Loading fresh member data...</p>
+                  </div>
+                ) : (
+                  members.map((member: GroupMember, index: number) => (
                   <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
                     <div className="flex items-center gap-2">
                       <ProfileIcon 
@@ -1374,7 +1405,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       )}
                     </div>
                   </div>
-                ))}
+                ))
+                )}
               </div>
             </div>
           </div>

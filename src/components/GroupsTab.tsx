@@ -292,7 +292,7 @@ export function GroupsTab({
 
   // Handler for tile click - navigates to group detail page
   const handleTileClick = (groupId: number) => {
-    navigate(`/study-groups/groups/${groupId}`);
+            navigate(`/study-groups/${groupId}`);
   };
 
   // Player modal functions
