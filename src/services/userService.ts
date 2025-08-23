@@ -15,7 +15,7 @@ interface User {
 interface RiotAccount {
   id: number
   user_id: number
-  riot_id: string
+  riot_id: string  // This is actually the PUUID
   summoner_name: string
   region: string
   rank?: string

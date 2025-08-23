@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { userService } from '../services/userService';
+import { matchHistoryService } from '../services/matchHistoryService';
+import type { MatchHistoryEntry as ApiMatchHistoryEntry } from '../services/matchHistoryService';
 
-// Define the MatchHistoryEntry type locally since we removed tftService
+// Local interface for the component's simplified data structure
 interface MatchHistoryEntry {
   matchId: string;
   timestamp: number;
@@ -44,10 +46,30 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
   
   console.log('🎨 PlacementHistory: Component rendered - userId:', userId, 'instanceId:', instanceId.current);
 
-  // Placeholder function since TFT service was removed
-  const fetchMatchHistoryWithRetry = useCallback(async (): Promise<MatchHistoryEntry[]> => {
-    // Return empty array since TFT functionality was removed
-    return [];
+  // Fetch match history with retry logic
+  const fetchMatchHistoryWithRetry = useCallback(async (puuid: string, region: string = 'americas'): Promise<ApiMatchHistoryEntry[]> => {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+    
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 PlacementHistory: Attempt ${attempt} to fetch match history for puuid: ${puuid}`);
+        const matches = await matchHistoryService.getMatchHistory(puuid, region);
+        console.log(`✅ PlacementHistory: Successfully fetched ${matches.length} matches on attempt ${attempt}`);
+        return matches;
+      } catch (error) {
+        lastError = error as Error;
+        console.warn(`⚠️ PlacementHistory: Attempt ${attempt} failed:`, error);
+        
+        if (attempt < maxRetries) {
+          // Wait before retrying (exponential backoff)
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+    
+    throw lastError || new Error('Failed to fetch match history after all retries');
   }, []);
 
   const loadMatchHistory = useCallback(async () => {
@@ -93,10 +115,16 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
       }
 
       // Fetch match history with retry logic
-      const matchHistory = await fetchMatchHistoryWithRetry();
+      const matchHistory = await fetchMatchHistoryWithRetry(account.riot_id, account.region);
       
-      // Take only the last 20 matches
-      const last20Matches = matchHistory.slice(0, 20);
+      // Take only the last 20 matches and transform to the expected format
+      const last20Matches = matchHistory.slice(0, 20).map(match => ({
+        matchId: match.matchId,
+        timestamp: match.gameCreation,
+        placement: match.placement,
+        gameLength: match.gameLength,
+        champions: match.champions.map(champ => champ.name)
+      }));
       setMatches(last20Matches);
       hasLoadedRef.current.add(userId);
       globalDataCache.set(userId, last20Matches);
