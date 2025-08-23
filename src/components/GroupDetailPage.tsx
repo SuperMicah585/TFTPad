@@ -169,6 +169,7 @@ export function GroupDetailPage() {
   const [isRequestLoading, setIsRequestLoading] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [isUserMember, setIsUserMember] = useState(false);
+  const [isUserStatusLoading, setIsUserStatusLoading] = useState(true);
 
   // Overflow detection state
   const [descriptionOverflow, setDescriptionOverflow] = useState(false);
@@ -193,12 +194,21 @@ export function GroupDetailPage() {
   useEffect(() => {
     if (groupId && userId && members.length > 0) {
       checkUserStatus(parseInt(groupId), userId);
+    } else if (groupId && userId && members.length === 0) {
+      // If we have userId but no members yet, we're still loading
+      setIsUserStatusLoading(true);
+    } else if (!userId) {
+      // If no userId, user is not logged in
+      setIsUserStatusLoading(false);
+      setIsUserMember(false);
     }
   }, [groupId, userId, members]);
 
   // Check user's status in the group
   const checkUserStatus = async (groupId: number, userId: number) => {
     try {
+      setIsUserStatusLoading(true);
+      
       // Check if user is already a member
       const isMember = members.some(member => member.user_id === userId);
       setIsUserMember(isMember);
@@ -213,6 +223,8 @@ export function GroupDetailPage() {
     } catch (error) {
       console.error('Error checking user status:', error);
       setRequestError('Failed to check user status');
+    } finally {
+      setIsUserStatusLoading(false);
     }
   };
 
@@ -1157,8 +1169,8 @@ export function GroupDetailPage() {
                     <p className="text-xs sm:text-sm text-gray-500">Created: {new Date(group.created_at).toLocaleDateString()}</p>
                   </div>
                   
-                  {/* Request to Join Button - Only show if user is logged in and not a member */}
-                  {userId && !isUserMember && (
+                  {/* Request to Join Button - Only show if user is logged in, not a member, and status is loaded */}
+                  {userId && !isUserMember && !isUserStatusLoading && (
                     <div className="flex items-center gap-2">
                       {requestError && (
                         <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
@@ -1196,6 +1208,16 @@ export function GroupDetailPage() {
                           </span>
                         </button>
                       )}
+                    </div>
+                  )}
+                  
+                  {/* Loading state for user status check */}
+                  {userId && isUserStatusLoading && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 text-gray-500 rounded-lg font-medium flex-shrink-0">
+                        <LoadingSpinner size="sm" />
+                        <span className="text-sm font-medium">Checking membership...</span>
+                      </div>
                     </div>
                   )}
                 </>
