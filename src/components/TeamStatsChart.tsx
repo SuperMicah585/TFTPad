@@ -181,7 +181,7 @@ export function TeamStatsChart({
     series.data.forEach(point => {
       // Keep x as Date object for proper sorting, but ensure displayDate is available for tooltips
       if (point.isLive) {
-        point.x = 'Current';
+        (point as any).x = 'Current';
       }
       // For non-live data, x remains as Date object
     });
@@ -208,7 +208,7 @@ export function TeamStatsChart({
   chartData.forEach((series, seriesIndex) => {
     console.log(`\n📊 Series ${seriesIndex}: ${series.id}`);
     const dates = new Set();
-    const duplicates = [];
+    const duplicates: Array<{ pointIndex: number; dateKey: string; point: any }> = [];
     
     series.data.forEach((point, pointIndex) => {
       const dateKey = point.x instanceof Date ? point.x.toDateString() : point.x;
@@ -376,7 +376,7 @@ export function TeamStatsChart({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
                 <span className="whitespace-nowrap">
-                  {point.data.isLive ? point.data.x : point.data.displayDate}
+                  {point.data.isLive ? String(point.data.x) : point.data.displayDate}
                 </span>
                 {point.data.isLive && (
                   <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1">
