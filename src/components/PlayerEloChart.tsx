@@ -91,15 +91,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
               isLive: false
             };
           })
-          .sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically
-          .filter((point, index, array) => {
-            // Keep the first point always
-            if (index === 0) return true;
-            
-            // Keep points where ELO has changed from the previous point
-            const previousPoint = array[index - 1];
-            return point.y !== previousPoint.y;
-          })
+          .sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically (backend handles filtering)
           .map((item, index) => ({
             ...item,
             x: `${item.displayDate} ${index}` // Recreate x value with new index

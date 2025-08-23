@@ -125,6 +125,11 @@ export function TeamStatsChart({
     const events = groupedData[summonerName];
     const memberName = truncateName(summonerName);
     
+    console.log(`🔍 Processing ${summonerName} (${events.length} events):`);
+    events.forEach((event, index) => {
+      console.log(`  Event ${index + 1}: ${event.created_at} | ELO: ${event.elo} | W:${event.wins} L:${event.losses}`);
+    });
+    
     // Start with historical data
     let chartPoints = events
       .filter(event => {
@@ -135,11 +140,15 @@ export function TeamStatsChart({
       .map((event) => {
         const date = new Date(event.created_at);
         console.log('Processing date:', event.created_at, '-> formatted:', date.toLocaleDateString());
+        
+        // Normalize the date to noon of the same day to avoid time-based duplicates
+        const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+        
         return {
-          x: date, // Use actual Date object for proper chronological sorting
+          x: normalizedDate, // Use normalized date to avoid time-based duplicates
           y: event.elo,
           date: event.created_at,
-          timestamp: date.getTime(), // Keep timestamp for sorting
+          timestamp: date.getTime(), // Keep original timestamp for sorting
           displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
           displayTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           wins: event.wins,
@@ -147,29 +156,12 @@ export function TeamStatsChart({
           isLive: false
         };
       })
-      .sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically first
-      .reduce((filtered, point, index) => {
-        // Keep the first point always
-        if (index === 0) {
-          filtered.push(point);
-          return filtered;
-        }
-        
-        // For points on the same day, only keep the latest one
-        const previousPoint = filtered[filtered.length - 1];
-        const currentDate = new Date(point.date).toDateString();
-        const previousDate = new Date(previousPoint.date).toDateString();
-        
-        if (currentDate === previousDate) {
-          // Same day - replace the previous point with this one (latest)
-          filtered[filtered.length - 1] = point;
-        } else {
-          // Different day - add this point
-          filtered.push(point);
-        }
-        
-        return filtered;
-      }, [] as any[]);
+      .sort((a, b) => a.timestamp - b.timestamp); // Sort chronologically (backend handles filtering)
+    
+    console.log(`📊 Chart points for ${summonerName} (${chartPoints.length} points):`);
+    chartPoints.forEach((point, index) => {
+      console.log(`  Point ${index + 1}: ${point.x.toDateString()} | ELO: ${point.y} | Display: ${point.displayDate}`);
+    });
     
     // Note: Live data is no longer added to charts - only date-based data is shown
     
@@ -180,7 +172,7 @@ export function TeamStatsChart({
     
     return {
       id: memberName,
-      data: chartPoints.sort((a, b) => a.timestamp - b.timestamp) // Sort chronologically
+      data: chartPoints
     };
   }).filter(series => series !== null);
 
@@ -210,6 +202,34 @@ export function TeamStatsChart({
       console.log(`  Live data key: "${key}" - Found in groupedData: ${key in groupedData}`);
     });
   }
+
+  // Debug: Check for duplicates in final chart data
+  console.log('🔍 Checking for duplicates in final chart data:');
+  chartData.forEach((series, seriesIndex) => {
+    console.log(`\n📊 Series ${seriesIndex}: ${series.id}`);
+    const dates = new Set();
+    const duplicates = [];
+    
+    series.data.forEach((point, pointIndex) => {
+      const dateKey = point.x instanceof Date ? point.x.toDateString() : point.x;
+      if (dates.has(dateKey)) {
+        duplicates.push({ pointIndex, dateKey, point });
+      } else {
+        dates.add(dateKey);
+      }
+    });
+    
+    if (duplicates.length > 0) {
+      console.log(`❌ Found ${duplicates.length} duplicates in series ${series.id}:`);
+      duplicates.forEach(dup => {
+        console.log(`   Point ${dup.pointIndex}: ${dup.dateKey} - ELO: ${dup.point.y}`);
+      });
+    } else {
+      console.log(`✅ No duplicates found in series ${series.id}`);
+    }
+  });
+
+
 
   // Debug: Check for invalid timestamps
   chartData.forEach((series, seriesIndex) => {

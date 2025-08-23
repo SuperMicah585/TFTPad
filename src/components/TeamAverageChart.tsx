@@ -104,17 +104,26 @@ export function TeamAverageChart({
     const memberName = truncateName(summonerName);
     
     // Start with historical data
-    let chartPoints = events.map(event => {
-      const date = new Date(event.created_at);
-      return {
-        x: date, // Use Date object for time scale
-        y: event.elo,
-        wins: event.wins,
-        losses: event.losses,
-        isLive: false,
-        displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
-      };
-    });
+    let chartPoints = events
+      .filter(event => {
+        if (!event.created_at) return false;
+        const date = new Date(event.created_at);
+        return !isNaN(date.getTime()) && date.getTime() > 0;
+      })
+      .map((event) => {
+        const date = new Date(event.created_at);
+        return {
+          x: date, // Use Date object for time scale
+          y: event.elo,
+          date: event.created_at,
+          timestamp: date.getTime(), // Keep timestamp for sorting
+          wins: event.wins,
+          losses: event.losses,
+          isLive: false,
+          displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' })
+        };
+      })
+      .sort((a, b) => a.timestamp - b.timestamp); // Sort chronologically (backend handles filtering)
     
     // Note: Live data is no longer added to charts - only date-based data is shown
     

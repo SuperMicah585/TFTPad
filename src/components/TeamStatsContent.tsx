@@ -85,13 +85,22 @@ export function TeamStatsContent({
       const events = groupedData[summonerName];
       
       // Start with historical data
-      let chartPoints = events.map(event => ({
-        x: event.created_at.split('T')[0],
-        y: event.elo,
-        wins: event.wins,
-        losses: event.losses,
-        isLive: false
-      }));
+      let chartPoints = events
+        .filter(event => {
+          if (!event.created_at) return false;
+          const date = new Date(event.created_at);
+          return !isNaN(date.getTime()) && date.getTime() > 0;
+        })
+        .map(event => ({
+          x: event.created_at.split('T')[0],
+          y: event.elo,
+          date: event.created_at,
+          timestamp: new Date(event.created_at).getTime(),
+          wins: event.wins,
+          losses: event.losses,
+          isLive: false
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp); // Sort chronologically (backend handles filtering)
       
       // Only include series that have data points
       if (chartPoints.length === 0) {
