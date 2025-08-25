@@ -306,7 +306,7 @@ export function GroupDetailPage() {
       // Start loading detailed member data and team stats in background
       Promise.all([
         fetchMembersData(id),
-        fetchTeamStatsData(id, true) // Load live data initially to get wins/losses
+        fetchTeamStatsData(id, false, false) // Don't load live data on page load, only on update button
       ]).then(async () => {
         // After loading team stats, check if we need to create initial rank audit events
         try {
@@ -655,7 +655,7 @@ export function GroupDetailPage() {
       // Step 1: Fetch fresh live data
       setUpdateProgress('Fetching fresh live data...');
       console.log('📡 Step 1: Fetching fresh live data...');
-      await fetchTeamStatsData(parseInt(groupId), true);
+              await fetchTeamStatsData(parseInt(groupId), true, false);
       
       // Step 2: Update database with fresh rank data and fetch updated group info
       setUpdateProgress('Updating database with fresh rank data...');
@@ -702,10 +702,28 @@ export function GroupDetailPage() {
       teamStatsService.clearCache();
       livePlayerService.clearCache();
       
-      // Step 6: Final refresh of team stats to show updated data
+      // Step 6: Refresh Redis cache with fresh data
+      setUpdateProgress('Refreshing Redis cache...');
+      console.log('📡 Step 6: Refreshing Redis cache with fresh data...');
+      
+      try {
+        const cacheRefreshResponse = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/cache/refresh/${groupId}`, {
+          method: 'POST'
+        });
+        
+        if (cacheRefreshResponse.ok) {
+          console.log('✅ Redis cache refreshed successfully');
+        } else {
+          console.warn('⚠️ Failed to refresh Redis cache, but continuing...');
+        }
+      } catch (cacheError) {
+        console.warn('⚠️ Error refreshing Redis cache:', cacheError);
+      }
+      
+      // Step 7: Final refresh of team stats to show updated data
       setUpdateProgress('Refreshing team stats...');
-      console.log('📡 Step 6: Refreshing team stats with updated data...');
-      await fetchTeamStatsData(parseInt(groupId), false); // Don't fetch live data again, just refresh from database
+      console.log('📡 Step 7: Refreshing team stats with updated data...');
+      await fetchTeamStatsData(parseInt(groupId), false, true); // Force refresh to get fresh data from Redis cache
       
       setUpdateProgress('Update completed successfully!');
       console.log('✅ All data updated successfully');
@@ -723,7 +741,7 @@ export function GroupDetailPage() {
   };
 
   // Independent team stats data fetching - NO CACHING for GroupDetailPage
-  const fetchTeamStatsData = async (id: number, loadLiveData: boolean = false) => {
+  const fetchTeamStatsData = async (id: number, loadLiveData: boolean = false, forceRefresh: boolean = false) => {
     setTeamStatsError(null);
     if (loadLiveData) {
       setLiveDataLoading(true);
@@ -745,6 +763,9 @@ export function GroupDetailPage() {
           queryParams.append('group_id', id.toString());
           queryParams.append('start_date', groupDetails.created_at);
           queryParams.append('include_members', 'true');
+          if (forceRefresh) {
+            queryParams.append('force_refresh', 'true');
+          }
           
           const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
           if (!response.ok) {
@@ -801,6 +822,9 @@ export function GroupDetailPage() {
           const queryParams = new URLSearchParams();
           queryParams.append('group_id', id.toString());
           queryParams.append('start_date', groupDetails.created_at);
+          if (forceRefresh) {
+            queryParams.append('force_refresh', 'true');
+          }
           
           const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
           if (!response.ok) {

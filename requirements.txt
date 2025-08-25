@@ -3,4 +3,5 @@ Flask-CORS==4.0.0
 requests==2.31.0
 supabase==2.4.5
 PyJWT==2.10.1
-pytz==2023.3 
+pytz==2023.3
+redis==6.4.0 
