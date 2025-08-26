@@ -103,10 +103,19 @@ POST /api/cache/refresh/1
 
 ### Redis Connection
 ```python
-REDIS_HOST = "switchyard.proxy.rlwy.net"
-REDIS_PORT = 36750
-REDIS_PASSWORD = "TZroUBwEQBXarRTolomwuqDvarlqpZBe"
-REDIS_DB = 0
+# Use environment variables for security
+REDIS_HOST = os.environ.get('REDIS_HOST', 'switchyard.proxy.rlwy.net')
+REDIS_PORT = int(os.environ.get('REDIS_PORT', 36750))
+REDIS_PASSWORD = os.environ.get('REDIS_PASSWORD', 'your-redis-password')
+REDIS_DB = int(os.environ.get('REDIS_DB', 0))
+```
+
+**Important**: Create a `.env` file with your actual credentials:
+```bash
+REDIS_HOST=switchyard.proxy.rlwy.net
+REDIS_PORT=36750
+REDIS_PASSWORD=your-actual-redis-password
+REDIS_DB=0
 ```
 
 ### Dependencies
@@ -161,8 +170,8 @@ Use `/api/redis-health` to monitor Redis connection status.
 
 ### Redis CLI Commands
 ```bash
-# Connect to Redis
-redis-cli -h switchyard.proxy.rlwy.net -p 36750 -a TZroUBwEQBXarRTolomwuqDvarlqpZBe
+# Connect to Redis (replace with your actual password)
+redis-cli -h switchyard.proxy.rlwy.net -p 36750 -a your-actual-redis-password
 
 # List all cache keys
 KEYS member_stats_group_*

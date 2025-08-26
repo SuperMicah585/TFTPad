@@ -27,4 +27,5 @@ dist-ssr
 app.py
 rank_audit_processor.log
 rank_audit_processor.py
+test_redis_connection.py
 .env
