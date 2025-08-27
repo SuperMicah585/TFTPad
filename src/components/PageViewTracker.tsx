@@ -1,6 +1,6 @@
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
-import { trackPageView } from './GoogleAnalytics';
+import ReactGA from 'react-ga4';
 
 function getPageTitle(pathname: string): string {
   switch (pathname) {
@@ -51,10 +51,19 @@ function getPageTitle(pathname: string): string {
 
 export function PageViewTracker() {
   const location = useLocation();
+  
   useEffect(() => {
     const pageTitle = getPageTitle(location.pathname);
     document.title = pageTitle;
-    trackPageView(pageTitle, window.location.href);
+    
+    // Track page view with react-ga4
+    ReactGA.send({ 
+      hitType: "pageview", 
+      page: location.pathname,
+      title: pageTitle
+    });
+    
   }, [location]);
+  
   return null;
 } 
