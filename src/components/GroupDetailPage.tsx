@@ -443,7 +443,10 @@ export function GroupDetailPage() {
         user_id: relationship.user_id
       }));
       
-      setMembers(membersData);
+      // Sort members by ELO in descending order
+      const sortedMembersData = membersData.sort((a, b) => b.elo - a.elo);
+      
+      setMembers(sortedMembersData);
       // Hide placeholders now since we have member data (rank/elo from database)
       setShowMemberPlaceholders(false);
       
@@ -460,7 +463,11 @@ export function GroupDetailPage() {
           icon_id: relationship.icon_id,
           user_id: relationship.user_id
         }));
-        setMembers(membersData);
+        
+        // Sort members by ELO in descending order
+        const sortedMembersData = membersData.sort((a, b) => b.elo - a.elo);
+        
+        setMembers(sortedMembersData);
         // Hide placeholders now since we have member data (rank/elo from database)
         setShowMemberPlaceholders(false);
       } catch (retryErr) {
@@ -529,7 +536,11 @@ export function GroupDetailPage() {
         icon_id: relationship.icon_id,
         user_id: relationship.user_id
       }));
-      setMembers(membersData);
+      
+      // Sort members by ELO in descending order
+      const sortedMembersData = membersData.sort((a, b) => b.elo - a.elo);
+      
+      setMembers(sortedMembersData);
       
       console.log('✅ Group info and members updated successfully in UI');
       
