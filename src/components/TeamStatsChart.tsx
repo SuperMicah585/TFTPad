@@ -1,6 +1,7 @@
 
 import { ResponsiveLine } from '@nivo/line';
 import type { RankAuditEvent } from '../services/teamStatsService';
+import { useState, useMemo } from 'react';
 
 // Extend the interface to include summoner_name that backend provides
 interface RankAuditEventWithName extends RankAuditEvent {
@@ -29,6 +30,10 @@ export function TeamStatsChart({
   maxXAxisLabels = 5,
   numGridLines = 5
 }: TeamStatsChartProps) {
+  // State for legend filter
+  const [searchQuery, setSearchQuery] = useState('');
+  const [compactView, setCompactView] = useState(false);
+
   console.log('📊 TeamStatsChart received data:', data);
   console.log('👥 TeamStatsChart received memberNames:', memberNames);
   console.log('📊 Sample event riot_id:', data[0]?.riot_id);
@@ -84,6 +89,33 @@ export function TeamStatsChart({
     });
   }
 
+  // Get all available members for the filter
+  const allMembers = useMemo(() => {
+    const members = new Set<string>();
+    
+    // Add members from historic data
+    Object.keys(groupedData).forEach(summonerName => {
+      members.add(summonerName);
+    });
+    
+    // Add members from live data
+    if (liveData) {
+      Object.keys(liveData).forEach(summonerName => {
+        members.add(summonerName);
+      });
+    }
+    
+    return Array.from(members).sort();
+  }, [groupedData, liveData]);
+
+
+
+  // Chart data is filtered by search - both chart and legend show filtered results
+  const filteredGroupedData = useMemo(() => {
+    // Use all grouped data - filtering is handled in chartData and legendData
+    return groupedData;
+  }, [groupedData]);
+
   // Helper function to normalize summoner names for consistent key matching
   const normalizeSummonerName = (name: string): string => {
     // Remove any special characters and normalize to lowercase for comparison
@@ -124,61 +156,92 @@ export function TeamStatsChart({
     return name.substring(0, maxLength) + '...';
   };
 
-  // Transform data for Nivo
-  const chartData = Object.keys(groupedData).map((summonerName) => {
-    const events = groupedData[summonerName];
-    const memberName = truncateName(summonerName);
-    
-    console.log(`🔍 Processing ${summonerName} (${events.length} events):`);
-    events.forEach((event, index) => {
-      console.log(`  Event ${index + 1}: ${event.created_at} | ELO: ${event.elo} | W:${event.wins} L:${event.losses}`);
+  // Get legend data - this is what gets filtered by search
+  const legendData = useMemo(() => {
+    // Get the summoner names that match the search query
+    const matchingSummonerNames = searchQuery.trim() 
+      ? allMembers.filter(summonerName => 
+          summonerName.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allMembers;
+
+    // Create legend data for matching members
+    return matchingSummonerNames.map((summonerName) => {
+      const memberName = truncateName(summonerName);
+      
+      return {
+        id: memberName,
+        summonerName: summonerName
+      };
     });
-    
-    // Start with historical data
-    let chartPoints = events
-      .filter(event => {
-        if (!event.created_at) return false;
-        const date = new Date(event.created_at);
-        return !isNaN(date.getTime()) && date.getTime() > 0;
-      })
-      .map((event) => {
-        const date = new Date(event.created_at);
-        console.log('Processing date:', event.created_at, '-> formatted:', date.toLocaleDateString());
-        
-        // Normalize the date to noon of the same day to avoid time-based duplicates
-        const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
-        
-        return {
-          x: normalizedDate, // Use normalized date to avoid time-based duplicates
-          y: event.elo,
-          date: event.created_at,
-          timestamp: date.getTime(), // Keep original timestamp for sorting
-          displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
-          displayTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          wins: event.wins,
-          losses: event.losses,
-          isLive: false
-        };
-      })
-      .sort((a, b) => a.timestamp - b.timestamp); // Sort chronologically (backend handles filtering)
-    
-    console.log(`📊 Chart points for ${summonerName} (${chartPoints.length} points):`);
-    chartPoints.forEach((point, index) => {
-      console.log(`  Point ${index + 1}: ${point.x.toDateString()} | ELO: ${point.y} | Display: ${point.displayDate}`);
-    });
-    
-    // Note: Live data is no longer added to charts - only date-based data is shown
-    
-    // Only include series that have data points
-    if (chartPoints.length === 0) {
-      return null;
-    }
-    
-    return {
-      id: memberName,
-      data: chartPoints
-    };
-  }).filter(series => series !== null);
+  }, [allMembers, groupedData, searchQuery]);
+
+  // Transform data for Nivo (filtered by search)
+  const chartData = useMemo(() => {
+    // Get the summoner names that match the search query
+    const matchingSummonerNames = searchQuery.trim() 
+      ? allMembers.filter(summonerName => 
+          summonerName.toLowerCase().includes(searchQuery.toLowerCase())
+        )
+      : allMembers;
+
+
+
+    return matchingSummonerNames.map((summonerName) => {
+      const events = groupedData[summonerName];
+      const memberName = truncateName(summonerName);
+      
+      console.log(`🔍 Processing ${summonerName} (${events.length} events):`);
+      events.forEach((event, index) => {
+        console.log(`  Event ${index + 1}: ${event.created_at} | ELO: ${event.elo} | W:${event.wins} L:${event.losses}`);
+      });
+      
+      // Start with historical data
+      let chartPoints = events
+        .filter(event => {
+          if (!event.created_at) return false;
+          const date = new Date(event.created_at);
+          return !isNaN(date.getTime()) && date.getTime() > 0;
+        })
+        .map((event) => {
+          const date = new Date(event.created_at);
+          console.log('Processing date:', event.created_at, '-> formatted:', date.toLocaleDateString());
+          
+          // Normalize the date to noon of the same day to avoid time-based duplicates
+          const normalizedDate = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 12, 0, 0);
+          
+          return {
+            x: normalizedDate, // Use normalized date to avoid time-based duplicates
+            y: event.elo,
+            date: event.created_at,
+            timestamp: date.getTime(), // Keep original timestamp for sorting
+            displayDate: date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+            displayTime: date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            wins: event.wins,
+            losses: event.losses,
+            isLive: false
+          };
+        })
+        .sort((a, b) => a.timestamp - b.timestamp); // Sort chronologically (backend handles filtering)
+      
+      console.log(`📊 Chart points for ${summonerName} (${chartPoints.length} points):`);
+      chartPoints.forEach((point, index) => {
+        console.log(`  Point ${index + 1}: ${point.x.toDateString()} | ELO: ${point.y} | Display: ${point.displayDate}`);
+      });
+      
+      // Note: Live data is no longer added to charts - only date-based data is shown
+      
+      // Only include series that have data points
+      if (chartPoints.length === 0) {
+        return null;
+      }
+      
+      return {
+        id: memberName,
+        data: chartPoints
+      };
+    }).filter(series => series !== null);
+  }, [groupedData, searchQuery]);
 
   // Keep x-axis as Date objects for proper chronological sorting
   chartData.forEach(series => {
@@ -195,7 +258,7 @@ export function TeamStatsChart({
   console.log('📊 Chart data structure:', JSON.stringify(chartData, null, 2));
   console.log('📊 Chart data length:', chartData.length);
   console.log('📊 First series data:', chartData[0]?.data);
-  console.log('📊 Grouped data keys:', Object.keys(groupedData));
+  console.log('📊 Filtered grouped data keys:', Object.keys(filteredGroupedData));
   console.log('📊 Member names mapping:', memberNames);
   console.log('📊 Chart series IDs:', chartData.map(series => series.id));
   console.log('📊 Live data available:', liveData);
@@ -320,21 +383,8 @@ export function TeamStatsChart({
   // Check if we have any valid data points after filtering
   const hasValidData = chartData.length > 0 && chartData.some(series => series && series.data.length > 0);
 
-  if (!hasValidData) {
-    return (
-      <div className={`flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200 ${className}`} style={{ width, height }}>
-        <div className="text-center text-gray-500">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-            <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-            </svg>
-          </div>
-          <p className="text-lg font-medium text-gray-600 mb-1">No Valid Rank Data</p>
-          <p className="text-sm text-gray-500">Valid rank progression data will appear here</p>
-        </div>
-      </div>
-    );
-  }
+  // Don't return error component - always show the chart interface
+  // This keeps the search and controls interactive even when no data is found
 
   return (
     <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 ${className}`}>
@@ -348,110 +398,187 @@ export function TeamStatsChart({
       </h5>
       
       <div className="mb-4">
+        {/* Member Filter Header */}
+        <div className="flex items-center justify-between mb-3">
+          <label className="text-sm font-medium text-gray-700">Filter Members:</label>
+          <div className="flex gap-2">
+            {allMembers.length > 10 && (
+              <button
+                onClick={() => setCompactView(!compactView)}
+                className={`px-2 py-1 text-xs rounded transition-colors ${
+                  compactView 
+                    ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {compactView ? 'Normal' : 'Compact'}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Search Input */}
+        <div className="mb-3">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search members to filter chart and legend..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+            />
+          </div>
+        </div>
+        
+        {/* Legend Display */}
         <div className="flex flex-wrap gap-2 justify-center">
-          {chartData.map((series, index) => (
-            <div key={series.id} className="flex items-center gap-1 text-xs">
-              <div 
-                className="w-3 h-3 rounded-full" 
-                style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
-              ></div>
-              <span className="text-gray-600 font-medium">{series.id}</span>
-            </div>
-          ))}
+          {legendData.length > 0 ? (
+            legendData.map((series, index) => (
+              <div
+                key={series.id}
+                className={`${
+                  compactView ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-xs'
+                } font-medium rounded-full flex items-center gap-1`}
+              >
+                <div 
+                  className="w-2 h-2 rounded-full"
+                  style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
+                />
+                {compactView ? series.summonerName.substring(0, 8) + (series.summonerName.length > 8 ? '...' : '') : series.summonerName}
+              </div>
+            ))
+          ) : null}
+        </div>
+        
+        {/* Search Results Info */}
+        <div className="text-center mt-2">
+          <span className="text-xs text-gray-500">
+            {searchQuery ? (
+              chartData.length > 0 
+                ? `Showing ${chartData.length} of ${allMembers.length} members on chart`
+                : null
+            ) : (
+              `Showing all ${chartData.length} members on chart`
+            )}
+          </span>
         </div>
       </div>
+      
+      {/* Chart Area */}
       <div style={{ height: height }}>
-        <ResponsiveLine
-          curve="monotoneX"
-          data={chartData}
-          margin={{ top: 50, right: 80, bottom: 100, left: 80 }}
-          colors={chartData.map((_, index) => `hsl(${index * 60}, 70%, 50%)`)}
-          xScale={{ 
-            type: 'time',
-            format: '%m-%d',
-            useUTC: false,
-            precision: 'day'
-          }}
-          yScale={{ 
-            type: 'linear', 
-            min: 'auto', 
-            max: 'auto', 
-            stacked: false, 
-            reverse: false 
-          }}
-          axisBottom={{ 
-            legend: 'Date', 
-            legendOffset: 70,
-            legendPosition: 'middle',
-            tickRotation: -45,
-            tickSize: 5,
-            tickPadding: 8,
-            format: '%m/%d',
-            tickValues: smartTickValues
-          }}
-          axisLeft={{ 
-            legend: 'ELO Rating', 
-            legendOffset: -50 
-          }}
-          gridYValues={gridYValues}
-          enableGridX={false}
-          enableGridY={true}
-          pointSize={8}
-          pointBorderWidth={1}
-          pointLabelYOffset={-20}
-          enableTouchCrosshair={true}
-          useMesh={true}
-          legends={[]}
-          tooltip={({ point }) => (
-            <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[200px] text-center">
-              <div className="font-semibold text-gray-800 mb-1 flex items-center justify-center gap-2">
-                <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                {point.seriesId}
-              </div>
-              <div className="text-sm text-gray-600 flex items-center justify-center gap-2 mb-1">
-                <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                <span className="whitespace-nowrap">
-                  {point.data.isLive ? String(point.data.x) : point.data.displayDate}
-                </span>
-                {point.data.isLive && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    LIVE
+        {hasValidData ? (
+          <ResponsiveLine
+            curve="monotoneX"
+            data={chartData}
+            margin={{ top: 50, right: 80, bottom: 100, left: 80 }}
+            colors={chartData.map((_, index) => `hsl(${index * 60}, 70%, 50%)`)}
+            xScale={{ 
+              type: 'time',
+              format: '%m-%d',
+              useUTC: false,
+              precision: 'day'
+            }}
+            yScale={{ 
+              type: 'linear', 
+              min: 'auto', 
+              max: 'auto', 
+              stacked: false, 
+              reverse: false 
+            }}
+            axisBottom={{ 
+              legend: 'Date', 
+              legendOffset: 70,
+              legendPosition: 'middle',
+              tickRotation: -45,
+              tickSize: 5,
+              tickPadding: 8,
+              format: '%m/%d',
+              tickValues: smartTickValues
+            }}
+            axisLeft={{ 
+              legend: 'ELO Rating', 
+              legendOffset: -50 
+            }}
+            gridYValues={gridYValues}
+            enableGridX={false}
+            enableGridY={true}
+            pointSize={8}
+            pointBorderWidth={1}
+            pointLabelYOffset={-20}
+            enableTouchCrosshair={true}
+            useMesh={true}
+            legends={[]}
+            tooltip={({ point }) => (
+              <div className="bg-white border border-gray-200 rounded-lg p-3 shadow-lg min-w-[200px] text-center">
+                <div className="font-semibold text-gray-800 mb-1 flex items-center justify-center gap-2">
+                  <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {point.seriesId}
+                </div>
+                <div className="text-sm text-gray-600 flex items-center justify-center gap-2 mb-1">
+                  <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="whitespace-nowrap">
+                    {point.data.isLive ? String(point.data.x) : point.data.displayDate}
                   </span>
+                  {point.data.isLive && (
+                    <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full whitespace-nowrap flex items-center gap-1">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      LIVE
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-gray-500 mb-1">
+                  {point.data.displayTime}
+                </div>
+                <div className="text-sm text-gray-600 flex items-center justify-center gap-2">
+                  <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  ELO: {point.data.y}
+                </div>
+                {point.data.wins !== undefined && (
+                  <div className="text-sm text-gray-600 flex items-center justify-center gap-4 mt-2 pt-2 border-t border-gray-100">
+                    <div className="flex items-center gap-1">
+                      <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      <span>{point.data.wins}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
+                      </svg>
+                      <span>{point.data.losses}</span>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="text-xs text-gray-500 mb-1">
-                {point.data.displayTime}
-              </div>
-              <div className="text-sm text-gray-600 flex items-center justify-center gap-2">
-                <svg className="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            )}
+          />
+        ) : (
+          // Show empty chart area with message when no data
+          <div className="flex items-center justify-center bg-white rounded-lg border border-gray-200" style={{ height }}>
+            <div className="text-center text-gray-500">
+              <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
-                ELO: {point.data.y}
               </div>
-              {point.data.wins !== undefined && (
-                <div className="text-sm text-gray-600 flex items-center justify-center gap-4 mt-2 pt-2 border-t border-gray-100">
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                    </svg>
-                    <span>{point.data.wins}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <svg className="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6" />
-                    </svg>
-                    <span>{point.data.losses}</span>
-                  </div>
-                </div>
-              )}
+              <p className="text-lg font-medium text-gray-600 mb-1">
+                {searchQuery ? 'No Matching Members' : 'No Valid Rank Data'}
+              </p>
+              <p className="text-sm text-gray-500">
+                {searchQuery 
+                  ? `No members found matching "${searchQuery}"`
+                  : 'Valid rank progression data will appear here'
+                }
+              </p>
             </div>
-          )}
-        />
+          </div>
+        )}
       </div>
     </div>
   );
