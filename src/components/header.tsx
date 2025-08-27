@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { RiotLoginModal } from './auth/RiotLoginModal'
 import { UserMenu } from './auth/UserMenu'
+import { trackNavigation } from './GoogleAnalytics'
 
 export function Header() {
    const location = useLocation();
@@ -27,6 +28,7 @@ export function Header() {
                <nav className="hidden md:flex items-center space-x-6 absolute left-1/2 transform -translate-x-1/2">
                    <Link 
                        to="/study-groups" 
+                       onClick={() => trackNavigation('/study-groups')}
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname.startsWith('/study-groups')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
@@ -37,6 +39,7 @@ export function Header() {
                    </Link>
                    <Link 
                        to="/free-agents" 
+                       onClick={() => trackNavigation('/free-agents')}
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname.startsWith('/free-agents')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
@@ -47,6 +50,7 @@ export function Header() {
                    </Link>
                    <Link 
                        to="/my-groups" 
+                       onClick={() => trackNavigation('/my-groups')}
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname.startsWith('/my-groups')
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
@@ -58,6 +62,7 @@ export function Header() {
 
                    <Link 
                        to="/blog" 
+                       onClick={() => trackNavigation('/blog')}
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname === '/blog'
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
@@ -68,6 +73,7 @@ export function Header() {
                    </Link>
                    <Link 
                        to="/contact" 
+                       onClick={() => trackNavigation('/contact')}
                        className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
                            location.pathname === '/contact'
                                ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'

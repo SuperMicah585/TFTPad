@@ -18,7 +18,9 @@ function getPageTitle(pathname: string): string {
       return 'TFTPad - Study Groups - Free Agents';
     case '/invitations':
       return 'TFTPad - Study Groups - Invitations';
-    // Tracker routes removed - TFT functionality was removed
+    case '/profile':
+      return 'TFTPad - Profile';
+    // Blog posts
     case '/blog/defensive-stats':
       return 'TFTPad - Defensive Stats';
     case '/blog/champion-pool':
@@ -35,7 +37,14 @@ function getPageTitle(pathname: string): string {
       return 'TFTPad - Understanding DMG';
     case '/blog/mana':
       return 'TFTPad - Mana';
+    // Dynamic routes
     default:
+      if (pathname.startsWith('/study-groups/') && pathname !== '/study-groups/') {
+        return 'TFTPad - Study Group Details';
+      }
+      if (pathname.startsWith('/free-agents/') && pathname !== '/free-agents/') {
+        return 'TFTPad - Free Agent Profile';
+      }
       return 'TFTPad';
   }
 }

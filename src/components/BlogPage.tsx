@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Footer } from './Footer'
+import { trackBlogInteraction, trackLinkClick } from './GoogleAnalytics'
 
 export function BlogPage() {
   const blogTopics = [
@@ -122,6 +123,10 @@ export function BlogPage() {
               <Link
                 key={index}
                 to={topic.path}
+                onClick={() => {
+                  trackBlogInteraction('blog_post_click')
+                  trackLinkClick(topic.title, topic.path)
+                }}
                 className="group block"
               >
                 <div 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { SquareX } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
+import { trackLogin } from '../GoogleAnalytics'
 
 interface RiotLoginModalProps {
   isOpen: boolean
@@ -37,6 +38,9 @@ export function RiotLoginModal({ isOpen, onClose, onSuccess }: RiotLoginModalPro
       if (result.error) {
         throw new Error(result.error)
       }
+      
+      // Track successful login
+      trackLogin('riot_games')
       
       // Call onSuccess callback
       if (onSuccess) {

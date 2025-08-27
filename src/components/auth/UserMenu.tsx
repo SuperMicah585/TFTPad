@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext'
 import { useProfile } from '../../contexts/ProfileContext'
 import { LogOut, User } from 'lucide-react'
 import { LoadingSpinner } from './LoadingSpinner'
+import { trackLogout } from '../GoogleAnalytics'
 
 export function UserMenu() {
   const { user, signOut } = useAuth()
@@ -23,6 +24,7 @@ export function UserMenu() {
   }, [])
 
   const handleSignOut = async () => {
+    trackLogout()
     await signOut()
     setIsOpen(false)
   }

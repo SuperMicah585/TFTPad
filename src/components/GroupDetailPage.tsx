@@ -17,6 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { TeamStatsContent } from './TeamStatsContent';
 import { TFTStatsContent } from './TFTStatsContent';
 import type { StudyGroup } from '../services/studyGroupService';
+import { trackStudyGroupAction } from './GoogleAnalytics';
 
 interface GroupMember {
   summoner_name: string;
@@ -242,6 +243,7 @@ export function GroupDetailPage() {
       });
       
       setUserRequest(request);
+      trackStudyGroupAction('join_request_sent');
       alert('Request to join group sent successfully!');
     } catch (error) {
       console.error('Error creating request:', error);
@@ -266,6 +268,7 @@ export function GroupDetailPage() {
     try {
       await studyGroupRequestService.cancelRequest(userRequest.id);
       setUserRequest(null);
+      trackStudyGroupAction('join_request_cancelled');
       alert('Request cancelled successfully!');
     } catch (error) {
       console.error('Error cancelling request:', error);

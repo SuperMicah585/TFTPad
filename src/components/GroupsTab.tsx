@@ -15,6 +15,7 @@ import { playerStatsService } from '../services/playerStatsService'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
 import { LoadingSpinner } from './auth/LoadingSpinner'
+import { trackSearch } from './GoogleAnalytics'
 
 interface GroupMember {
   summoner_name: string;
@@ -572,6 +573,7 @@ export function GroupsTab({
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyPress={(e) => {
                 if (e.key === 'Enter') {
+                  trackSearch(searchQuery);
                   setActiveSearchQuery(searchQuery);
                   updateSearchInURL(searchQuery);
                 }
@@ -588,6 +590,7 @@ export function GroupsTab({
             />
             <button
               onClick={() => {
+                trackSearch(searchQuery);
                 setActiveSearchQuery(searchQuery);
                 updateSearchInURL(searchQuery);
               }}

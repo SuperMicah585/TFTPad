@@ -5,6 +5,7 @@ import { Footer } from './Footer'
 import { GroupsTab } from './GroupsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
 import { LoadingSpinner } from './auth/LoadingSpinner';
+import { trackModalOpen } from './GoogleAnalytics';
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -85,6 +86,7 @@ export function GroupsPage() {
 
   // Function to fetch group info and open modal
   const handleOpenInfoModal = async (groupId: number) => {
+    trackModalOpen('group_info_modal')
     setShowInfoPopup(true)
     setInfoLoading(true)
     setInfoDescription('')

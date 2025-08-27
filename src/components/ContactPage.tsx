@@ -1,4 +1,5 @@
 import { Footer } from './Footer'
+import { trackContactForm, trackFormSubmission } from './GoogleAnalytics'
 
 export function ContactPage() {
   const handleSubmit = (e: React.FormEvent) => {
@@ -7,6 +8,10 @@ export function ContactPage() {
     const subject = formData.get('subject') as string
     const message = formData.get('message') as string
     const email = formData.get('email') as string
+    
+    // Track form submission
+    trackContactForm(subject)
+    trackFormSubmission('contact_form')
     
     const mailtoLink = `mailto:micahphlps@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${email}\n\n${message}`)}`
     window.location.href = mailtoLink

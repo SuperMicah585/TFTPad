@@ -9,6 +9,7 @@ import { LoadingSpinner } from './auth/LoadingSpinner'
 import { userService } from '../services/userService'
 // tftService removed - TFT functionality was removed
 import { Calendar, User, Clock, Star, Award, TrendingUp, TrendingDown } from 'lucide-react'
+import { trackProfileAction } from './GoogleAnalytics'
 
 interface RiotAccount {
   id: number
@@ -230,6 +231,7 @@ function ProfileContent() {
 
   // Handle delete account button click - show modal
   const handleDeleteButtonClick = () => {
+    trackProfileAction('delete_account_modal_open')
     setShowDeleteModal(true)
     setDeleteConfirmation('')
   }
@@ -245,6 +247,7 @@ function ProfileContent() {
     
     setDeletingAccount(true)
     try {
+      trackProfileAction('account_deleted')
       await userService.deleteUserAccount(userId)
       alert('Your account has been deleted successfully. You will be signed out.')
       // Sign out the user

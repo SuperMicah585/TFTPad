@@ -62,4 +62,57 @@ export const trackPageView = (page_title: string, page_location?: string) => {
       page_location: page_location || window.location.href,
     });
   }
+};
+
+// Enhanced event tracking functions for specific user interactions
+export const trackNavigation = (destination: string) => {
+  trackEvent('navigation_click', 'navigation', destination, undefined);
+};
+
+export const trackButtonClick = (buttonName: string) => {
+  trackEvent('button_click', 'engagement', buttonName, undefined);
+};
+
+export const trackFormSubmission = (formName: string) => {
+  trackEvent('form_submit', 'engagement', formName, undefined);
+};
+
+export const trackLinkClick = (linkText: string, destination: string) => {
+  trackEvent('link_click', 'engagement', `${linkText} -> ${destination}`, undefined);
+};
+
+export const trackSearch = (searchTerm: string) => {
+  trackEvent('search', 'engagement', searchTerm, undefined);
+};
+
+export const trackFilter = (filterType: string, filterValue: string) => {
+  trackEvent('filter_apply', 'engagement', `${filterType}: ${filterValue}`, undefined);
+};
+
+export const trackModalOpen = (modalName: string) => {
+  trackEvent('modal_open', 'engagement', modalName, undefined);
+};
+
+export const trackLogin = (method: string) => {
+  trackEvent('login', 'authentication', method, undefined);
+};
+
+export const trackLogout = () => {
+  trackEvent('logout', 'authentication', 'user_logout', undefined);
+};
+
+export const trackProfileAction = (action: string) => {
+  trackEvent('profile_action', 'user_profile', action, undefined);
+};
+
+export const trackStudyGroupAction = (action: string) => {
+  trackEvent('study_group_action', 'study_groups', action, undefined);
+};
+
+export const trackBlogInteraction = (action: string) => {
+  trackEvent('blog_interaction', 'content', action, undefined);
+};
+
+export const trackContactForm = (subject: string) => {
+  trackEvent('contact_form', 'engagement', subject, undefined);
 }; 
