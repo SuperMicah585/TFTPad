@@ -8,6 +8,7 @@ interface TeamAverageChartProps {
   liveData?: { [summonerName: string]: LivePlayerData };
   height?: number;
   className?: string;
+  maxXAxisLabels?: number;
 }
 
 export function TeamAverageChart({ 
@@ -15,7 +16,8 @@ export function TeamAverageChart({
   memberNames, 
   liveData,
   height = 400, 
-  className = '' 
+  className = '',
+  maxXAxisLabels = 5
 }: TeamAverageChartProps) {
   // Check if we have any data (historic or live)
   const hasHistoricData = data && data.length > 0;
@@ -243,26 +245,26 @@ export function TeamAverageChart({
     });
   }
 
-  // Calculate smart tick values for x-axis (max 10 labels with even visual spacing)
-  const calculateSmartTickValues = () => {
+  // Calculate smart tick values for x-axis (configurable max labels)
+  const calculateSmartTickValues = (maxLabels: number = 5) => {
     if (!averageChartData[0] || averageChartData[0].data.length === 0) {
       return [];
     }
 
     const allDates = averageChartData[0].data.map(point => point.x as Date);
     
-    if (allDates.length <= 10) {
-      // If 10 or fewer dates, show all
+    if (allDates.length <= maxLabels) {
+      // If maxLabels or fewer dates, show all
       return allDates;
     }
 
-    // If more than 10 dates, show evenly spaced labels by index (visual spacing)
-    const step = Math.floor(allDates.length / 9); // 9 intervals = 10 labels
+    // If more than maxLabels dates, show evenly spaced labels by index (visual spacing)
+    const step = Math.floor(allDates.length / (maxLabels - 1)); // maxLabels - 1 intervals = maxLabels labels
     const smartTicks = [];
     
     for (let i = 0; i < allDates.length; i += step) {
       smartTicks.push(allDates[i]);
-      if (smartTicks.length >= 10) break;
+      if (smartTicks.length >= maxLabels) break;
     }
     
     // Always include the last date
@@ -273,7 +275,7 @@ export function TeamAverageChart({
     return smartTicks;
   };
 
-  const smartTickValues = calculateSmartTickValues();
+  const smartTickValues = calculateSmartTickValues(maxXAxisLabels);
 
   return (
     <div className={`bg-gray-50 rounded-lg p-4 border border-gray-200 ${className}`}>

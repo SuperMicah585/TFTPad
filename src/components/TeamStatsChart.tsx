@@ -15,6 +15,8 @@ interface TeamStatsChartProps {
   width?: number;
   height?: number;
   className?: string;
+  maxXAxisLabels?: number;
+  numGridLines?: number;
 }
 
 export function TeamStatsChart({ 
@@ -23,7 +25,9 @@ export function TeamStatsChart({
   liveData,
   width = 600, 
   height = 400, 
-  className = '' 
+  className = '',
+  maxXAxisLabels = 5,
+  numGridLines = 5
 }: TeamStatsChartProps) {
   console.log('📊 TeamStatsChart received data:', data);
   console.log('👥 TeamStatsChart received memberNames:', memberNames);
@@ -243,8 +247,8 @@ export function TeamStatsChart({
     });
   });
 
-  // Calculate smart tick values for x-axis (max 10 labels with even visual spacing)
-  const calculateSmartTickValues = () => {
+  // Calculate smart tick values for x-axis (configurable max labels)
+  const calculateSmartTickValues = (maxLabels: number = 10) => {
     // Get all unique dates from all series
     const allDates = new Set<Date>();
     chartData.forEach(series => {
@@ -257,18 +261,18 @@ export function TeamStatsChart({
 
     const sortedDates = Array.from(allDates).sort((a, b) => a.getTime() - b.getTime());
     
-    if (sortedDates.length <= 10) {
-      // If 10 or fewer dates, show all
+    if (sortedDates.length <= maxLabels) {
+      // If maxLabels or fewer dates, show all
       return sortedDates;
     }
 
-    // If more than 10 dates, show evenly spaced labels by index (visual spacing)
-    const step = Math.floor(sortedDates.length / 9); // 9 intervals = 10 labels
+    // If more than maxLabels dates, show evenly spaced labels by index (visual spacing)
+    const step = Math.floor(sortedDates.length / (maxLabels - 1)); // maxLabels - 1 intervals = maxLabels labels
     const smartTicks = [];
     
     for (let i = 0; i < sortedDates.length; i += step) {
       smartTicks.push(sortedDates[i]);
-      if (smartTicks.length >= 10) break;
+      if (smartTicks.length >= maxLabels) break;
     }
     
     // Always include the last date
@@ -279,7 +283,39 @@ export function TeamStatsChart({
     return smartTicks;
   };
 
-  const smartTickValues = calculateSmartTickValues();
+  // Calculate grid values for y-axis (horizontal grid lines)
+  const calculateGridYValues = (numGridLines: number = 5) => {
+    // Get min and max ELO values from all data
+    let minElo = Infinity;
+    let maxElo = -Infinity;
+    
+    chartData.forEach(series => {
+      series.data.forEach(point => {
+        if (typeof point.y === 'number') {
+          minElo = Math.min(minElo, point.y);
+          maxElo = Math.max(maxElo, point.y);
+        }
+      });
+    });
+    
+    if (minElo === Infinity || maxElo === -Infinity) {
+      return [];
+    }
+    
+    // Calculate evenly spaced grid lines
+    const range = maxElo - minElo;
+    const step = range / (numGridLines - 1);
+    const gridValues = [];
+    
+    for (let i = 0; i < numGridLines; i++) {
+      gridValues.push(minElo + (step * i));
+    }
+    
+    return gridValues;
+  };
+
+  const smartTickValues = calculateSmartTickValues(maxXAxisLabels);
+  const gridYValues = calculateGridYValues(numGridLines);
 
   // Check if we have any valid data points after filtering
   const hasValidData = chartData.length > 0 && chartData.some(series => series && series.data.length > 0);
@@ -357,6 +393,9 @@ export function TeamStatsChart({
             legend: 'ELO Rating', 
             legendOffset: -50 
           }}
+          gridYValues={gridYValues}
+          enableGridX={false}
+          enableGridY={true}
           pointSize={8}
           pointBorderWidth={1}
           pointLabelYOffset={-20}

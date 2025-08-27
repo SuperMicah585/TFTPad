@@ -6,9 +6,10 @@ interface PlayerEloChartProps {
   liveData?: any; // Current live data from league API
   height?: number;
   className?: string;
+  maxXAxisLabels?: number;
 }
 
-export function PlayerEloChart({ data, liveData, height = 500, className = '' }: PlayerEloChartProps) {
+export function PlayerEloChart({ data, liveData, height = 500, className = '', maxXAxisLabels = 5 }: PlayerEloChartProps) {
   // Function to convert rank to ELO (same as backend)
   const rankToElo = (rankStr: string): number => {
     if (!rankStr || rankStr === 'UNRANKED') return 0;
@@ -111,13 +112,13 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
     }
   ];
 
-  // Calculate smart tick values for x-axis (max 10 labels with even visual spacing)
-  const calculateSmartTickValues = () => {
+  // Calculate smart tick values for x-axis (configurable max labels)
+  const calculateSmartTickValues = (maxLabels: number = 5) => {
     const allDates = chartData[0].data.map(point => point.displayDate);
     const uniqueDates = [...new Set(allDates)];
     
-    if (uniqueDates.length <= 10) {
-      // If 10 or fewer dates, show all
+    if (uniqueDates.length <= maxLabels) {
+      // If maxLabels or fewer dates, show all
       return uniqueDates.map(date => {
         if (date === 'Current') return 'Current';
         // Find the first data point for this date and use its exact x value
@@ -126,8 +127,8 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
       });
     }
 
-    // If more than 10 dates, show evenly spaced labels by index (visual spacing)
-    const step = Math.floor(uniqueDates.length / 9); // 9 intervals = 10 labels
+    // If more than maxLabels dates, show evenly spaced labels by index (visual spacing)
+    const step = Math.floor(uniqueDates.length / (maxLabels - 1)); // maxLabels - 1 intervals = maxLabels labels
     const smartTicks = [];
     
     for (let i = 0; i < uniqueDates.length; i += step) {
@@ -139,7 +140,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
         const firstPointForDate = chartData[0].data.find(point => point.displayDate === date);
         smartTicks.push(firstPointForDate ? firstPointForDate.x : date);
       }
-      if (smartTicks.length >= 10) break;
+      if (smartTicks.length >= maxLabels) break;
     }
     
     // Always include the last date
@@ -156,7 +157,7 @@ export function PlayerEloChart({ data, liveData, height = 500, className = '' }:
     return smartTicks;
   };
 
-  const smartTickValues = calculateSmartTickValues();
+  const smartTickValues = calculateSmartTickValues(maxXAxisLabels);
 
   console.log('Chart data being passed to Nivo:', chartData);
 
