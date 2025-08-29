@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { SquareX, FileText } from 'lucide-react'
+
 import { useSearchParams } from 'react-router-dom'
 import { Footer } from './Footer'
 import { GroupsTab } from './GroupsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
-import { LoadingSpinner } from './auth/LoadingSpinner';
-import { trackModalOpen } from './GoogleAnalytics';
+
+
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -29,14 +29,14 @@ export function GroupsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>('')
-  const [meetingDayFilter, setMeetingDayFilter] = useState<string>('');
+
   const [minEloFilter, setMinEloFilter] = useState<number>(0);
   const [maxEloFilter, setMaxEloFilter] = useState<number>(5000);
   
   // Debounced ELO filters to prevent excessive API calls
   const debouncedMinEloFilter = useDebounce(minEloFilter, 1000);
   const debouncedMaxEloFilter = useDebounce(maxEloFilter, 1000);
-  const [timezoneFilter, setTimezoneFilter] = useState<string>('');
+
 
   // Real data state with caching
   const [studyGroups, setStudyGroups] = useState<StudyGroup[]>([]);
@@ -49,7 +49,7 @@ export function GroupsPage() {
   // Cache state
   const [lastFetched, setLastFetched] = useState<number | null>(null);
 
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -65,16 +65,11 @@ export function GroupsPage() {
   const [isCountLoading, setIsCountLoading] = useState(false);
   const [isDataLoading, setIsDataLoading] = useState(false);
 
-  // Group info modal state
-  const [showInfoPopup, setShowInfoPopup] = useState(false);
-  const [infoDescription, setInfoDescription] = useState('');
-  const [infoInstructions, setInfoInstructions] = useState('');
-  const [infoLoading, setInfoLoading] = useState(false);
+  
+
 
   // Available meeting days for filtering
-  const meetingDays = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Flexible'
-  ];
+
 
   // Sort state
   const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
@@ -84,24 +79,7 @@ export function GroupsPage() {
   const [prevSortBy, setPrevSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
   const [prevSortOrder, setPrevSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Function to fetch group info and open modal
-  const handleOpenInfoModal = async (groupId: number) => {
-    trackModalOpen('group_info_modal')
-    setShowInfoPopup(true)
-    setInfoLoading(true)
-    setInfoDescription('')
-    setInfoInstructions('')
-    try {
-      const groupDetails = await studyGroupService.getStudyGroup(groupId)
-      setInfoDescription(groupDetails.description || '')
-      setInfoInstructions(groupDetails.application_instructions || '')
-    } catch (err) {
-      setInfoDescription('Error loading group description.')
-      setInfoInstructions('Error loading application instructions.')
-    } finally {
-      setInfoLoading(false)
-    }
-  }
+
 
   // Initialize search from URL on component mount
   useEffect(() => {
@@ -119,13 +97,13 @@ export function GroupsPage() {
     }
   }, []);
 
-  // Fetch study groups when filters change
+          // Fetch groups when filters change
   useEffect(() => {
     if (!hasInitialized) return;
     
     const fetchStudyGroups = async (isRetry: boolean = false) => {
       const isCacheValid = lastFetched && (Date.now() - lastFetched < CACHE_DURATION);
-      const hasActiveFilters = activeSearchQuery || meetingDayFilter || debouncedMinEloFilter > 0 || debouncedMaxEloFilter < 5000 || timezoneFilter;
+      const hasActiveFilters = activeSearchQuery || debouncedMinEloFilter !== 0 || debouncedMaxEloFilter !== 5000;
       const hasSortingChanged = sortBy !== prevSortBy || sortOrder !== prevSortOrder;
       
       if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !hasSortingChanged && !isRetry) {
@@ -143,10 +121,8 @@ export function GroupsPage() {
           page: 1,
           limit: 10,
           search: activeSearchQuery || undefined,
-          meeting_days: meetingDayFilter || undefined,
-          minEloFilter: debouncedMinEloFilter > 0 ? debouncedMinEloFilter : undefined,
-          maxEloFilter: debouncedMaxEloFilter < 5000 ? debouncedMaxEloFilter : undefined,
-          timezone: timezoneFilter || undefined,
+          minEloFilter: debouncedMinEloFilter,
+          maxEloFilter: debouncedMaxEloFilter,
           sort_by: sortBy,
           sort_order: sortOrder
         };
@@ -180,7 +156,7 @@ export function GroupsPage() {
         setIsDataLoading(false);
 
       } catch (err) {
-        console.error('Failed to fetch study groups:', err);
+        console.error('Failed to fetch groups:', err);
         
         if (retryCount < MAX_RETRIES && !isRetry) {
           setRetryCount(prev => prev + 1);
@@ -188,7 +164,7 @@ export function GroupsPage() {
           return;
         }
         
-        setError('Failed to load study groups. Please try again later.');
+        setError('Failed to load groups. Please try again later.');
         setRetryCount(0);
         setIsCountLoading(false);
         setIsDataLoading(false);
@@ -199,7 +175,7 @@ export function GroupsPage() {
     if (hasInitialized) {
       fetchStudyGroups();
     }
-  }, [activeSearchQuery, meetingDayFilter, debouncedMinEloFilter, debouncedMaxEloFilter, timezoneFilter, sortBy, sortOrder, hasInitialized]);
+  }, [activeSearchQuery, debouncedMinEloFilter, debouncedMaxEloFilter, sortBy, sortOrder, hasInitialized]);
 
   // Load more groups when scrolling
   const loadMoreGroups = async () => {
@@ -212,10 +188,8 @@ export function GroupsPage() {
         page: currentPage + 1,
         limit: 10,
         search: activeSearchQuery || undefined,
-        meeting_days: meetingDayFilter || undefined,
-        minEloFilter: debouncedMinEloFilter > 0 ? debouncedMinEloFilter : undefined,
-        maxEloFilter: debouncedMaxEloFilter < 5000 ? debouncedMaxEloFilter : undefined,
-        timezone: timezoneFilter || undefined,
+        minEloFilter: debouncedMinEloFilter,
+        maxEloFilter: debouncedMaxEloFilter,
         sort_by: sortBy,
         sort_order: sortOrder
       };
@@ -226,7 +200,7 @@ export function GroupsPage() {
       setCurrentPage(prev => prev + 1);
       setHasMore(response.pagination.has_next);
     } catch (err) {
-      console.error('Failed to load more study groups:', err);
+      console.error('Failed to load more groups:', err);
     } finally {
       setLoadingMore(false);
     }
@@ -294,8 +268,8 @@ export function GroupsPage() {
         setHasInitialized(true);
         setRetryCount(0);
       } catch (err) {
-        console.error('Failed to fetch study groups on retry:', err);
-        setError('Failed to load study groups. Please try again later.');
+        console.error('Failed to fetch groups on retry:', err);
+        setError('Failed to load groups. Please try again later.');
       }
     };
     
@@ -337,15 +311,10 @@ export function GroupsPage() {
                 setSearchQuery={setSearchQuery}
                 setActiveSearchQuery={setActiveSearchQuery}
                 updateSearchInURL={updateSearchInURL}
-                meetingDayFilter={meetingDayFilter}
-                setMeetingDayFilter={setMeetingDayFilter}
                 minEloFilter={minEloFilter}
                 setMinEloFilter={setMinEloFilter}
                 maxEloFilter={maxEloFilter}
                 setMaxEloFilter={setMaxEloFilter}
-                timezoneFilter={timezoneFilter}
-                setTimezoneFilter={setTimezoneFilter}
-                meetingDays={meetingDays}
                 loading={isCountLoading || isDataLoading}
                 error={error}
                 memberCounts={memberCounts}
@@ -353,7 +322,7 @@ export function GroupsPage() {
                 hasMore={hasMore}
                 loadingMore={loadingMore}
                 onRetry={handleRetry}
-                handleOpenInfoModal={handleOpenInfoModal}
+
                 sortBy={sortBy}
                 setSortBy={setSortBy}
                 sortOrder={sortOrder}
@@ -362,48 +331,7 @@ export function GroupsPage() {
                 showPlaceholders={showPlaceholders}
                 isCountLoading={isCountLoading}
               />
-              {showInfoPopup && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-                  <div className="bg-white rounded-lg p-6 max-w-lg w-full h-96 flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                      <h3 className="text-lg font-semibold text-gray-800">Group Information</h3>
-                      <button
-                        onClick={() => setShowInfoPopup(false)}
-                        className="text-gray-400 hover:text-gray-600 transition-colors"
-                      >
-                        <SquareX className="w-6 h-6 text-black" />
-                      </button>
-                    </div>
-                    <div className="flex-1 overflow-y-auto">
-                      {infoLoading ? (
-                        <div className="flex justify-center items-center py-8">
-                          <div className="text-center">
-                            <LoadingSpinner size="md" className="mx-auto mb-2" />
-                            <p className="text-gray-600">Loading group details...</p>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="space-y-4">
-                          <div>
-                            <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-green-600" />
-                              Description
-                            </h4>
-                            <p className="text-gray-700 text-sm">{infoDescription}</p>
-                          </div>
-                          <div>
-                            <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-orange-600" />
-                              Application Instructions
-                            </h4>
-                            <p className="text-gray-700 text-sm">{infoInstructions}</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
+
             </div>
             
             <Footer />

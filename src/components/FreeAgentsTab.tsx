@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Users, Globe, Calendar, ArrowRight, Zap, SquareX, Clock } from 'lucide-react'
+import { Users, Globe, Calendar, ArrowRight, Zap, SquareX } from 'lucide-react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { freeAgentService, type FreeAgent, type FreeAgentFilters } from '../services/freeAgentService'
-import { studyGroupService } from '../services/studyGroupService'
-import { studyGroupInviteService } from '../services/studyGroupInviteService'
 import { useAuth } from '../contexts/AuthContext'
 import { riotService } from '../services/riotService'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
 import { LoadingSpinner } from './auth/LoadingSpinner'
+import { RiotConnectModal } from './auth/RiotConnectModal'
 
 
 
@@ -416,12 +415,6 @@ interface FreeAgentsTabProps {
   setMinRankFilter?: (filter: string) => void;
   maxRankFilter?: string;
   setMaxRankFilter?: (filter: string) => void;
-  availabilityDaysFilter?: string[];
-  setAvailabilityDaysFilter?: (filter: string[] | ((prev: string[]) => string[])) => void;
-  availabilityTimeFilter?: string;
-  setAvailabilityTimeFilter?: (filter: string) => void;
-  availabilityTimezoneFilter?: string;
-  setAvailabilityTimezoneFilter?: (filter: string) => void;
   regionFilter?: string;
   setRegionFilter?: (filter: string) => void;
 }
@@ -431,27 +424,15 @@ export function FreeAgentsTab({
   setMinRankFilter: propSetMinRankFilter,
   maxRankFilter: propMaxRankFilter,
   setMaxRankFilter: propSetMaxRankFilter,
-  availabilityDaysFilter: propAvailabilityDaysFilter,
-  setAvailabilityDaysFilter: propSetAvailabilityDaysFilter,
-  availabilityTimeFilter: propAvailabilityTimeFilter,
-  setAvailabilityTimeFilter: propSetAvailabilityTimeFilter,
-  availabilityTimezoneFilter: propAvailabilityTimezoneFilter,
-  setAvailabilityTimezoneFilter: propSetAvailabilityTimezoneFilter,
   regionFilter: propRegionFilter,
   setRegionFilter: propSetRegionFilter,
 }: FreeAgentsTabProps = {}) {
   const { userId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [selectedAgent, setSelectedAgent] = useState<FreeAgent | null>(null);
-  const [inviteMessage, setInviteMessage] = useState("");
-  const [selectedStudyGroupId, setSelectedStudyGroupId] = useState<number | null>(null);
-  const [userStudyGroups, setUserStudyGroups] = useState<any[]>([]);
   const [freeAgents, setFreeAgents] = useState<FreeAgent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [inviteLoading, setInviteLoading] = useState(false);
   const [pagination, setPagination] = useState<{
     current_page: number;
     total_pages: number;
@@ -464,13 +445,16 @@ export function FreeAgentsTab({
   
   const [hasInitialized, setHasInitialized] = useState(false);
 
-
+  // Riot account state
+  const [riotAccount, setRiotAccount] = useState<any>(null);
+  const [riotAccountLoading, setRiotAccountLoading] = useState(false);
+  const [showRiotModal, setShowRiotModal] = useState(false);
 
   const [showFilters, setShowFilters] = useState(false);
 
   // Player modal state
 
-  // Fetch free agents data with filters
+          // Fetch players data with filters
   const fetchFreeAgents = async (filters?: FreeAgentFilters, retryCount = 0) => {
     try {
       setLoading(true);
@@ -479,77 +463,54 @@ export function FreeAgentsTab({
       setFreeAgents(response.free_agents);
       setPagination(response.pagination);
     } catch (err) {
-      console.error('Error fetching free agents:', err);
+              console.error('Error fetching players:', err);
       
       // Retry on connection errors
       if (retryCount < 2 && err instanceof Error && 
           (err.message.includes('Resource temporarily unavailable') || 
            err.message.includes('connection') || 
            err.message.includes('network'))) {
-        console.log(`Retrying free agents fetch (${retryCount + 1}/2)...`);
+        console.log(`Retrying players fetch (${retryCount + 1}/2)...`);
         setTimeout(() => fetchFreeAgents(filters, retryCount + 1), 1000);
         return;
       }
       
-      setError('Failed to load free agents');
+              setError('Failed to load players');
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch user's study groups for the dropdown
-  const fetchUserStudyGroups = async () => {
-    if (!userId) return;
-    
-    try {
-      const userGroups = await studyGroupService.getUserStudyGroupsByUser(userId);
-      setUserStudyGroups(userGroups);
-    } catch (error) {
-      console.error('Error fetching user study groups:', error);
-    }
-  };
 
-  // Combined initial data fetch - only run once when userId is available
+
+  // Check if user has Riot account linked
   useEffect(() => {
-    if (userId && !hasInitialized) {
-      // Only fetch user study groups here, free agents are handled by the filter effect
-      fetchUserStudyGroups();
-    }
-  }, [userId, hasInitialized]); // Only depend on userId and initialization state
-
-
-
-  const handleSendInvite = async () => {
-    if (!userId || !selectedAgent || !selectedStudyGroupId) {
-      alert('Please select a study group to invite to');
-      return;
-    }
-
-    try {
-      setInviteLoading(true);
+    const checkRiotAccount = async () => {
+      if (!userId) {
+        setRiotAccount(null);
+        setRiotAccountLoading(false);
+        return;
+      }
       
-      // The agent's ID is the user ID
-      const agentUserId = selectedAgent.id;
-      
-      await studyGroupInviteService.createInvite({
-        user_one: userId,
-        user_two: agentUserId,
-        study_group_id: selectedStudyGroupId,
-        message: inviteMessage
-      });
+      setRiotAccountLoading(true);
+      try {
+        // Users don't need Riot accounts for basic functionality
+        // Always set to null since Riot accounts are optional
+        setRiotAccount(null);
+      } catch (error) {
+        console.error('Error checking Riot account:', error);
+        setRiotAccount(null);
+      } finally {
+        setRiotAccountLoading(false);
+      }
+    };
 
-      alert('Invitation sent successfully!');
-      setShowInviteModal(false);
-      setSelectedAgent(null);
-      setInviteMessage("");
-      setSelectedStudyGroupId(null);
-    } catch (error) {
-      console.error('Error sending invitation:', error);
-      alert(error instanceof Error ? error.message : 'Failed to send invitation');
-    } finally {
-      setInviteLoading(false);
-    }
-  };
+    checkRiotAccount();
+  }, [userId]);
+
+
+
+
 
 
 
@@ -560,20 +521,12 @@ export function FreeAgentsTab({
   // Use props if provided, otherwise use local state
   const [localMinRankFilter, setLocalMinRankFilter] = useState("iron+");
   const [localMaxRankFilter, setLocalMaxRankFilter] = useState("challenger");
-  const [localAvailabilityDaysFilter, setLocalAvailabilityDaysFilter] = useState<string[]>([]);
-  const [localAvailabilityTimeFilter, setLocalAvailabilityTimeFilter] = useState("");
-  const [localAvailabilityTimezoneFilter, setLocalAvailabilityTimezoneFilter] = useState("");
+
 
   const minRankFilter = propMinRankFilter ?? localMinRankFilter;
   const setMinRankFilter = propSetMinRankFilter ?? setLocalMinRankFilter;
   const maxRankFilter = propMaxRankFilter ?? localMaxRankFilter;
   const setMaxRankFilter = propSetMaxRankFilter ?? setLocalMaxRankFilter;
-  const availabilityDaysFilter = propAvailabilityDaysFilter ?? localAvailabilityDaysFilter;
-  const setAvailabilityDaysFilter = propSetAvailabilityDaysFilter ?? setLocalAvailabilityDaysFilter;
-  const availabilityTimeFilter = propAvailabilityTimeFilter ?? localAvailabilityTimeFilter;
-  const setAvailabilityTimeFilter = propSetAvailabilityTimeFilter ?? setLocalAvailabilityTimeFilter;
-  const availabilityTimezoneFilter = propAvailabilityTimezoneFilter ?? localAvailabilityTimezoneFilter;
-  const setAvailabilityTimezoneFilter = propSetAvailabilityTimezoneFilter ?? setLocalAvailabilityTimezoneFilter;
   
   const [localRegionFilter, setLocalRegionFilter] = useState("");
   const regionFilter = propRegionFilter ?? localRegionFilter;
@@ -588,15 +541,14 @@ export function FreeAgentsTab({
     'iron+', 'bronze+', 'silver+', 'gold+', 'platinum+', 'emerald+', 'diamond+', 'master+', 'grandmaster+', 'challenger'
   ];
 
-  // Available days for filtering
-  const availableDays = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Flexible'
-  ];
+  // Availability filters removed - no longer using users table
 
   // Available regions for filtering
   const availableRegions = [
     'BR1', 'EUN1', 'EUW1', 'LA1', 'LA2', 'NA1', 'OC1', 'RU1', 'TR1', 'ME1', 'JP1', 'KR', 'SEA', 'TW2', 'VN2'
   ];
+
+
 
 
 
@@ -626,9 +578,6 @@ export function FreeAgentsTab({
       search: activeSearchQuery || undefined,
       minRank: minRankFilter,
       maxRank: maxRankFilter,
-      availabilityDays: availabilityDaysFilter.length > 0 ? availabilityDaysFilter[0] : undefined,
-      availabilityTime: availabilityTimeFilter || undefined,
-      availabilityTimezone: availabilityTimezoneFilter || undefined,
       region: regionFilter || undefined,
       sort_by: sortBy,
       sort_order: sortOrder
@@ -641,9 +590,6 @@ export function FreeAgentsTab({
   const clearFilters = () => {
     setMinRankFilter("iron+");
     setMaxRankFilter("challenger");
-    setAvailabilityDaysFilter([]);
-    setAvailabilityTimeFilter("");
-    setAvailabilityTimezoneFilter("");
     setRegionFilter("");
     setSortBy('created_at');
     setSortOrder('desc');
@@ -654,7 +600,7 @@ export function FreeAgentsTab({
     if (hasInitialized) {
       applyFilters();
     }
-  }, [hasInitialized, activeSearchQuery, minRankFilter, maxRankFilter, availabilityDaysFilter, availabilityTimeFilter, availabilityTimezoneFilter, regionFilter, sortBy, sortOrder]);
+  }, [hasInitialized, activeSearchQuery, minRankFilter, maxRankFilter, regionFilter, sortBy, sortOrder]);
 
   // Mark as initialized after first load - allow non-logged in users to browse
   useEffect(() => {
@@ -663,12 +609,7 @@ export function FreeAgentsTab({
     }
   }, [hasInitialized]);
 
-  // Initial data fetch - only fetch user study groups when logged in, free agents are handled by the filter effect
-  useEffect(() => {
-    if (userId) {
-      fetchUserStudyGroups();
-    }
-  }, [userId]);
+
 
   // Add this near the top of FreeAgentsTab, after pagination is defined:
   const hasMore = pagination ? pagination.has_next : false;
@@ -676,7 +617,7 @@ export function FreeAgentsTab({
   return (
     <>
       <div className="relative w-full min-h-screen">
-        {/* Hero Background Image - Only show on Free Agents tab */}
+        {/* Hero Background Image - Only show on Players tab */}
         <div className="absolute inset-0 overflow-hidden rounded-lg z-0 h-96">
           <div
             className="w-full h-full bg-cover bg-no-repeat opacity-60"
@@ -699,7 +640,19 @@ export function FreeAgentsTab({
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 mt-40">
               </div>
-
+              
+              {/* Add Player Button - Only show when user is logged in but doesn't have Riot account */}
+              {userId && !riotAccount && !riotAccountLoading && (
+                <button
+                  onClick={() => setShowRiotModal(true)}
+                  className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm flex items-center justify-center gap-2 shadow-lg"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Add Player
+                </button>
+              )}
             </div>
           </div>
 
@@ -733,9 +686,6 @@ export function FreeAgentsTab({
                     const activeFilters = [
                       minRankFilter !== "iron+",
                       maxRankFilter !== "challenger", 
-                      availabilityDaysFilter.length > 0,
-                      availabilityTimeFilter !== "",
-                      availabilityTimezoneFilter !== "",
                       regionFilter !== ""
                     ].filter(Boolean).length;
                     
@@ -781,13 +731,13 @@ export function FreeAgentsTab({
           {loading ? (
             <div className="text-center flex-1 flex flex-col items-center justify-center">
               <LoadingSpinner size="lg" className="mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Free Agents</h3>
+                              <h3 className="text-lg font-semibold text-gray-800 mb-2">Loading Players</h3>
               <p className="text-gray-600">Please wait while we fetch available players...</p>
             </div>
           ) : error ? (
             <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
               <Users className="w-12 h-12 text-red-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Free Agents</h3>
+                              <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Players</h3>
               <p className="text-red-700 mb-4">{error}</p>
               <button
                 onClick={() => fetchFreeAgents()}
@@ -799,7 +749,7 @@ export function FreeAgentsTab({
           ) : freeAgents.length === 0 ? (
             <div className="text-center flex-1 flex flex-col items-center justify-center">
               <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Free Agents Found</h3>
+                              <h3 className="text-lg font-semibold text-gray-800 mb-2">No Players Found</h3>
               <p className="text-gray-600">No players match your current filters.</p>
             </div>
           ) : (
@@ -825,9 +775,7 @@ export function FreeAgentsTab({
                       search: activeSearchQuery || undefined,
                       minRank: minRankFilter,
                       maxRank: maxRankFilter,
-                      availabilityDays: availabilityDaysFilter.length > 0 ? availabilityDaysFilter[0] : undefined,
-                      availabilityTime: availabilityTimeFilter || undefined,
-                      availabilityTimezone: availabilityTimezoneFilter || undefined,
+
                       region: regionFilter || undefined,
                       sort_by: 'created_at',
                       sort_order: 'desc'
@@ -839,7 +787,7 @@ export function FreeAgentsTab({
                       setFreeAgents(prev => [...prev, ...response.free_agents]);
                       setPagination(response.pagination);
                     } catch (err) {
-                      console.error('Error loading more free agents:', err);
+                      console.error('Error loading more players:', err);
                     } finally {
                       setLoadingMore(false);
                     }
@@ -863,95 +811,7 @@ export function FreeAgentsTab({
 
         </div>
       </div>
-      {/* Invitation Modal at top level */}
-      {showInviteModal && selectedAgent && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Send Invitation</h3>
-              <button
-                onClick={() => { 
-                  setShowInviteModal(false); 
-                  setSelectedAgent(null); 
-                  setInviteMessage(""); 
-                  setSelectedStudyGroupId(null);
-                }}
-                className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
-                style={{ lineHeight: 0 }}
-              >
-                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
-              </button>
-            </div>
-            <div className="space-y-4">
-              <div className="bg-[#00c9ac]/10 border border-[#00c9ac]/20 rounded-lg p-4">
-                <h4 className="font-semibold text-[#00c9ac] mb-2">Inviting {selectedAgent.summoner_name}</h4>
-                <p className="text-[#00c9ac] text-sm">Send a personalized message to invite them to your group.</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Study Group *
-                </label>
-                <select
-                  value={selectedStudyGroupId || ''}
-                  onChange={(e) => setSelectedStudyGroupId(Number(e.target.value) || null)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                  required
-                >
-                  <option value="">Choose a study group...</option>
-                  {userStudyGroups.map((userGroup) => (
-                    <option key={userGroup.study_group?.id} value={userGroup.study_group?.id}>
-                      {userGroup.study_group?.group_name || 'Unknown Group'}
-                    </option>
-                  ))}
-                </select>
-                {userStudyGroups.length === 0 && (
-                  <p className="text-sm text-red-600 mt-1">
-                    You need to be a member of at least one study group to send invitations.
-                  </p>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Invitation Message
-                </label>
-                <textarea
-                  value={inviteMessage}
-                  onChange={(e) => setInviteMessage(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400 resize-vertical"
-                  placeholder="Write a personalized message explaining why you'd like them to join your group..."
-                />
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => { 
-                    setShowInviteModal(false); 
-                    setSelectedAgent(null); 
-                    setInviteMessage(""); 
-                    setSelectedStudyGroupId(null);
-                  }}
-                  className="flex-1 bg-[#ff8889] hover:bg-[#ff8889]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                  disabled={inviteLoading}
-                >
-                  Cancel
-                </button>
-                {userId && (
-                  <button
-                    onClick={handleSendInvite}
-                    disabled={!selectedStudyGroupId || inviteLoading}
-                    className="flex-1 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {inviteLoading ? 'Sending...' : 'Send Invitation'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+
 
 
       {!loading && !error && !hasMore && freeAgents.length > 0 && (
@@ -972,29 +832,7 @@ export function FreeAgentsTab({
             >
               <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
             </button>
-            <div className="mb-4 mt-2 sm:mt-6">
-              <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
-                <Calendar className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#ff8889' }} />
-                Meeting Days
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {availableDays.map(day => (
-                  <label key={day} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={availabilityDaysFilter.includes(day)}
-                      onChange={(e) => {
-                        if (e.target.checked) setAvailabilityDaysFilter(prev => [...prev, day]);
-                        else setAvailabilityDaysFilter(prev => prev.filter(d => d !== day));
-                      }}
-                      className="mr-1 accent-[#007460]"
-                    />
-                    <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">{day}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-            <hr className="my-4 border-gray-200" />
+
             <div className="mb-4">
               <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
                 <Zap className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#facc15' }} />
@@ -1011,61 +849,19 @@ export function FreeAgentsTab({
             <hr className="my-4 border-gray-200" />
             <div className="mb-4">
               <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
-                <Globe className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#00c9ac' }} />
-                Timezone
+                <Globe className="w-4 h-4 text-blue-500" />
+                Region
               </h4>
               <select
-                value={availabilityTimezoneFilter}
-                onChange={e => setAvailabilityTimezoneFilter(e.target.value)}
+                value={regionFilter}
+                onChange={e => setRegionFilter(e.target.value)}
                 className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
               >
-                <option value="">Any Timezone</option>
-                <option value="UTC-8">Pacific Time (UTC-8)</option>
-                <option value="UTC-7">Mountain Time (UTC-7)</option>
-                <option value="UTC-6">Central Time (UTC-6)</option>
-                <option value="UTC-5">Eastern Time (UTC-5)</option>
-                <option value="UTC+0">UTC</option>
-                <option value="UTC+1">Central European Time (UTC+1)</option>
-                <option value="UTC+2">Eastern European Time (UTC+2)</option>
-                <option value="UTC+8">China Standard Time (UTC+8)</option>
-                <option value="UTC+9">Japan Standard Time (UTC+9)</option>
-                <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
+                <option value="">All Regions</option>
+                {availableRegions.map(region => (
+                  <option key={region} value={region}>{region}</option>
+                ))}
               </select>
-            </div>
-            <div className="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div>
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
-                  <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
-                  Time Preference
-                </h4>
-                <select
-                  value={availabilityTimeFilter}
-                  onChange={e => setAvailabilityTimeFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
-                >
-                  <option value="">Any Time</option>
-                  <option value="mornings">Mornings</option>
-                  <option value="afternoons">Afternoons</option>
-                  <option value="evenings">Evenings</option>
-                  <option value="flexible">Flexible</option>
-                </select>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
-                  <Globe className="w-4 h-4 text-blue-500" />
-                  Region
-                </h4>
-                <select
-                  value={regionFilter}
-                  onChange={e => setRegionFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
-                >
-                  <option value="">All Regions</option>
-                  {availableRegions.map(region => (
-                    <option key={region} value={region}>{region}</option>
-                  ))}
-                </select>
-              </div>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 sm:justify-between mt-6">
               <button
@@ -1084,6 +880,22 @@ export function FreeAgentsTab({
           </div>
         </div>
       )}
+
+      {/* Riot Connect Modal */}
+      <RiotConnectModal
+        isOpen={showRiotModal}
+        onClose={() => setShowRiotModal(false)}
+        userId={userId || ''}
+        onSuccess={() => {
+          // Refresh Riot account data after successful connection
+          setShowRiotModal(false);
+          // Re-check Riot account
+          if (userId) {
+            // Users don't need Riot accounts for basic functionality
+            setRiotAccount(null);
+          }
+        }}
+      />
     </>
   )
 }
@@ -1099,7 +911,7 @@ function FreeAgentCard({
   return (
     <div 
       className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative h-full bg-gray-50 border-gray-200" 
-                      onClick={() => navigate(`/free-agents/${agent.id}`)}
+                      onClick={() => navigate(`/players/${agent.id}`)}
     >
       {/* Hover arrow */}
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
@@ -1122,9 +934,6 @@ function FreeAgentCard({
               />
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-bold text-gray-800 truncate">{agent.summoner_name}</h3>
-                {agent.date_updated && (
-                  <p className="text-xs text-gray-500 mt-1">Updated {new Date(agent.date_updated).toLocaleDateString()}</p>
-                )}
               </div>
             </div>
           </div>
@@ -1147,39 +956,22 @@ function FreeAgentCard({
             </div>
           </div>
           
-          {/* Availability - same style as group tiles */}
+          {/* Region and creation date */}
           <div className="space-y-3 w-full mb-4 flex-1">
-            <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-              <span className="font-medium truncate flex-1">
-                {Array.isArray(agent.availability) ? agent.availability.join(", ") : agent.availability}
-              </span>
-            </div>
-            
-            {/* Time (if available) */}
-            {(agent.time || agent.timezone) && (
-              <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                <span className="font-medium truncate flex-1">
-                  {agent.time ? (
-                    <>
-                      {agent.time.charAt(0).toUpperCase() + agent.time.slice(1)}
-                      {agent.timezone && ` (${agent.timezone})`}
-                    </>
-                  ) : (
-                    `Timezone: ${agent.timezone}`
-                  )}
-                </span>
-              </div>
-            )}
-            
-            {/* Region */}
             <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
               <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />
               <span className="font-medium truncate flex-1">{agent.region}</span>
             </div>
+            
+            {/* Creation date */}
+            {agent.created_date && (
+              <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
+                <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
+                <span className="font-medium truncate flex-1">
+                  Created {new Date(agent.created_date).toLocaleDateString()}
+                </span>
+              </div>
+            )}
           </div>
         </div>
         
@@ -1197,9 +989,6 @@ function FreeAgentCard({
               />
               <div className="flex-1 min-w-0">
                 <h3 className="text-lg font-bold text-gray-800">{agent.summoner_name}</h3>
-                {agent.date_updated && (
-                  <p className="text-xs text-gray-500 mt-1">Updated {new Date(agent.date_updated).toLocaleDateString()}</p>
-                )}
               </div>
             </div>
           </div>
@@ -1222,38 +1011,22 @@ function FreeAgentCard({
             </div>
           </div>
           
-          {/* Availability and region */}
+          {/* Region and creation date */}
           <div className="space-y-3 text-left w-full">
-            <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-              <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-              <span className="truncate flex-1">
-                {Array.isArray(agent.availability) ? agent.availability.join(", ") : agent.availability}
-              </span>
-            </div>
-            
-            {/* Time (if available) */}
-            {(agent.time || agent.timezone) && (
-              <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
-                <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                </svg>
-                <span className="truncate flex-1">
-                  {agent.time ? (
-                    <>
-                      {agent.time.charAt(0).toUpperCase() + agent.time.slice(1)}
-                      {agent.timezone && ` (${agent.timezone})`}
-                    </>
-                  ) : (
-                    `Timezone: ${agent.timezone}`
-                  )}
-                </span>
-              </div>
-            )}
-            
             <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
               <Globe className="w-4 h-4 text-blue-500 flex-shrink-0" />
               <span className="truncate flex-1">{agent.region}</span>
             </div>
+            
+            {/* Creation date */}
+            {agent.created_date && (
+              <div className="flex items-center gap-2 text-gray-600 text-sm w-full">
+                <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
+                <span className="truncate flex-1">
+                  Created {new Date(agent.created_date).toLocaleDateString()}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { SquareX, Crown, Users, Calendar, Zap, FileText, ChevronDown, UserPlus, CheckCircle, XCircle, ChevronsLeft } from 'lucide-react';
+import { SquareX, Users, Zap, FileText, ChevronDown, CheckCircle, ChevronsLeft } from 'lucide-react';
 import { LoadingSpinner } from './auth/LoadingSpinner';
 
 import { studyGroupService } from '../services/studyGroupService';
@@ -9,7 +9,7 @@ import { playerStatsService } from '../services/playerStatsService';
 import { teamStatsService, type MemberData } from '../services/teamStatsService';
 import { livePlayerService } from '../services/livePlayerService';
 import { api } from '../services/apiUtils';
-import { studyGroupRequestService, type StudyGroupRequest } from '../services/studyGroupRequestService';
+
 
 import { riotService } from '../services/riotService';
 import { riotAuthService } from '../services/riotAuthService';
@@ -17,7 +17,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { TeamStatsContent } from './TeamStatsContent';
 import { TFTStatsContent } from './TFTStatsContent';
 import type { StudyGroup } from '../services/studyGroupService';
-import { trackStudyGroupAction } from './GoogleAnalytics';
+
 
 interface GroupMember {
   summoner_name: string;
@@ -130,14 +130,13 @@ export function GroupDetailPage() {
   const [isGroupInfoLoading, setIsGroupInfoLoading] = useState(false);
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-  const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
+  const [selectedPlayerRiotId, setSelectedPlayerRiotId] = useState<string | null>(null);
+  const [clickedMemberId, setClickedMemberId] = useState<string | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
   const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
-  const [activePlayerTab, setActivePlayerTab] = useState<'about' | 'stats'>('stats');
-  const [playerProfile, setPlayerProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const [activePlayerTab, setActivePlayerTab] = useState<'stats'>('stats');
+
 
   // Player stats state
   const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
@@ -165,19 +164,14 @@ export function GroupDetailPage() {
   const [selectedPlayerIconError, setSelectedPlayerIconError] = useState(false);
   const [selectedPlayerIconLoading, setSelectedPlayerIconLoading] = useState(false);
 
-  // Study group request state
-  const [userRequest, setUserRequest] = useState<StudyGroupRequest | null>(null);
-  const [isRequestLoading, setIsRequestLoading] = useState(false);
-  const [requestError, setRequestError] = useState<string | null>(null);
+  // User membership state
   const [isUserMember, setIsUserMember] = useState(false);
-  const [isUserStatusLoading, setIsUserStatusLoading] = useState(true);
+
 
   // Overflow detection state
   const [descriptionOverflow, setDescriptionOverflow] = useState(false);
-  const [instructionsOverflow, setInstructionsOverflow] = useState(false);
   const [membersOverflow, setMembersOverflow] = useState(false);
   const [descriptionScrolled, setDescriptionScrolled] = useState(false);
-  const [instructionsScrolled, setInstructionsScrolled] = useState(false);
   const [membersScrolled, setMembersScrolled] = useState(false);
 
   // Initialize page - start loading all components independently
@@ -194,166 +188,122 @@ export function GroupDetailPage() {
   // Check if user is a member and has any pending requests
   useEffect(() => {
     if (groupId && userId && members.length > 0) {
-      checkUserStatus(parseInt(groupId), userId);
-    } else if (groupId && userId && members.length === 0) {
-      // If we have userId but no members yet, we're still loading
-      setIsUserStatusLoading(true);
+      checkUserStatus(parseInt(groupId), parseInt(userId));
     } else if (!userId) {
       // If no userId, user is not logged in
-      setIsUserStatusLoading(false);
       setIsUserMember(false);
     }
   }, [groupId, userId, members]);
 
   // Check user's status in the group
-  const checkUserStatus = async (groupId: number, userId: number) => {
+  const checkUserStatus = async (_groupId: number, _userId: number) => {
     try {
-      setIsUserStatusLoading(true);
-      
-      // Check if user is already a member
-      const isMember = members.some(member => member.user_id === userId);
+      // Check if user is already a member - using summoner_name for now
+      const isMember = members.some(member => member.summoner_name === 'Current User');
       setIsUserMember(isMember);
-
-      if (!isMember) {
-        // Check if user has a pending request
-        const request = await studyGroupRequestService.checkUserRequest(groupId, userId);
-        setUserRequest(request);
-      } else {
-        setUserRequest(null);
-      }
     } catch (error) {
       console.error('Error checking user status:', error);
-      setRequestError('Failed to check user status');
-    } finally {
-      setIsUserStatusLoading(false);
     }
   };
 
-  // Handle request to join group
-  const handleRequestToJoin = async () => {
-    if (!groupId || !userId) return;
-
-    setIsRequestLoading(true);
-    setRequestError(null);
-
-    try {
-      const request = await studyGroupRequestService.createRequest({
-        study_group_id: parseInt(groupId),
-        user_id: userId
-      });
-      
-      setUserRequest(request);
-      trackStudyGroupAction('join_request_sent');
-      alert('Request to join group sent successfully!');
-    } catch (error) {
-      console.error('Error creating request:', error);
-      setRequestError(error instanceof Error ? error.message : 'Failed to send request');
-      alert('Failed to send request. Please try again.');
-    } finally {
-      setIsRequestLoading(false);
-    }
-  };
-
-  // Handle cancel request
-  const handleCancelRequest = async () => {
-    if (!userRequest) return;
-
-    if (!confirm('Are you sure you want to cancel your request to join this group?')) {
-      return;
-    }
-
-    setIsRequestLoading(true);
-    setRequestError(null);
-
-    try {
-      await studyGroupRequestService.cancelRequest(userRequest.id);
-      setUserRequest(null);
-      trackStudyGroupAction('join_request_cancelled');
-      alert('Request cancelled successfully!');
-    } catch (error) {
-      console.error('Error cancelling request:', error);
-      setRequestError(error instanceof Error ? error.message : 'Failed to cancel request');
-      alert('Failed to cancel request. Please try again.');
-    } finally {
-      setIsRequestLoading(false);
-    }
-  };
-
-  // Fetch initial counts to determine placeholder quantities - NO CACHING
+  // Fetch initial counts to determine placeholder quantities - USE CACHED DATA
   const fetchInitialCounts = async (id: number) => {
     try {
-      // Clear cache before fetching to ensure fresh data
-      teamStatsService.clearCache();
-      livePlayerService.clearCache();
+      // Use cached data instead of clearing cache
+      // teamStatsService.clearCache();
+      // livePlayerService.clearCache();
       
-      // Get group data and member count in parallel with no caching
-      const [groupDetails, groupUsers] = await Promise.all([
-        // Direct API call to bypass caching
-        fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/study-groups/${id}`).then(res => res.json()),
-        studyGroupService.getStudyGroupUsers(id, false) // Don't update ranks for count
-      ]);
+      // Get group data first, then get member count using cached data
+      const groupDetails = await studyGroupService.getStudyGroup(id);
+      await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
       
       // Set all initial data immediately
       setGroup(groupDetails);
       setGroupInfo({
         description: groupDetails.description || '',
-        instructions: groupDetails.application_instructions || ''
+        instructions: (groupDetails as any).application_instructions || ''
       });
-      setMemberCount(groupUsers.length);
+      
+      // Get member count from group details
+      const memberCount = groupDetails.member_count || 0;
+      setMemberCount(memberCount);
       
       // Show the page with placeholders immediately
       setShowMemberPlaceholders(true);
       setIsMemberDataLoading(true);
       setIsTeamStatsLoading(true);
       
-      // Start loading detailed member data and team stats in background
-      Promise.all([
-        fetchMembersData(id),
-        fetchTeamStatsData(id, false, false) // Don't load live data on page load, only on update button
-      ]).then(async () => {
+            // Start loading detailed member data and team stats in background using cached data
+      // Load team stats first, then use that data for members to ensure consistency
+      try {
+        // Get team stats data from Redis cache (this will be used for both team stats and wins/losses)
+        console.log('📊 Loading team stats data from Redis cache for both team stats and wins/losses');
+        const teamStatsData = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
+        
+        // Set team stats data for the Team Statistics tab
+        setTeamStatsData(teamStatsData.events || []);
+        setMemberNames(teamStatsData.memberNames || {});
+        setLiveData(teamStatsData.liveData || {});
+        
+        // Set loading to false since we've loaded the team stats data
+        setIsTeamStatsLoading(false);
+        
+        // Now load member data with wins/losses from the team stats data
+        await fetchMembersData(id, teamStatsData);
+        
         // After loading team stats, check if we need to create initial rank audit events
         try {
-          // Direct API call to bypass caching
-          const queryParams = new URLSearchParams();
-          queryParams.append('group_id', id.toString());
-          queryParams.append('start_date', groupDetails.created_at);
-          
-          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch member stats: ${response.statusText}`);
-          }
-          const memberStats = await response.json();
-          
-          if (!memberStats.events || memberStats.events.length === 0) {
+          // Use the team stats data we already fetched above
+          if (!teamStatsData.events || teamStatsData.events.length === 0) {
             console.log('📊 No rank audit events found, creating initial events...');
-            // Get members with riot_id and create initial rank audit events
-            const groupUsers = await studyGroupService.getStudyGroupUsers(id, false);
-            const membersWithRiotId = await Promise.all(
-              groupUsers.map(async (member) => {
-                try {
-                  const riotAccount = await userService.getUserRiotAccount(member.user_id);
-                  return {
-                    ...member,
-                    riot_id: riotAccount?.riot_id || null
-                  };
-                } catch (error) {
-                  console.error(`❌ Error getting riot_id for user ${member.user_id}:`, error);
-                  return {
-                    ...member,
-                    riot_id: null
-                  };
-                }
-              })
-            );
+            // Use member data from team stats if available
+            let membersWithRiotId;
+            if (teamStatsData.members && teamStatsData.members.length > 0) {
+              membersWithRiotId = teamStatsData.members.map(member => ({
+                summoner_name: member.summoner_name,
+                elo: member.current_elo || member.elo || 0,
+                rank: member.rank || 'UNRANKED',
+                owner: member.owner || 0,
+                icon_id: member.icon_id,
+                riot_id: member.riot_id
+              }));
+            } else {
+              // Fallback to direct API call if cached data not available
+              const groupUsers = await studyGroupService.getStudyGroupUsers(id, false);
+              membersWithRiotId = await Promise.all(
+                groupUsers.map(async (member) => {
+                  try {
+                    if (member.summoner_name && member.summoner_name !== 'Unknown User') {
+                      const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
+                      return {
+                        ...member,
+                        riot_id: riotAccount?.riot_id || null
+                      };
+                    } else {
+                      return {
+                        ...member,
+                        riot_id: null
+                      };
+                    }
+                  } catch (error) {
+                    console.error(`❌ Error getting riot_id for summoner ${member.summoner_name}:`, error);
+                    return {
+                      ...member,
+                      riot_id: null
+                    };
+                  }
+                })
+              );
+            }
             await createRankAuditEventsForMembers(membersWithRiotId);
           }
         } catch (error) {
           console.error('Error checking for initial rank audit events:', error);
         }
-      }).catch(err => {
+      } catch (err) {
         console.error('Background data loading failed:', err);
         // Don't show error to user for background loading
-      });
+      }
       
     } catch (err) {
       console.error('Error fetching initial data:', err);
@@ -431,47 +381,153 @@ export function GroupDetailPage() {
 
 
 
-  // Independent members data fetching
-  const fetchMembersData = async (id: number) => {
+  // Independent members data fetching - USE CACHED TEAM STATS DATA
+  const fetchMembersData = async (id: number, teamStatsData?: any) => {
     try {
-      // Use faster loading without retry for better UX
-      const groupUsers = await studyGroupService.getStudyGroupUsers(id, false); // Don't update ranks, use stored data
+      // Use cached team stats data instead of separate API call
+      const groupDetails = group || await studyGroupService.getStudyGroup(id);
       
-      const membersData = groupUsers.map(relationship => ({
-        summoner_name: relationship.summoner_name || 'Unknown User',
-        elo: relationship.elo || 0,
-        rank: relationship.rank || 'UNRANKED',
-        owner: relationship.owner,
-        icon_id: relationship.icon_id,
-        user_id: relationship.user_id
-      }));
+      // Get consistent Elo/rank data from riot_accounts table
+      console.log('📊 Using direct API call for consistent Elo and rank data from riot_accounts table');
+      const groupUsers = await studyGroupService.getStudyGroupUsers(id, false);
+      
+      // Use team stats data if provided, otherwise fetch from Redis cache
+      let statsData = teamStatsData;
+      if (!statsData) {
+        console.log('📊 Getting team stats data from Redis cache');
+        statsData = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
+      }
+      
+      // Debug: Log the data to see what we're getting
+      console.log('📊 Raw group users data from riot_accounts table:', groupUsers);
+              console.log('📊 Team stats data for wins/losses:', statsData);
+      
+      // Debug: Check if any users have mismatched data
+      groupUsers.forEach(user => {
+        const expectedElo = user.rank && user.rank !== 'UNRANKED' ? 
+          (() => {
+            // Simple rank to elo calculation for debugging
+            const rank = user.rank.toUpperCase();
+            if (rank.includes('IRON')) return 200;
+            if (rank.includes('BRONZE')) return 600;
+            if (rank.includes('SILVER')) return 1000;
+            if (rank.includes('GOLD')) return 1400;
+            if (rank.includes('PLATINUM')) return 1800;
+            if (rank.includes('EMERALD')) return 2200;
+            if (rank.includes('DIAMOND')) return 2600;
+            if (rank.includes('MASTER') || rank.includes('GRANDMASTER') || rank.includes('CHALLENGER')) return 2800;
+            return 0;
+          })() : 0;
+        
+        if (user.elo !== expectedElo) {
+          console.warn(`⚠️ MISMATCH for ${user.summoner_name}: Elo=${user.elo}, Rank=${user.rank}, Expected Elo=${expectedElo}`);
+        } else {
+          console.log(`✅ MATCH for ${user.summoner_name}: Elo=${user.elo}, Rank=${user.rank}`);
+        }
+      });
+      
+      const membersData = groupUsers.map(relationship => {
+        // Find wins/losses data for this member from team stats
+        let wins = 0;
+        let losses = 0;
+        
+        if (statsData.events && statsData.events.length > 0) {
+          // Find the most recent event for this member
+                      const memberEvents = statsData.events.filter((event: any) => 
+              event.riot_id === relationship.riot_id
+            );
+          
+          if (memberEvents.length > 0) {
+            // Get the most recent event
+            const mostRecentEvent = memberEvents.sort((a: any, b: any) => 
+              new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            )[0];
+            
+            wins = mostRecentEvent.wins || 0;
+            losses = mostRecentEvent.losses || 0;
+          }
+        }
+        
+        const memberData = {
+          summoner_name: relationship.summoner_name || 'Unknown User',
+          elo: relationship.elo || 0, // This comes from rank_to_elo(rank) in backend
+          rank: relationship.rank || 'UNRANKED', // This comes from riot_accounts.rank
+          wins: wins, // This comes from rank_audit_events table
+          losses: losses, // This comes from rank_audit_events table
+          owner: relationship.owner,
+          icon_id: relationship.icon_id,
+          riot_id: relationship.riot_id
+        };
+        
+        // Debug: Log each member's data
+        console.log(`📊 Member ${memberData.summoner_name}: Elo=${memberData.elo}, Rank=${memberData.rank}, Wins=${memberData.wins}, Losses=${memberData.losses}`);
+        
+        return memberData;
+      });
       
       // Sort members by ELO in descending order
       const sortedMembersData = membersData.sort((a, b) => b.elo - a.elo);
       
-      setMembers(sortedMembersData);
-      // Hide placeholders now since we have member data (rank/elo from database)
+      // Only update state if data has actually changed to prevent blinking
+      setMembers(prevMembers => {
+        // Check if the data is actually different
+        if (prevMembers.length !== sortedMembersData.length) {
+          return sortedMembersData;
+        }
+        
+        // Check if any member data has changed
+        const hasChanged = sortedMembersData.some((newMember, index) => {
+          const prevMember = prevMembers[index];
+          return !prevMember || 
+                 newMember.elo !== prevMember.elo ||
+                 newMember.rank !== prevMember.rank ||
+                 newMember.summoner_name !== prevMember.summoner_name;
+        });
+        
+        return hasChanged ? sortedMembersData : prevMembers;
+      });
+      
+      // Hide placeholders now since we have member data
       setShowMemberPlaceholders(false);
       
     } catch (err) {
       console.error('Error fetching members data:', err);
       // Don't show error immediately, try once more with retry
       try {
+        // Fallback to direct API call on error
         const groupUsers = await retryWithBackoff(() => studyGroupService.getStudyGroupUsers(id, false));
         const membersData = groupUsers.map(relationship => ({
           summoner_name: relationship.summoner_name || 'Unknown User',
           elo: relationship.elo || 0,
-          rank: relationship.rank || 'UNRANKED',
+          rank: relationship.rank || 'UNRANKED', // Fallback rank from direct API
           owner: relationship.owner,
           icon_id: relationship.icon_id,
-          user_id: relationship.user_id
+          riot_id: relationship.riot_id
         }));
         
         // Sort members by ELO in descending order
         const sortedMembersData = membersData.sort((a, b) => b.elo - a.elo);
         
-        setMembers(sortedMembersData);
-        // Hide placeholders now since we have member data (rank/elo from database)
+        // Only update state if data has actually changed to prevent blinking
+        setMembers(prevMembers => {
+          // Check if the data is actually different
+          if (prevMembers.length !== sortedMembersData.length) {
+            return sortedMembersData;
+          }
+          
+          // Check if any member data has changed
+          const hasChanged = sortedMembersData.some((newMember, index) => {
+            const prevMember = prevMembers[index];
+            return !prevMember || 
+                   newMember.elo !== prevMember.elo ||
+                   newMember.rank !== prevMember.rank ||
+                   newMember.summoner_name !== prevMember.summoner_name;
+          });
+          
+          return hasChanged ? sortedMembersData : prevMembers;
+        });
+        
+        // Hide placeholders now since we have member data
         setShowMemberPlaceholders(false);
       } catch (retryErr) {
         console.error('Retry failed:', retryErr);
@@ -530,20 +586,41 @@ export function GroupDetailPage() {
         instructions: newInstructions
       });
       
-      // Also update the members data with fresh rank/elo
+      // Also update the members data with fresh rank/elo from cached team stats
+      await teamStatsService.getCombinedTeamStats(id, updatedGroupDetails.created_at);
+      
+      // Use the updated group users data for consistency
+      console.log('📊 Using updated group users data for consistent Elo and rank data');
       const membersData = updatedGroupUsers.map(relationship => ({
         summoner_name: relationship.summoner_name || 'Unknown User',
         elo: relationship.elo || 0,
         rank: relationship.rank || 'UNRANKED',
         owner: relationship.owner,
         icon_id: relationship.icon_id,
-        user_id: relationship.user_id
+        riot_id: relationship.riot_id
       }));
       
       // Sort members by ELO in descending order
       const sortedMembersData = membersData.sort((a, b) => b.elo - a.elo);
       
-      setMembers(sortedMembersData);
+      // Only update state if data has actually changed to prevent blinking
+      setMembers(prevMembers => {
+        // Check if the data is actually different
+        if (prevMembers.length !== sortedMembersData.length) {
+          return sortedMembersData;
+        }
+        
+        // Check if any member data has changed
+        const hasChanged = sortedMembersData.some((newMember, index) => {
+          const prevMember = prevMembers[index];
+          return !prevMember || 
+                 newMember.elo !== prevMember.elo ||
+                 newMember.rank !== prevMember.rank ||
+                 newMember.summoner_name !== prevMember.summoner_name;
+        });
+        
+        return hasChanged ? sortedMembersData : prevMembers;
+      });
       
       console.log('✅ Group info and members updated successfully in UI');
       
@@ -592,18 +669,20 @@ export function GroupDetailPage() {
         // If no live data available, try to fetch it for this member
         try {
           console.log(`📡 Fetching live data for ${member.summoner_name} to get wins/losses...`);
-          const riotAccount = await userService.getUserRiotAccount(member.user_id);
-          if (riotAccount?.riot_id) {
-            // Fetch live data from Riot API
-            const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
-            const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${member.user_id}`);
-            if (response.ok) {
-              const leagueData = await response.json();
-              const rankedData = leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT');
-              if (rankedData) {
-                wins = rankedData.wins || 0;
-                losses = rankedData.losses || 0;
-                console.log(`✅ Fetched wins/losses for ${member.summoner_name}: ${wins}W/${losses}L`);
+          if (member.summoner_name && member.summoner_name !== 'Unknown User') {
+            const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
+            if (riotAccount?.riot_id) {
+              // Fetch live data from Riot API
+              const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
+              const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}`);
+              if (response.ok) {
+                const leagueData = await response.json();
+                const rankedData = leagueData.find((entry: any) => entry.queueType === 'RANKED_TFT');
+                if (rankedData) {
+                  wins = rankedData.wins || 0;
+                  losses = rankedData.losses || 0;
+                  console.log(`✅ Fetched wins/losses for ${member.summoner_name}: ${wins}W/${losses}L`);
+                }
               }
             }
           }
@@ -669,7 +748,7 @@ export function GroupDetailPage() {
       // Step 1: Fetch fresh live data
       setUpdateProgress('Fetching fresh live data...');
       console.log('📡 Step 1: Fetching fresh live data...');
-              await fetchTeamStatsData(parseInt(groupId), true, false);
+      await fetchTeamStatsData(parseInt(groupId), true);
       
       // Step 2: Update database with fresh rank data and fetch updated group info
       setUpdateProgress('Updating database with fresh rank data...');
@@ -681,24 +760,11 @@ export function GroupDetailPage() {
         setUpdateProgress('Creating rank audit events...');
         console.log('📡 Step 3: Creating rank audit events for updated members...');
         
-        // Get riot_id for each member
-        const membersWithRiotId = await Promise.all(
-          updatedMembers.map(async (member) => {
-            try {
-              const riotAccount = await userService.getUserRiotAccount(member.user_id);
-              return {
-                ...member,
-                riot_id: riotAccount?.riot_id || null
-              };
-            } catch (error) {
-              console.error(`❌ Error getting riot_id for user ${member.user_id}:`, error);
-              return {
-                ...member,
-                riot_id: null
-              };
-            }
-          })
-        );
+        // Members already have riot_id, no need to fetch it
+        const membersWithRiotId = updatedMembers.map(member => ({
+          ...member,
+          riot_id: member.riot_id
+        }));
         
         // Wait for all rank audit events to be created in the database
         const auditResults = await createRankAuditEventsForMembers(membersWithRiotId);
@@ -722,13 +788,18 @@ export function GroupDetailPage() {
       
       try {
         const cacheRefreshResponse = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/cache/refresh/${groupId}`, {
-          method: 'POST'
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
         });
         
         if (cacheRefreshResponse.ok) {
-          console.log('✅ Redis cache refreshed successfully');
+          const result = await cacheRefreshResponse.json();
+          console.log('✅ Redis cache refreshed successfully:', result);
         } else {
-          console.warn('⚠️ Failed to refresh Redis cache, but continuing...');
+          const errorText = await cacheRefreshResponse.text();
+          console.warn('⚠️ Failed to refresh Redis cache:', cacheRefreshResponse.status, errorText);
         }
       } catch (cacheError) {
         console.warn('⚠️ Error refreshing Redis cache:', cacheError);
@@ -737,7 +808,7 @@ export function GroupDetailPage() {
       // Step 7: Final refresh of team stats to show updated data
       setUpdateProgress('Refreshing team stats...');
       console.log('📡 Step 7: Refreshing team stats with updated data...');
-      await fetchTeamStatsData(parseInt(groupId), false, true); // Force refresh to get fresh data from Redis cache
+      await fetchTeamStatsData(parseInt(groupId), false); // Force refresh to get fresh data from Redis cache
       
       setUpdateProgress('Update completed successfully!');
       console.log('✅ All data updated successfully');
@@ -754,17 +825,17 @@ export function GroupDetailPage() {
     }
   };
 
-  // Independent team stats data fetching - NO CACHING for GroupDetailPage
-  const fetchTeamStatsData = async (id: number, loadLiveData: boolean = false, forceRefresh: boolean = false) => {
+  // Independent team stats data fetching - USE CACHED DATA for GroupDetailPage
+  const fetchTeamStatsData = async (id: number, loadLiveData: boolean = false) => {
     setTeamStatsError(null);
     if (loadLiveData) {
       setLiveDataLoading(true);
     }
     
     try {
-      // Clear cache before fetching to ensure fresh data
-      teamStatsService.clearCache();
-      livePlayerService.clearCache();
+      // Use cached data instead of clearing cache
+      // teamStatsService.clearCache();
+      // livePlayerService.clearCache();
       
       // Use the group data we already have instead of fetching again
       const groupDetails = group || await studyGroupService.getStudyGroup(id);
@@ -772,20 +843,8 @@ export function GroupDetailPage() {
       if (loadLiveData) {
         // Only fetch live data when explicitly requested
         try {
-          // Force fresh data by clearing cache and using direct API calls
-          const queryParams = new URLSearchParams();
-          queryParams.append('group_id', id.toString());
-          queryParams.append('start_date', groupDetails.created_at);
-          queryParams.append('include_members', 'true');
-          if (forceRefresh) {
-            queryParams.append('force_refresh', 'true');
-          }
-          
-          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch combined team stats: ${response.statusText}`);
-          }
-          const combinedStats = await response.json();
+          // Use cached service instead of direct API calls
+          const combinedStats = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
           
           setTeamStatsData(combinedStats.events || []);
           setMemberNames(combinedStats.memberNames || {});
@@ -794,16 +853,8 @@ export function GroupDetailPage() {
         } catch (combinedError) {
           console.log('⚠️ Combined API failed, using separate calls:', combinedError);
           
-          // Fallback to separate API calls with no caching
-          const queryParams = new URLSearchParams();
-          queryParams.append('group_id', id.toString());
-          queryParams.append('start_date', groupDetails.created_at);
-          
-          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch member stats: ${response.statusText}`);
-          }
-          const memberStats = await response.json();
+          // Fallback to separate API calls with caching
+          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
           
           // Handle team stats data
           let allEvents: any[] = [];
@@ -817,6 +868,23 @@ export function GroupDetailPage() {
             }
             if (memberStats.liveData && typeof memberStats.liveData === 'object') {
               liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
+            }
+            
+            // Check if cached data matches current group members
+            const currentMembers = await studyGroupService.getStudyGroupUsers(id, false);
+            const currentMemberRiotIds = new Set(currentMembers.map(m => m.riot_id));
+            const cachedMemberRiotIds = new Set(Object.keys(names));
+            
+            // If there's a mismatch, force a refresh
+            if (currentMemberRiotIds.size !== cachedMemberRiotIds.size || 
+                !Array.from(currentMemberRiotIds).every(id => cachedMemberRiotIds.has(id))) {
+              console.log('🔄 Group membership changed, forcing cache refresh...');
+              // Force refresh by clearing cache and calling the service again
+              teamStatsService.clearCache();
+              const freshData = await teamStatsService.getCombinedTeamStats(id, groupDetails.created_at);
+              allEvents = freshData.events || [];
+              names = freshData.memberNames || {};
+              liveDataFromAPI = freshData.liveData || {};
             }
           } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
             allEvents = Object.values(memberStats).flat();
@@ -832,19 +900,8 @@ export function GroupDetailPage() {
       } else {
         // Just fetch basic team stats without live data
         try {
-          // Force fresh data by using direct API calls
-          const queryParams = new URLSearchParams();
-          queryParams.append('group_id', id.toString());
-          queryParams.append('start_date', groupDetails.created_at);
-          if (forceRefresh) {
-            queryParams.append('force_refresh', 'true');
-          }
-          
-          const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
-          if (!response.ok) {
-            throw new Error(`Failed to fetch member stats: ${response.statusText}`);
-          }
-          const memberStats = await response.json();
+          // Use cached service instead of direct API calls
+          const memberStats = await teamStatsService.getMemberStats(id, groupDetails.created_at);
           
           let allEvents: any[] = [];
           let names: { [riotId: string]: string } = {};
@@ -853,6 +910,29 @@ export function GroupDetailPage() {
             allEvents = memberStats.events;
             if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
               names = memberStats.memberNames as unknown as { [riotId: string]: string };
+            }
+            
+            // Check if cached data matches current group members
+            const currentMembers = await studyGroupService.getStudyGroupUsers(id, false);
+            const currentMemberRiotIds = new Set(currentMembers.map(m => m.riot_id));
+            const cachedMemberRiotIds = new Set(Object.keys(names));
+            
+            // If there's a mismatch, force a refresh
+            if (currentMemberRiotIds.size !== cachedMemberRiotIds.size || 
+                !Array.from(currentMemberRiotIds).every(id => cachedMemberRiotIds.has(id))) {
+              console.log('🔄 Group membership changed, forcing cache refresh...');
+              // Force refresh by calling the API again with force_refresh=true
+              const refreshParams = new URLSearchParams();
+              refreshParams.append('group_id', id.toString());
+              refreshParams.append('start_date', groupDetails.created_at);
+              refreshParams.append('force_refresh', 'true');
+              
+              const refreshResponse = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${refreshParams}`);
+              if (refreshResponse.ok) {
+                const freshData = await refreshResponse.json();
+                allEvents = freshData.events || [];
+                names = freshData.memberNames || {};
+              }
             }
           } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
             allEvents = Object.values(memberStats).flat();
@@ -881,22 +961,18 @@ export function GroupDetailPage() {
     }
   };
 
-  const fetchPlayerLeagueData = async (userId: number) => {
+  const fetchPlayerLeagueData = async (riotId: string) => {
     try {
       setLeagueDataLoading(true);
       setLeagueDataError(null);
       
-      // Get user's riot account to get PUUID with retry
-      const riotAccount = await retryWithBackoff(() => userService.getUserRiotAccount(userId));
-      if (!riotAccount || !riotAccount.riot_id) {
-        setLeagueDataError('No Riot account found for this user');
-        return;
-      }
+      // Use the provided riotId - no fallback
+      const puuid = riotId;
 
       // Fetch league data using the riot_id (which contains the PUUID) with retry
       const fetchLeagueData = async () => {
         const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
-        const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
+        const response = await fetch(`${API_BASE_URL}/api/tft-league/${puuid}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch league data: ${response.status}`);
         }
@@ -914,21 +990,7 @@ export function GroupDetailPage() {
     }
   };
 
-  const fetchPlayerProfile = async (userId: number) => {
-    try {
-      setProfileLoading(true);
-      setProfileError(null);
-      
-      const profile = await retryWithBackoff(() => userService.getUserProfile(userId));
-      setPlayerProfile(profile);
-    } catch (error) {
-      console.error('Error fetching player profile:', error);
-      setProfileError('Failed to load profile data after multiple attempts');
-      setPlayerProfile(null);
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+
 
   const fetchPlayerStats = async (riotId: string) => {
     setPlayerStatsLoading(true);
@@ -951,30 +1013,26 @@ export function GroupDetailPage() {
 
 
   const handlePlayerClick = async (member: any) => {
-    if (!member.user_id) {
-      console.error('No user_id found for member:', member);
+    if (!member.riot_id) {
+      console.error('No riot_id found for member:', member);
       return;
     }
     
     setSelectedPlayer(member);
-    setClickedMemberId(member.user_id);
+    setClickedMemberId(member.riot_id);
     setShowPlayerModal(true);
     setActivePlayerTab('stats');
     
-    // Get the riot account for this user to fetch player stats
-    let riotId = null;
-    try {
-      const riotAccount = await userService.getUserRiotAccount(member.user_id);
-      riotId = riotAccount?.riot_id;
-    } catch (error) {
-      console.error('Error fetching riot account for player stats:', error);
-    }
+    // Use the riot_id directly from the member data
+    const riotId = member.riot_id;
+    
+    // Store the riotId for use in TFTStatsContent
+    setSelectedPlayerRiotId(riotId);
     
     // Fetch league data, profile data, and player stats for the player
     await Promise.all([
-      fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id),
-      ...(riotId ? [fetchPlayerStats(riotId)] : [])
+      fetchPlayerLeagueData(riotId),
+      fetchPlayerStats(riotId)
     ]);
   };
 
@@ -1098,13 +1156,6 @@ export function GroupDetailPage() {
     }
   };
 
-  const handleInstructionsScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    if (target.scrollTop > 0) {
-      setInstructionsScrolled(true);
-    }
-  };
-
   const handleMembersScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const target = e.target as HTMLDivElement;
     if (target.scrollTop > 0) {
@@ -1115,19 +1166,15 @@ export function GroupDetailPage() {
   // Check overflow when content changes
   useEffect(() => {
     const descriptionElement = document.getElementById('description-container');
-    const instructionsElement = document.getElementById('instructions-container');
     const membersElement = document.getElementById('members-container');
     
     if (descriptionElement) {
       setDescriptionOverflow(checkOverflow(descriptionElement));
     }
-    if (instructionsElement) {
-      setInstructionsOverflow(checkOverflow(instructionsElement));
-    }
     if (membersElement) {
       setMembersOverflow(checkOverflow(membersElement));
     }
-  }, [groupInfo.description, groupInfo.instructions, members]);
+  }, [groupInfo.description, members]);
 
 
 
@@ -1138,10 +1185,10 @@ export function GroupDetailPage() {
         <div className="text-center">
           <p className="text-red-600 mb-4">{groupError}</p>
                       <button 
-              onClick={() => navigate('/study-groups')}
+              onClick={() => navigate('/groups')}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
-              Back to Study Groups
+              Back to Groups
             </button>
         </div>
       </div>
@@ -1203,54 +1250,14 @@ export function GroupDetailPage() {
                   
                   {/* Back Button */}
                   <button
-                    onClick={() => navigate('/study-groups')}
+                    onClick={() => navigate('/groups')}
                     className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
                   >
                     <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                    <span className="text-sm sm:text-base">Back to Study Groups</span>
+                    <span className="text-sm sm:text-base">Back to Groups</span>
                   </button>
                   
-                  {/* Request to Join Button - Only show if user is logged in, not a member, and status is loaded */}
-                  {userId && !isUserMember && !isUserStatusLoading && (
-                    <div className="flex items-center gap-2">
-                      {requestError && (
-                        <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg">
-                          <p className="text-red-600 text-xs">{requestError}</p>
-                        </div>
-                      )}
-                      {userRequest ? (
-                        <button
-                          onClick={handleCancelRequest}
-                          disabled={isRequestLoading}
-                          className="flex items-center justify-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                        >
-                          {isRequestLoading ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            <XCircle className="w-4 h-4" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {isRequestLoading ? 'Cancelling...' : 'Cancel Request'}
-                          </span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={handleRequestToJoin}
-                          disabled={isRequestLoading}
-                          className="flex items-center justify-center gap-2 px-4 py-2 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-                        >
-                          {isRequestLoading ? (
-                            <LoadingSpinner size="sm" />
-                          ) : (
-                            <UserPlus className="w-4 h-4" />
-                          )}
-                          <span className="text-sm font-medium">
-                            {isRequestLoading ? 'Sending Request...' : 'Request to Join'}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  )}
+
                   
                   {/* Loading state for user status check - removed to avoid showing users we're checking membership */}
                 </>
@@ -1380,7 +1387,7 @@ export function GroupDetailPage() {
                         <div 
                           key={index} 
                           className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
-                            clickedMemberId === member.user_id 
+                            clickedMemberId === member.riot_id 
                               ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
                               : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
                           }`}
@@ -1388,7 +1395,7 @@ export function GroupDetailPage() {
                         >
                           {/* Member Icon */}
                           <ProfileIcon 
-                            memberId={member.user_id || index}
+                            memberId={index}
                             summonerName={member.summoner_name}
                             iconId={member.icon_id}
                             size="md"
@@ -1400,16 +1407,14 @@ export function GroupDetailPage() {
                             <div className="flex items-center gap-2">
                               <span 
                                 className={`font-medium transition-all duration-300 ${
-                                  clickedMemberId === member.user_id 
+                                  clickedMemberId === member.riot_id 
                                     ? 'text-blue-600 scale-105' 
                                     : 'text-gray-800 hover:text-blue-600'
                                 }`}
                               >
                                 {member.summoner_name}
                               </span>
-                              {member.owner === 1 && (
-                                <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                              )}
+                              {/* Captain crown removed - no captain system */}
                             </div>
                             
                             {/* Rank and ELO - Below name on mobile, hidden on larger screens */}
@@ -1512,65 +1517,7 @@ export function GroupDetailPage() {
                   </div>
                 )}
                 
-                {/* Application Instructions */}
-                {(isGroupInfoLoading || isUpdatingData) ? (
-                  <PlaceholderContentSection />
-                ) : (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                      <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-orange-600" />
-                      Application Instructions
-                    </h4>
-                    <div className="relative">
-                      <div 
-                        id="instructions-container"
-                        className="bg-gray-50 rounded-lg p-4 border border-gray-200 h-96 overflow-y-auto"
-                        onScroll={handleInstructionsScroll}
-                      >
-                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                          {groupInfo.instructions || 'No application instructions available.'}
-                        </p>
-                      </div>
-                      {instructionsOverflow && !instructionsScrolled && (
-                        <div className="absolute bottom-2 right-2">
-                          <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Meeting Schedule */}
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
-                    Meeting Schedule
-                  </h4>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                    <div className="flex items-center gap-2 text-gray-700 text-xs">
-                      <span className="font-medium">
-                        {group && Array.isArray(group.meeting_schedule) ? group.meeting_schedule.join(", ") : group?.meeting_schedule}
-                      </span>
-                    </div>
-                    {group && (group.time || group.timezone) && (
-                      <div className="flex items-center gap-2 text-gray-700 mt-2 text-xs">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                        </svg>
-                        <span className="font-medium">
-                          {group.time ? (
-                            <>
-                              {group.time.charAt(0).toUpperCase() + group.time.slice(1)}
-                              {group.timezone && ` (${group.timezone})`}
-                            </>
-                          ) : (
-                            `Timezone: ${group.timezone}`
-                          )}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
+
 
 
 
@@ -1638,9 +1585,10 @@ export function GroupDetailPage() {
               onClick={() => {
                 setShowPlayerModal(false);
                 setSelectedPlayer(null);
+                setSelectedPlayerRiotId(null);
                 setClickedMemberId(null);
                 setPlayerLeagueData([]);
-                setPlayerProfile(null);
+        
               }}
               className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
               style={{ lineHeight: 0 }}
@@ -1688,16 +1636,7 @@ export function GroupDetailPage() {
             {/* Navigation Tabs */}
             <div className="px-4 sm:px-6 border-b border-gray-200">
               <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
-                <button 
-                  onClick={() => setActivePlayerTab('about')}
-                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                    activePlayerTab === 'about' 
-                      ? 'text-[#00c9ac] border-[#00c9ac]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                  }`}
-                >
-                  About Me
-                </button>
+
                 <button 
                   onClick={() => setActivePlayerTab('stats')}
                   className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
@@ -1727,7 +1666,7 @@ export function GroupDetailPage() {
                   getRankedTftData={getRankedTftData}
                   getTurboTftData={getTurboTftData}
                   className="w-full"
-                  userId={selectedPlayer?.user_id}
+                  riotId={selectedPlayerRiotId || undefined}
                 />
 
                 
@@ -1735,83 +1674,7 @@ export function GroupDetailPage() {
               </div>
               )}
               
-              {/* About Me Section */}
-              {activePlayerTab === 'about' && (
-                <div className="space-y-4">
-                  {profileLoading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-center">
-                        <LoadingSpinner size="md" className="mx-auto mb-2" />
-                        <p className="text-gray-500">Loading profile data...</p>
-                      </div>
-                    </div>
-                  ) : profileError ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-red-600">{profileError}</p>
-                    </div>
-                  ) : playerProfile ? (
-                    <div className="space-y-4">
-                      {/* Description */}
-                      <div className="w-full">
-                        <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-green-600" />
-                          Description
-                        </h4>
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                          <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                            {playerProfile.description || "No description provided"}
-                          </p>
-                        </div>
-                      </div>
 
-                      {/* Availability */}
-                      {playerProfile.days && playerProfile.days.length > 0 && (
-                        <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                            Availability
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <div className="text-gray-700 text-xs text-left">
-                              <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Time and Timezone */}
-                      {(playerProfile.time || playerProfile.timezone) && (
-                        <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                            </svg>
-                            Preferred Time
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <div className="text-gray-700 text-xs text-left">
-                              {playerProfile.time ? (
-                                <span>
-                                  {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                  {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                                </span>
-                              ) : (
-                                <span>
-                                  Timezone: {playerProfile.timezone}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                      <p className="text-gray-600">No profile data available</p>
-                    </div>
-                  )}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -1881,8 +1744,8 @@ function ProfileIcon({
       <div 
         className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-sm ${(profileIconUrl && !iconError && !iconLoading) ? 'hidden' : 'flex'}`}
         style={{ 
-          backgroundColor: ['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][memberId % 5],
-          color: getTextColor(['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][memberId % 5])
+          backgroundColor: ['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][(memberId || 0) % 5] || '#564ec7',
+          color: getTextColor(['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][(memberId || 0) % 5] || '#564ec7')
         }}
       >
         {summonerName.charAt(0).toUpperCase()}
@@ -1929,6 +1792,9 @@ function getRankTier(rank: string): string {
 
 function getTextColor(backgroundColor: string): string {
   // Simple contrast calculation
+  if (!backgroundColor || typeof backgroundColor !== 'string') {
+    return '#000000'; // Default to black if background color is invalid
+  }
   const hex = backgroundColor.replace('#', '');
   const r = parseInt(hex.substr(0, 2), 16);
   const g = parseInt(hex.substr(2, 2), 16);

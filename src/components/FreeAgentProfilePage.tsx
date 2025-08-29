@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronsLeft, Calendar, FileText, SquareX, Globe, ChevronDown } from 'lucide-react';
+import { ChevronsLeft, SquareX } from 'lucide-react';
 import { LoadingSpinner } from './auth/LoadingSpinner';
 import { freeAgentService, type FreeAgent } from '../services/freeAgentService';
 import { studyGroupService } from '../services/studyGroupService';
-import { studyGroupInviteService } from '../services/studyGroupInviteService';
+// Invitation service removed - using direct addition instead
 import { useAuth } from '../contexts/AuthContext';
-import { userService } from '../services/userService';
+
 import { playerStatsService } from '../services/playerStatsService';
 import { TFTStatsContent } from './TFTStatsContent';
+import { PlayerEloChart } from './PlayerEloChart';
+
 import { Footer } from './Footer';
 import { riotService } from '../services/riotService';
 
@@ -55,16 +57,13 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   const [isLeagueDataLoading, setIsLeagueDataLoading] = useState(false);
   const [isPlayerStatsLoading, setIsPlayerStatsLoading] = useState(false);
   
-  // Invitation modal state
-  const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteMessage, setInviteMessage] = useState("");
+  // Direct addition modal state
+  const [showAddModal, setShowAddModal] = useState(false);
   const [selectedStudyGroupId, setSelectedStudyGroupId] = useState<number | null>(null);
   const [userStudyGroups, setUserStudyGroups] = useState<any[]>([]);
-  const [inviteLoading, setInviteLoading] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
   
-  // Overflow detection state
-  const [descriptionOverflow, setDescriptionOverflow] = useState(false);
-  const [descriptionScrolled, setDescriptionScrolled] = useState(false);
+  // Overflow detection state removed - no longer needed
   
   // Profile icon state
   const [profileIconUrl, setProfileIconUrl] = useState<string | null>(null);
@@ -95,7 +94,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       
       // Start loading additional data in background
       Promise.all([
-        fetchAgentLeagueData(id),
+        fetchAgentLeagueData(id, agentData),
         ...(agentData.riot_id ? [fetchPlayerStats(agentData.riot_id)] : [])
       ]).catch(err => {
         console.error('Background data loading failed:', err);
@@ -109,7 +108,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     }
   };
 
-  // Fetch user's study groups for the dropdown
+          // Fetch user's groups for the dropdown
   useEffect(() => {
     if (userId) {
       fetchUserStudyGroups();
@@ -182,20 +181,25 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     if (!userId) return;
     
     try {
-      const userGroups = await retryWithBackoff(() => studyGroupService.getUserStudyGroupsByUser(userId));
-      setUserStudyGroups(userGroups);
+      const ownedGroups = await retryWithBackoff(() => studyGroupService.getStudyGroupsByOwner(parseInt(userId, 10)));
+      // Transform the data to match the expected format
+      const transformedGroups = ownedGroups.map(group => ({
+        study_group: group
+      }));
+      setUserStudyGroups(transformedGroups);
     } catch (error) {
-      console.error('Error fetching user study groups:', error);
+              console.error('Error fetching owned groups:', error);
     }
   };
 
-  const fetchAgentLeagueData = async (agentId: number) => {
+  const fetchAgentLeagueData = async (_agentId: number, agentData?: FreeAgent) => {
     setLeagueDataError(null);
     
     try {
-      // Get the agent's Riot account to get their puuid
-      const riotAccount = await userService.getUserRiotAccount(agentId);
-      if (!riotAccount || !riotAccount.riot_id) {
+      // Use the agent's riot_id directly from the loaded agent data
+      const riotId = agentData?.riot_id || agent?.riot_id;
+      
+      if (!riotId) {
         setLeagueDataError('No Riot account found for this user');
         return;
       }
@@ -203,7 +207,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       // Fetch league data using the riot_id (which contains the PUUID)
       const fetchLeagueData = async () => {
         const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
-        const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${agentId}`);
+        const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotId}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch league data: ${response.status}`);
         }
@@ -216,15 +220,16 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       console.error('Error fetching agent league data:', error);
       // Try once more with retry
       try {
-        const riotAccount = await retryWithBackoff(() => userService.getUserRiotAccount(agentId));
-        if (!riotAccount || !riotAccount.riot_id) {
+        const riotId = agentData?.riot_id || agent?.riot_id;
+        
+        if (!riotId) {
           setLeagueDataError('No Riot account found for this user');
           return;
         }
         
         const fetchLeagueData = async () => {
           const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
-          const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${agentId}`);
+          const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotId}`);
           if (!response.ok) {
             throw new Error(`Failed to fetch league data: ${response.status}`);
           }
@@ -265,30 +270,24 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     }
   };
 
-  const handleSendInvite = async () => {
+  const handleAddToGroup = async () => {
     if (!userId || !selectedStudyGroupId || !agent) return;
     
-    setInviteLoading(true);
+    setAddLoading(true);
     try {
-      await studyGroupInviteService.createInvite({
-        user_one: userId,
-        user_two: agent.id,
-        study_group_id: selectedStudyGroupId,
-        message: inviteMessage
-      });
+      await studyGroupService.addMemberToStudyGroup(selectedStudyGroupId, agent.summoner_name, parseInt(userId, 10));
       
       // Close modal and reset form
-      setShowInviteModal(false);
-      setInviteMessage("");
+      setShowAddModal(false);
       setSelectedStudyGroupId(null);
       
       // Show success message (you could add a toast notification here)
-      alert('Invitation sent successfully!');
+      alert('User added to study group successfully!');
     } catch (error) {
-      console.error('Error sending invitation:', error);
+      console.error('Error adding user to group:', error);
       
       // Extract the specific error message from the server response
-      let errorMessage = 'Failed to send invitation. Please try again.';
+      let errorMessage = 'Failed to add user to study group. Please try again.';
       
       if (error instanceof Error) {
         // Try to parse the error message from the response
@@ -307,7 +306,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       
       alert(errorMessage);
     } finally {
-      setInviteLoading(false);
+      setAddLoading(false);
     }
   };
 
@@ -334,34 +333,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     return '#ffffff';
   };
 
-  // Overflow detection functions
-  const checkOverflow = (element: HTMLElement) => {
-    return element.scrollHeight > element.clientHeight;
-  };
-
-  const handleDescriptionScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const target = e.target as HTMLDivElement;
-    console.log('🖱️ Scroll event:', target.scrollTop);
-    if (target.scrollTop > 0) {
-      console.log('✅ Setting scrolled to true');
-      setDescriptionScrolled(true);
-    }
-  };
-
-  // Check overflow when agent data is loaded
-  useEffect(() => {
-    if (agent && !isInitialLoading) {
-      // Add a small delay to ensure content is rendered
-      const timeoutId = setTimeout(() => {
-        const descriptionElement = document.getElementById('description-container');
-        if (descriptionElement) {
-          setDescriptionOverflow(checkOverflow(descriptionElement));
-        }
-      }, 100);
-      
-      return () => clearTimeout(timeoutId);
-    }
-  }, [agent, isInitialLoading]);
+  // Overflow detection functions removed - no longer needed
 
   // Show initial loading spinner until we get agent data
   if (isInitialLoading) {
@@ -382,10 +354,10 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         <div className="text-center">
           <p className="text-red-600 mb-4">{agentError || 'Profile not found'}</p>
           <button 
-            onClick={() => navigate('/free-agents')}
+            onClick={() => navigate('/players')}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
           >
-            Back to Free Agents
+            Back to Players
           </button>
         </div>
       </div>
@@ -420,11 +392,11 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         {/* Back Button */}
         <div className="mt-4 sm:mt-6 mb-4 sm:mb-6 px-4 sm:px-0">
           <button
-            onClick={() => navigate('/free-agents')}
+            onClick={() => navigate('/players')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-800 transition-colors bg-white/90 backdrop-blur-sm rounded-lg px-3 py-2 border border-gray-200 w-fit"
           >
             <ChevronsLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-            <span className="text-sm sm:text-base">Back to Free Agents</span>
+            <span className="text-sm sm:text-base">Back to Players</span>
           </button>
         </div>
 
@@ -463,14 +435,14 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
               <div>
                 <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-1 text-left">{agent.summoner_name}</h3>
-                <p className="text-gray-500 text-sm text-left">Free Agent</p>
+                <p className="text-gray-500 text-sm text-left">{agent.region}</p>
               </div>
               {userId && (
                 <button
-                  onClick={() => setShowInviteModal(true)}
+                  onClick={() => setShowAddModal(true)}
                   className="bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors w-fit"
                 >
-                  Send Invitation
+                  Add to Study Group
                 </button>
               )}
             </div>
@@ -480,130 +452,70 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
         {/* Content */}
         <div className="bg-white border border-gray-200 rounded-b-lg mx-2 sm:mx-0">
           <div className="p-4 sm:p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
-              {/* Left Column - About Me Section */}
-              <div className="space-y-4 sm:space-y-6">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">About Me</h3>
-                
-                {/* Description */}
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                    <FileText className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
-                    Description
-                  </h4>
-                  <div className="relative">
-                    <div 
-                      id="description-container"
-                      className="bg-gray-50 rounded-lg p-3 sm:p-4 border border-gray-200 h-64 sm:h-96 overflow-y-auto"
-                      onScroll={handleDescriptionScroll}
-                    >
-                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                        {agent.looking_for || "No description provided"}
-                      </p>
-                    </div>
-                    {descriptionOverflow && !descriptionScrolled && (
-                      <div className="absolute bottom-2 right-2">
-                        <ChevronDown className="w-5 h-5 animate-bounce" style={{ color: '#00c9ac' }} />
+            <div className="space-y-4 sm:space-y-6">
+              <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">TFT Statistics</h3>
+              {isLeagueDataLoading || isPlayerStatsLoading ? (
+                <PlaceholderStatsSection />
+              ) : (
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
+                  {/* Left Column - TFT Stats */}
+                  <div className="space-y-4 sm:space-y-6">
+                    <TFTStatsContent
+                      leagueDataLoading={isLeagueDataLoading}
+                      leagueDataError={leagueDataError}
+                      playerLeagueData={leagueData}
+                      playerStatsLoading={isPlayerStatsLoading}
+                      playerStatsError={playerStatsError}
+                      playerStatsData={playerStatsData}
+                      getRankedTftData={getRankedTftData}
+                      getTurboTftData={getTurboTftData}
+                      className="w-full"
+                      riotId={agent?.riot_id}
+                    />
+                  </div>
+                  
+                  {/* Right Column - ELO Progression Chart */}
+                  <div className="space-y-4 sm:space-y-6">
+                    {isPlayerStatsLoading ? (
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <div className="flex justify-center items-center py-8">
+                          <LoadingSpinner size="md" className="mx-auto mb-2" />
+                          <p className="text-gray-500">Loading ELO progression...</p>
+                        </div>
+                      </div>
+                    ) : playerStatsError ? (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
+                        <p className="text-red-600">{playerStatsError}</p>
+                      </div>
+                    ) : (playerStatsData.length > 0 || getRankedTftData()) ? (
+                      <PlayerEloChart 
+                        data={playerStatsData}
+                        liveData={getRankedTftData()}
+                        height={400}
+                        className="w-full"
+                      />
+                    ) : (
+                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                        <p className="text-gray-600 text-center">No ELO progression data available</p>
                       </div>
                     )}
-
                   </div>
                 </div>
-
-                {/* Availability */}
-                {agent.availability && agent.availability.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                      <Calendar className="w-3 h-3 sm:w-4 sm:h-4" style={{ color: '#ff8889' }} />
-                      Availability
-                    </h4>
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="text-gray-700 text-left text-xs">
-                        <span>{Array.isArray(agent.availability) ? agent.availability.join(", ") : agent.availability}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Time and Timezone */}
-                {(agent.time || agent.timezone) && (
-                  <div>
-                    <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                      <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                      </svg>
-                      Preferred Time
-                    </h4>
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="text-gray-700 text-left text-xs">
-                        {agent.time ? (
-                          <span>
-                            {agent.time.charAt(0).toUpperCase() + agent.time.slice(1)}
-                            {agent.timezone && ` (${agent.timezone})`}
-                          </span>
-                        ) : (
-                          <span>
-                            Timezone: {agent.timezone}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Region */}
-                <div>
-                  <h4 className="font-semibold text-gray-800 mb-2 sm:mb-3 text-left flex items-center gap-2">
-                    <Globe className="w-3 h-3 sm:w-4 sm:h-4 text-blue-500" />
-                    Region
-                  </h4>
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                                          <div className="text-gray-700 text-left text-xs">
-                        <span>{agent.region}</span>
-                      </div>
-                  </div>
-                </div>
-
-
-
-
-              </div>
-
-              {/* Right Column - TFT Stats Section */}
-              <div className="space-y-4 sm:space-y-6">
-                <h3 className="text-lg sm:text-xl font-bold text-gray-800 mb-3 sm:mb-4">TFT Statistics</h3>
-                {isLeagueDataLoading || isPlayerStatsLoading ? (
-                  <PlaceholderStatsSection />
-                ) : (
-                  <TFTStatsContent
-                    leagueDataLoading={isLeagueDataLoading}
-                    leagueDataError={leagueDataError}
-                    playerLeagueData={leagueData}
-                    playerStatsLoading={isPlayerStatsLoading}
-                    playerStatsError={playerStatsError}
-                    playerStatsData={playerStatsData}
-                    getRankedTftData={getRankedTftData}
-                    getTurboTftData={getTurboTftData}
-                    className="w-full"
-                    userId={user_id ? parseInt(user_id) : undefined}
-                  />
-                )}
-              </div>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Invitation Modal */}
-      {showInviteModal && (
+      {/* Add to Study Group Modal */}
+      {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
           <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Send Invitation</h3>
+              <h3 className="text-lg font-semibold text-gray-800">Add to Study Group</h3>
               <button
                 onClick={() => { 
-                  setShowInviteModal(false); 
-                  setInviteMessage(""); 
+                  setShowAddModal(false); 
                   setSelectedStudyGroupId(null);
                 }}
                 className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
@@ -614,8 +526,8 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
             </div>
             <div className="space-y-4">
               <div className="bg-[#00c9ac]/10 border border-[#00c9ac]/20 rounded-lg p-4">
-                <h4 className="font-semibold text-[#00c9ac] mb-2">Inviting {agent.summoner_name}</h4>
-                <p className="text-[#00c9ac] text-sm">Send a personalized message to invite them to your group.</p>
+                <h4 className="font-semibold text-[#00c9ac] mb-2">Adding {agent.summoner_name}</h4>
+                <p className="text-[#00c9ac] text-sm">Add this free agent directly to your study group.</p>
               </div>
               
               <div>
@@ -637,43 +549,29 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                 </select>
                 {userStudyGroups.length === 0 && (
                   <p className="text-sm text-red-600 mt-1">
-                    You need to be a member of at least one study group to send invitations.
+                    You need to be the owner of at least one study group to add members.
                   </p>
                 )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Invitation Message
-                </label>
-                <textarea
-                  value={inviteMessage}
-                  onChange={(e) => setInviteMessage(e.target.value)}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400 resize-vertical"
-                  placeholder="Write a personalized message explaining why you'd like them to join your group..."
-                />
               </div>
               
               <div className="flex gap-3 pt-4">
                 <button
                   onClick={() => { 
-                    setShowInviteModal(false); 
-                    setInviteMessage(""); 
+                    setShowAddModal(false); 
                     setSelectedStudyGroupId(null);
                   }}
                   className="flex-1 bg-[#ff8889] hover:bg-[#ff8889]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                  disabled={inviteLoading}
+                  disabled={addLoading}
                 >
                   Cancel
                 </button>
                 {userId && (
                   <button
-                    onClick={handleSendInvite}
-                    disabled={!selectedStudyGroupId || inviteLoading}
+                    onClick={handleAddToGroup}
+                    disabled={!selectedStudyGroupId || addLoading}
                     className="flex-1 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {inviteLoading ? 'Sending...' : 'Send Invitation'}
+                    {addLoading ? 'Adding...' : 'Add to Group'}
                   </button>
                 )}
               </div>

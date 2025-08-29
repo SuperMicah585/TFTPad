@@ -1,7 +1,7 @@
 import { useRef, useCallback, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createPortal } from 'react-dom'
-import { Users, Zap, Crown, Calendar, Globe, SquareX, ChevronsLeft, FileText, HelpCircle } from 'lucide-react'
+import { Users, Zap, SquareX, ChevronsLeft, FileText, HelpCircle } from 'lucide-react'
 
 import { userService } from '../services/userService'
 import type { StudyGroup } from '../services/studyGroupService'
@@ -155,22 +155,17 @@ function SortDropdown({
     );
 }
 
-// Study Groups Tab Component
+// Groups Tab Component
 export function GroupsTab({ 
   studyGroups, 
   searchQuery, 
   setSearchQuery, 
   setActiveSearchQuery,
   updateSearchInURL,
-  meetingDayFilter, 
-  setMeetingDayFilter, 
   minEloFilter, 
   setMinEloFilter, 
   maxEloFilter,
   setMaxEloFilter,
-  timezoneFilter,
-  setTimezoneFilter,
-  meetingDays,
   selectedGroupMembers,
   membersLoading,
   loading,
@@ -180,6 +175,7 @@ export function GroupsTab({
   hasMore,
   loadingMore,
   onRetry,
+
   sortBy,
   setSortBy,
   sortOrder,
@@ -193,15 +189,10 @@ export function GroupsTab({
   setSearchQuery: (query: string) => void
   setActiveSearchQuery: (query: string) => void
   updateSearchInURL: (query: string) => void
-  meetingDayFilter: string
-  setMeetingDayFilter: (filter: string) => void
   minEloFilter: number
   setMinEloFilter: (filter: number) => void
   maxEloFilter: number
   setMaxEloFilter: (filter: number) => void
-  timezoneFilter: string
-  setTimezoneFilter: (filter: string) => void
-  meetingDays: string[]
   selectedGroupMembers?: GroupMember[]
   membersLoading?: boolean
   loading?: boolean
@@ -211,7 +202,7 @@ export function GroupsTab({
   hasMore?: boolean
   loadingMore?: boolean
   onRetry?: () => void
-  handleOpenInfoModal: (groupId: number) => void
+
   sortBy?: 'created_at' | 'avg_elo'
   setSortBy?: (sortBy: 'created_at' | 'avg_elo') => void
   sortOrder?: 'asc' | 'desc'
@@ -236,14 +227,13 @@ export function GroupsTab({
   // Player modal state
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedPlayerRiotId, setSelectedPlayerRiotId] = useState<string | null>(null);
   const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
   const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
-  const [activePlayerTab, setActivePlayerTab] = useState<'about' | 'stats'>('stats');
-  const [playerProfile, setPlayerProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const [activePlayerTab, setActivePlayerTab] = useState<'stats'>('stats');
+
 
   // Player stats state
   const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
@@ -293,24 +283,20 @@ export function GroupsTab({
 
   // Handler for tile click - navigates to group detail page
   const handleTileClick = (groupId: number) => {
-            navigate(`/study-groups/${groupId}`);
+                            navigate(`/groups/${groupId}`);
   };
 
   // Player modal functions
-  const fetchPlayerLeagueData = async (userId: number) => {
+  const fetchPlayerLeagueData = async (_userId: number, riotId: string) => {
     try {
       setLeagueDataLoading(true);
       setLeagueDataError(null);
       
-      // Get user's riot account to get PUUID
-      const riotAccount = await userService.getUserRiotAccount(userId);
-      if (!riotAccount || !riotAccount.riot_id) {
-        setLeagueDataError('No Riot account found for this user');
-        return;
-      }
+      // Use the provided riotId - no fallback
+      const puuid = riotId;
 
       // Fetch league data using the riot_id (which contains the PUUID)
-              const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
+              const response = await fetch(`${API_BASE_URL}/api/tft-league/${puuid}`);
       if (!response.ok) {
         throw new Error('Failed to fetch league data');
       }
@@ -325,20 +311,7 @@ export function GroupsTab({
     }
   };
 
-  const fetchPlayerProfile = async (userId: number) => {
-    try {
-      setProfileLoading(true);
-      setProfileError(null);
-      
-      const profile = await userService.getUserProfile(userId);
-      setPlayerProfile(profile);
-    } catch (error) {
-      console.error('Error fetching player profile:', error);
-      setProfileError('Failed to load profile data');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+
 
     const fetchTeamStats = async (groupId: number, startDate: string) => {
     try {
@@ -430,16 +403,33 @@ export function GroupsTab({
     // Get the riot account for this user to fetch player stats
     let riotId = null;
     try {
-      const riotAccount = await userService.getUserRiotAccount(member.user_id);
-      riotId = riotAccount?.riot_id;
+      // Try to get riot account by summoner name first
+      if (member.summoner_name) {
+        const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
+        riotId = riotAccount?.riot_id;
+      }
+      
+      // Fallback: try to get by user_id if summoner name approach fails
+      if (!riotId) {
+        const riotAccount = await userService.getUserRiotAccount(member.user_id);
+        riotId = riotAccount?.riot_id;
+      }
     } catch (error) {
       console.error('Error fetching riot account for player stats:', error);
     }
     
+    // Store the riotId for use in TFTStatsContent
+    setSelectedPlayerRiotId(riotId || null);
+    
+    // Set error if no riotId found
+    if (!riotId) {
+      setLeagueDataError('No Riot account found for this user');
+    }
+    
     // Fetch league data, profile data, and player stats for the player
     await Promise.all([
-      fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id),
+      ...(riotId ? [fetchPlayerLeagueData(member.user_id, riotId)] : []),
+      
       ...(riotId ? [fetchPlayerStats(riotId)] : [])
     ]);
   };
@@ -488,10 +478,8 @@ export function GroupsTab({
 
   // Clear all filters
   const clearFilters = () => {
-    setMeetingDayFilter("");
     setMinEloFilter(0);
     setMaxEloFilter(5000);
-    setTimezoneFilter("");
     if (setSortBy) setSortBy('created_at');
     if (setSortOrder) setSortOrder('desc');
   };
@@ -549,10 +537,8 @@ export function GroupsTab({
               {/* Filter count indicator */}
               {(() => {
                 const activeFilters = [
-                  meetingDayFilter !== "",
                   minEloFilter !== 0,
-                  maxEloFilter !== 5000,
-                  timezoneFilter !== ""
+                  maxEloFilter !== 5000
                 ].filter(Boolean).length;
                 
                 return activeFilters > 0 ? (
@@ -665,7 +651,7 @@ export function GroupsTab({
         {!isCountLoading && !loading && !error && !showPlaceholders && studyGroups.length === 0 && (
           <div className="text-center py-12 flex flex-col items-center justify-center">
             <Users className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Study Groups Found</h3>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Groups Found</h3>
             <p className="text-gray-600 mb-4">No groups match your current filters.</p>
             <p className="text-gray-500 text-sm">Try adjusting your search or filters</p>
           </div>
@@ -824,9 +810,7 @@ export function GroupsTab({
                                 >
                                   {member.summoner_name}
                                 </span>
-                                {member.owner === 1 && (
-                                  <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                                )}
+                                {/* Captain crown removed - no captain system */}
                               </div>
                             </div>
                             
@@ -930,9 +914,10 @@ export function GroupsTab({
                 onClick={() => {
                   setShowPlayerModal(false);
                   setSelectedPlayer(null);
+                  setSelectedPlayerRiotId(null);
                   setClickedMemberId(null);
                   setPlayerLeagueData([]);
-                  setPlayerProfile(null);
+          
                 }}
                 className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
                 style={{ lineHeight: 0 }}
@@ -980,16 +965,7 @@ export function GroupsTab({
               {/* Navigation Tabs */}
               <div className="px-4 sm:px-6 border-b border-gray-200">
                 <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
-                  <button 
-                    onClick={() => setActivePlayerTab('about')}
-                    className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                      activePlayerTab === 'about' 
-                        ? 'text-[#00c9ac] border-[#00c9ac]' 
-                        : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                    }`}
-                  >
-                    About Me
-                  </button>
+
                   <button 
                     onClick={() => setActivePlayerTab('stats')}
                     className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
@@ -1017,87 +993,11 @@ export function GroupsTab({
                     getRankedTftData={getRankedTftData}
                     getTurboTftData={getTurboTftData}
                     className="w-full"
-                    userId={selectedPlayer?.user_id}
+                    riotId={selectedPlayerRiotId || undefined}
                   />
                 )}
                 
-                {/* About Me Section */}
-                {activePlayerTab === 'about' && (
-                  <div className="space-y-4">
-                    {profileLoading ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="text-center">
-                          <LoadingSpinner size="md" className="mx-auto mb-2" />
-                          <p className="text-gray-500">Loading profile data...</p>
-                        </div>
-                      </div>
-                    ) : profileError ? (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-600">{profileError}</p>
-                      </div>
-                    ) : playerProfile ? (
-                      <div className="space-y-4">
-                        {/* Description */}
-                        <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-green-600" />
-                            Description
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                              {playerProfile.description || "No description provided"}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Availability */}
-                        {playerProfile.days && playerProfile.days.length > 0 && (
-                          <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                              <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                              Availability
-                            </h4>
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                                                          <div className="text-gray-700 text-xs text-left">
-                              <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
-                            </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Time and Timezone */}
-                        {(playerProfile.time || playerProfile.timezone) && (
-                          <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                              </svg>
-                              Preferred Time
-                            </h4>
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                                                          <div className="text-gray-700 text-xs text-left">
-                              {playerProfile.time ? (
-                                <span>
-                                  {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                  {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                                </span>
-                              ) : (
-                                <span>
-                                  Timezone: {playerProfile.timezone}
-                                </span>
-                              )}
-                            </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                        <p className="text-gray-600">No profile data available</p>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -1115,35 +1015,7 @@ export function GroupsTab({
               >
                 <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
               </button>
-              <div className="mb-4 mt-2 sm:mt-6">
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
-                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#ff8889' }} />
-                  Meeting Days
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={meetingDayFilter === ''}
-                      onChange={(e) => { if (e.target.checked) setMeetingDayFilter(''); }}
-                      className="mr-1 accent-[#007460]"
-                    />
-                    <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">Any Meeting Day</span>
-                  </label>
-                  {meetingDays.map(day => (
-                    <label key={day} className="flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={meetingDayFilter === day}
-                        onChange={(e) => { if (e.target.checked) setMeetingDayFilter(day); else setMeetingDayFilter(''); }}
-                        className="mr-1 accent-[#007460]"
-                      />
-                      <span className="text-xs sm:text-sm text-gray-700 whitespace-nowrap">{day}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <hr className="my-4 border-gray-200" />
+
               <div className="mb-4">
                 <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
                   <Zap className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#facc15' }} />
@@ -1174,30 +1046,7 @@ export function GroupsTab({
                   />
                 </div>
               </div>
-              <hr className="my-4 border-gray-200" />
-              <div className="mb-4">
-                <h4 className="font-bold text-gray-700 mb-2 flex items-center gap-2 text-sm sm:text-base">
-                  <Globe className="w-4 h-4 sm:w-5 sm:h-5" style={{ color: '#00c9ac' }} />
-                  Timezone
-                </h4>
-                <select
-                  value={timezoneFilter}
-                  onChange={e => setTimezoneFilter(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:border-[#007460] focus:ring-2 focus:ring-[#007460] text-sm"
-                >
-                  <option value="">Any Timezone</option>
-                  <option value="UTC-8">Pacific Time (UTC-8)</option>
-                  <option value="UTC-7">Mountain Time (UTC-7)</option>
-                  <option value="UTC-6">Central Time (UTC-6)</option>
-                  <option value="UTC-5">Eastern Time (UTC-5)</option>
-                  <option value="UTC+0">UTC</option>
-                  <option value="UTC+1">Central European Time (UTC+1)</option>
-                  <option value="UTC+2">Eastern European Time (UTC+2)</option>
-                  <option value="UTC+8">China Standard Time (UTC+8)</option>
-                  <option value="UTC+9">Japan Standard Time (UTC+9)</option>
-                  <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
-                </select>
-              </div>
+
               <div className="flex flex-col sm:flex-row gap-2 sm:justify-between mt-6">
                 <button
                   onClick={clearFilters}

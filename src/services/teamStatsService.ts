@@ -130,10 +130,10 @@ export interface LivePlayerData {
 export interface MemberData {
   summoner_name: string;
   elo: number;
-  owner: number;
+  owner?: number;
   rank?: string;
   icon_id?: number;
-  user_id?: number;
+  riot_id?: string;
   current_elo?: number; // Live ELO from live data
   current_wins?: number;
   current_losses?: number;

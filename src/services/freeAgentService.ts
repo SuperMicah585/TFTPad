@@ -4,9 +4,9 @@ export interface FreeAgent {
   elo: number;
   rank: string;
   looking_for: string;
-  availability: string[];
-  time?: string;
-  timezone?: string;
+  availability: string[]; // Kept for backward compatibility but always empty
+  time?: string; // Kept for backward compatibility but always empty
+  timezone?: string; // Kept for backward compatibility but always empty
   experience: string;
   created_date: string;
   region: string;
@@ -21,12 +21,12 @@ export interface FreeAgentFilters {
   search?: string;
   minRank?: string;
   maxRank?: string;
-  availabilityDays?: string;
-  availabilityTime?: string;
-  availabilityTimezone?: string;
   region?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
+  availabilityDays?: string;
+  availabilityTime?: string;
+  availabilityTimezone?: string;
 }
 
 export interface FreeAgentResponse {

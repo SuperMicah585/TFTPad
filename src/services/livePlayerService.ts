@@ -196,12 +196,9 @@ class LivePlayerService {
     }
 
     return deduplicateRequest(cacheKey, async () => {
-      const riotAccountResponse = await fetch(`${API_BASE_URL}/api/user-riot-account/${userId}`);
-      if (!riotAccountResponse.ok) {
-        throw new Error(`Failed to get riot account for user ${userId}`);
-      }
-      
-      const riotAccount = await riotAccountResponse.json();
+      // Users don't need Riot accounts for basic functionality
+      // Return null to indicate no Riot account is connected
+      const riotAccount = null;
       setCachedData(cacheKey, riotAccount, CACHE_CONFIG.riotAccounts);
       return riotAccount;
     });
@@ -218,7 +215,7 @@ class LivePlayerService {
     }
 
     return deduplicateRequest(cacheKey, async () => {
-      const leagueResponse = await fetch(`${API_BASE_URL}/api/tft-league/${riotId}?user_id=${userId}`);
+      const leagueResponse = await fetch(`${API_BASE_URL}/api/tft-league/${riotId}`);
       if (!leagueResponse.ok) {
         throw new Error(`Failed to get league data for user ${userId}`);
       }

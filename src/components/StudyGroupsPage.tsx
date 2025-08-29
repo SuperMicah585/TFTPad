@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users, SquareX, FileText } from 'lucide-react'
+import { Users } from 'lucide-react'
 import { useSearchParams, useLocation, useNavigate } from 'react-router-dom'
 import { Footer } from './Footer'
 import { GroupsTab } from './GroupsTab'
@@ -7,8 +7,8 @@ import { MyGroupsTab } from './MyGroupsTab'
 import { FreeAgentsTab } from './FreeAgentsTab'
 import { studyGroupService, type StudyGroup, type User, type UserStudyGroup } from '../services/studyGroupService';
 import { useAuth } from '../contexts/AuthContext';
-import { LoadingSpinner } from './auth/LoadingSpinner';
-import { RiotLoginModal } from './auth/RiotLoginModal';
+
+import { SupabaseLoginModal } from './auth/SupabaseLoginModal';
 
 // Custom hook for debouncing
 function useDebounce<T>(value: T, delay: number): T {
@@ -27,7 +27,7 @@ function useDebounce<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-// Study Groups Page Component
+// Groups Page Component
 export function StudyGroupsPage() {
   const { userId } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -36,25 +36,20 @@ export function StudyGroupsPage() {
   
   // Determine active tab from URL path
   const pathSegments = location.pathname.split('/');
-  const currentTab = pathSegments[pathSegments.length - 1] as 'groups' | 'my-groups' | 'free-agents';
-  const [activeTab, setActiveTab] = useState<'groups' | 'my-groups' | 'free-agents'>(currentTab || 'groups')
+  const currentTab = pathSegments[pathSegments.length - 1] as 'groups' | 'my-groups' | 'players';
+  const [activeTab, setActiveTab] = useState<'groups' | 'my-groups' | 'players'>(currentTab || 'groups')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [activeSearchQuery, setActiveSearchQuery] = useState<string>('')
-  const [meetingDayFilter, setMeetingDayFilter] = useState<string>('');
   const [minEloFilter, setMinEloFilter] = useState<number>(0);
   const [maxEloFilter, setMaxEloFilter] = useState<number>(5000);
   
   // Debounced ELO filters to prevent excessive API calls
   const debouncedMinEloFilter = useDebounce(minEloFilter, 1000);
   const debouncedMaxEloFilter = useDebounce(maxEloFilter, 1000);
-  const [timezoneFilter, setTimezoneFilter] = useState<string>('');
 
   // Free Agents filter state
   const [minRankFilter, setMinRankFilter] = useState<string>("iron+");
   const [maxRankFilter, setMaxRankFilter] = useState<string>("challenger");
-  const [availabilityDaysFilter, setAvailabilityDaysFilter] = useState<string[]>([]);
-  const [availabilityTimeFilter, setAvailabilityTimeFilter] = useState<string>("");
-  const [availabilityTimezoneFilter, setAvailabilityTimezoneFilter] = useState<string>("");
   const [regionFilter, setRegionFilter] = useState<string>("");
 
   // Real data state with caching
@@ -68,7 +63,7 @@ export function StudyGroupsPage() {
   // Cache state
   const [lastFetched, setLastFetched] = useState<number | null>(null);
 
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
   const [retryCount, setRetryCount] = useState(0);
   const MAX_RETRIES = 2;
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -80,16 +75,10 @@ export function StudyGroupsPage() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Group info modal state
-  const [showInfoPopup, setShowInfoPopup] = useState(false);
-  const [infoDescription, setInfoDescription] = useState('');
-  const [infoInstructions, setInfoInstructions] = useState('');
-  const [infoLoading, setInfoLoading] = useState(false);
+  
 
-  // Available meeting days for filtering (matching free agents page)
-  const meetingDays = [
-    'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday', 'Flexible'
-  ];
+
+
 
   // Login modal state
   const [showLoginModal, setShowLoginModal] = useState(false);
@@ -104,24 +93,7 @@ export function StudyGroupsPage() {
   
 
 
-  // Function to fetch group info and open modal
-  const handleOpenInfoModal = async (groupId: number) => {
-    setShowInfoPopup(true)
-    setInfoLoading(true)
-    setInfoDescription('')
-    setInfoInstructions('')
-    try {
-      // Replace with your actual API call
-      const groupDetails = await studyGroupService.getStudyGroup(groupId)
-      setInfoDescription(groupDetails.description || '')
-      setInfoInstructions(groupDetails.application_instructions || '')
-    } catch (err) {
-      setInfoDescription('Error loading group description.')
-      setInfoInstructions('Error loading application instructions.')
-    } finally {
-      setInfoLoading(false)
-    }
-  }
+
 
   // Initialize search from URL on component mount
   useEffect(() => {
@@ -136,9 +108,9 @@ export function StudyGroupsPage() {
   // Sync active tab with URL changes
   useEffect(() => {
     const pathSegments = location.pathname.split('/');
-    const currentTab = pathSegments[pathSegments.length - 1] as 'groups' | 'my-groups' | 'free-agents';
+    const currentTab = pathSegments[pathSegments.length - 1] as 'groups' | 'my-groups' | 'players';
     
-    if (currentTab && ['groups', 'my-groups', 'free-agents'].includes(currentTab)) {
+    if (currentTab && ['groups', 'my-groups', 'players'].includes(currentTab)) {
       setActiveTab(currentTab);
     } else {
       // Default to groups if no valid tab in URL
@@ -153,14 +125,14 @@ export function StudyGroupsPage() {
     }
   }, []); // Empty dependency array - only run once on mount
 
-  // Fetch study groups when filters change (but only after initialization)
+          // Fetch groups when filters change (but only after initialization)
   useEffect(() => {
     if (!hasInitialized) return; // Don't run until after initial load
     
     const fetchStudyGroups = async (isRetry: boolean = false) => {
       // Check if we have valid cached data and no filters are applied
       const isCacheValid = lastFetched && (Date.now() - lastFetched < CACHE_DURATION);
-      const hasActiveFilters = activeSearchQuery || meetingDayFilter || debouncedMinEloFilter > 0 || debouncedMaxEloFilter < 5000 || timezoneFilter;
+      const hasActiveFilters = activeSearchQuery || debouncedMinEloFilter !== 0 || debouncedMaxEloFilter !== 5000;
       
       // Check if sorting has actually changed from previous values
       const hasSortingChanged = sortBy !== prevSortBy || sortOrder !== prevSortOrder;
@@ -186,10 +158,8 @@ export function StudyGroupsPage() {
           page: 1,
           limit: 10,
           search: activeSearchQuery || undefined,
-          meeting_days: meetingDayFilter || undefined,
-          minEloFilter: debouncedMinEloFilter > 0 ? debouncedMinEloFilter : undefined,
-          maxEloFilter: debouncedMaxEloFilter < 5000 ? debouncedMaxEloFilter : undefined,
-          timezone: timezoneFilter || undefined,
+          minEloFilter: debouncedMinEloFilter,
+          maxEloFilter: debouncedMaxEloFilter,
           sort_by: sortBy,
           sort_order: sortOrder
         };
@@ -210,7 +180,7 @@ export function StudyGroupsPage() {
         
 
       } catch (err) {
-        console.error('Failed to fetch study groups:', err);
+        console.error('Failed to fetch groups:', err);
         
         // Try to retry if we haven't exceeded max retries
         if (retryCount < MAX_RETRIES && !isRetry) {
@@ -233,7 +203,7 @@ export function StudyGroupsPage() {
       
       fetchStudyGroups();
     }
-  }, [activeSearchQuery, meetingDayFilter, debouncedMinEloFilter, debouncedMaxEloFilter, timezoneFilter, sortBy, sortOrder, hasInitialized]);
+  }, [activeSearchQuery, debouncedMinEloFilter, debouncedMaxEloFilter, sortBy, sortOrder, hasInitialized]);
 
   // Load more groups when scrolling
   const loadMoreGroups = async () => {
@@ -246,10 +216,8 @@ export function StudyGroupsPage() {
         page: currentPage + 1,
         limit: 10,
         search: activeSearchQuery || undefined,
-        meeting_days: meetingDayFilter || undefined,
-        minEloFilter: debouncedMinEloFilter > 0 ? debouncedMinEloFilter : undefined,
-        maxEloFilter: debouncedMaxEloFilter < 5000 ? debouncedMaxEloFilter : undefined,
-        timezone: timezoneFilter || undefined,
+        minEloFilter: debouncedMinEloFilter,
+        maxEloFilter: debouncedMaxEloFilter,
         sort_by: sortBy,
         sort_order: sortOrder
       };
@@ -260,7 +228,7 @@ export function StudyGroupsPage() {
       setCurrentPage(prev => prev + 1);
       setHasMore(response.pagination.has_next);
     } catch (err) {
-      console.error('Failed to load more study groups:', err);
+      console.error('Failed to load more groups:', err);
     } finally {
       setLoadingMore(false);
     }
@@ -312,7 +280,7 @@ export function StudyGroupsPage() {
   useEffect(() => {
     if (activeTab === 'my-groups' && !userId) {
       setActiveTab('groups');
-              navigate('/study-groups');
+              navigate('/groups');
       setShowLoginModal(true);
     }
   }, [activeTab, userId, navigate]);
@@ -344,8 +312,8 @@ export function StudyGroupsPage() {
         setHasInitialized(true);
         setRetryCount(0);
       } catch (err) {
-        console.error('Failed to fetch study groups on retry:', err);
-        setError('Failed to load study groups. Please try again later.');
+        console.error('Failed to fetch groups on retry:', err);
+        setError('Failed to load groups. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -361,7 +329,7 @@ export function StudyGroupsPage() {
         <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
           <div className="absolute inset-0 opacity-15 dark:opacity-20">
             <svg width="100%" height="100%">
-              <pattern id="notebook-lines-study-groups" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
+              <pattern id="notebook-lines-groups" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
                 <line
                   x1="0"
                   y1="23"
@@ -372,7 +340,7 @@ export function StudyGroupsPage() {
                   className="text-blue-500 dark:text-blue-400"
                 />
               </pattern>
-              <rect width="100%" height="100%" fill="url(#notebook-lines-study-groups)" />
+              <rect width="100%" height="100%" fill="url(#notebook-lines-groups)" />
             </svg>
           </div>
         </div>
@@ -393,15 +361,10 @@ export function StudyGroupsPage() {
                     setSearchQuery={setSearchQuery}
                     setActiveSearchQuery={setActiveSearchQuery}
                     updateSearchInURL={updateSearchInURL}
-                    meetingDayFilter={meetingDayFilter}
-                    setMeetingDayFilter={setMeetingDayFilter}
                     minEloFilter={minEloFilter}
                     setMinEloFilter={setMinEloFilter}
                     maxEloFilter={maxEloFilter}
                     setMaxEloFilter={setMaxEloFilter}
-                    timezoneFilter={timezoneFilter}
-                    setTimezoneFilter={setTimezoneFilter}
-                    meetingDays={meetingDays}
                     loading={loading}
                     error={error}
                     memberCounts={memberCounts}
@@ -409,54 +372,13 @@ export function StudyGroupsPage() {
                     hasMore={hasMore}
                     loadingMore={loadingMore}
                     onRetry={handleRetry}
-                    handleOpenInfoModal={handleOpenInfoModal}
+
                     sortBy={sortBy}
                     setSortBy={setSortBy}
                     sortOrder={sortOrder}
                     setSortOrder={setSortOrder}
                   />
-                  {showInfoPopup && (
-                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-                      <div className="bg-white rounded-lg p-6 max-w-lg w-full h-96 flex flex-col">
-                        <div className="flex justify-between items-center mb-4">
-                          <h3 className="text-lg font-semibold text-gray-800">Group Information</h3>
-                          <button
-                            onClick={() => setShowInfoPopup(false)}
-                            className="text-gray-400 hover:text-gray-600 transition-colors"
-                          >
-                            <SquareX className="w-6 h-6 text-black" />
-                          </button>
-                        </div>
-                        <div className="flex-1 overflow-y-auto">
-                          {infoLoading ? (
-                            <div className="flex justify-center items-center py-8">
-                              <div className="text-center">
-                                <LoadingSpinner size="md" className="mx-auto mb-2" />
-                                <p className="text-gray-600">Loading group details...</p>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="space-y-4">
-                              <div>
-                                <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
-                                  <FileText className="w-4 h-4 text-green-600" />
-                                  Description
-                                </h4>
-                                <p className="text-gray-700 text-sm">{infoDescription}</p>
-                              </div>
-                              <div>
-                                <h4 className="font-medium text-gray-800 mb-2 flex items-center gap-2">
-                                  <FileText className="w-4 h-4 text-orange-600" />
-                                  Application Instructions
-                                </h4>
-                                <p className="text-gray-700 text-sm">{infoInstructions}</p>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
                 </>
               )}
               {activeTab === 'my-groups' && userId && <MyGroupsTab />}
@@ -469,18 +391,12 @@ export function StudyGroupsPage() {
                   </div>
                 </div>
               )}
-              {activeTab === 'free-agents' && (
+                              {activeTab === 'players' && (
                 <FreeAgentsTab
                   minRankFilter={minRankFilter}
                   setMinRankFilter={setMinRankFilter}
                   maxRankFilter={maxRankFilter}
                   setMaxRankFilter={setMaxRankFilter}
-                  availabilityDaysFilter={availabilityDaysFilter}
-                  setAvailabilityDaysFilter={setAvailabilityDaysFilter}
-                  availabilityTimeFilter={availabilityTimeFilter}
-                  setAvailabilityTimeFilter={setAvailabilityTimeFilter}
-                  availabilityTimezoneFilter={availabilityTimezoneFilter}
-                  setAvailabilityTimezoneFilter={setAvailabilityTimezoneFilter}
                   regionFilter={regionFilter}
                   setRegionFilter={setRegionFilter}
                 />
@@ -493,12 +409,9 @@ export function StudyGroupsPage() {
       </div>
 
       {/* Authentication Modal */}
-      <RiotLoginModal
+      <SupabaseLoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={() => {
-  
-        }}
       />
     </>
   )

@@ -1,24 +1,24 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { riotAuthService } from '../services/riotAuthService'
+import { supabaseAuthService } from '../services/supabaseAuthService'
 
-interface RiotUser {
-  id: number
-  riot_id: string
-  summoner_name: string
-  region: string
+
+interface SupabaseUser {
+  id: string
+  email: string
   created_at: string
-  description?: string
-  available?: number
-  days?: string[]
-  time?: string
-  timezone?: string
+  user_metadata?: {
+    full_name?: string
+    avatar_url?: string
+    provider?: string
+  }
 }
 
 interface AuthContextType {
-  user: RiotUser | null
-  userId: number | null
+  user: SupabaseUser | null
+  userId: string | null
   loading: boolean
-  signInWithRiot: (gameName: string, tagLine: string, region: string) => Promise<{ error: string | null }>
+  signInWithDiscord: () => Promise<{ error: string | null }>
+  signInWithGoogle: () => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   checkProfileCompletion: () => Promise<void>
   isProfileIncomplete: () => boolean
@@ -27,8 +27,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<RiotUser | null>(null)
-  const [userId, setUserId] = useState<number | null>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const checkProfileCompletion = useCallback(async () => {
@@ -37,39 +37,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       // Always refresh user data to get the latest profile information
-      const token = riotAuthService.getToken()
-      if (token) {
-        const result = await riotAuthService.verifyToken(token)
-        setUser(result.user)
-        // Also update userId in case it's not set
-        if (result.user.id) {
-          setUserId(result.user.id)
-        }
+      const session = await supabaseAuthService.getSession()
+      if (session?.access_token) {
+        const userData = await supabaseAuthService.getUserFromBackend(session.access_token)
+        setUser(userData)
+        setUserId(userData.id)
       }
     } catch (error) {
       console.error('Error refreshing user data:', error)
     }
   }, [userId])
 
-  // Check for existing token on mount
+  // Check for existing session on mount
   useEffect(() => {
     const checkAuth = async () => {
-      const token = riotAuthService.getToken()
-      if (token) {
-        try {
-          const result = await riotAuthService.verifyToken(token)
-          // Set both userId and full user data
-          setUserId(result.user.id)
-          setUser(result.user)
+      try {
+        const session = await supabaseAuthService.getSession()
+        if (session?.access_token) {
+          const userData = await supabaseAuthService.getUserFromBackend(session.access_token)
+          setUser(userData)
+          setUserId(userData.id)
           
           // Ensure we have the latest profile data
           await checkProfileCompletion()
-        } catch (error) {
-          console.error('Token verification failed:', error)
-          riotAuthService.removeToken()
-          setUser(null)
-          setUserId(null)
         }
+      } catch (error) {
+        console.error('Session verification failed:', error)
+        setUser(null)
+        setUserId(null)
       }
       setLoading(false)
     }
@@ -77,38 +72,87 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     checkAuth()
   }, [checkProfileCompletion])
 
-  const signInWithRiot = async (gameName: string, tagLine: string, region: string) => {
+  // Listen to auth state changes
+  useEffect(() => {
+    const { data: { subscription } } = supabaseAuthService.onAuthStateChange(
+      async (event, session) => {
+        console.log('Auth state changed:', event, session)
+        
+        if (event === 'SIGNED_IN' && session?.access_token) {
+          try {
+            const userData = await supabaseAuthService.getUserFromBackend(session.access_token)
+            setUser(userData)
+            setUserId(userData.id)
+            await checkProfileCompletion()
+          } catch (error) {
+            console.error('Error getting user from backend:', error)
+            setUser(null)
+            setUserId(null)
+          }
+        } else if (event === 'SIGNED_OUT') {
+          console.log('Auth state: SIGNED_OUT detected, clearing user state')
+          setUser(null)
+          setUserId(null)
+        }
+        
+        setLoading(false)
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [checkProfileCompletion])
+
+  const signInWithDiscord = async () => {
     try {
-      const result = await riotAuthService.loginWithRiot(gameName, tagLine, region)
-      riotAuthService.storeToken(result.token)
-      setUser(result.user)
-      setUserId(result.user.id)
-      
-      // Refresh user data to get complete profile information
-      await checkProfileCompletion()
-      
+      const result = await supabaseAuthService.signInWithDiscord()
+      if (!result.success) {
+        return { error: result.message }
+      }
       return { error: null }
     } catch (error) {
-      return { error: error instanceof Error ? error.message : 'Login failed' }
+      return { error: error instanceof Error ? error.message : 'Discord login failed' }
+    }
+  }
+
+  const signInWithGoogle = async () => {
+    try {
+      const result = await supabaseAuthService.signInWithGoogle()
+      if (!result.success) {
+        return { error: result.message }
+      }
+      return { error: null }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Google login failed' }
     }
   }
 
   const signOut = async () => {
-    riotAuthService.removeToken()
-    setUser(null)
-    setUserId(null)
+    try {
+      console.log('🔐 AuthContext: Starting sign out...')
+      await supabaseAuthService.signOut()
+      console.log('🔐 AuthContext: Supabase sign out completed, clearing user state...')
+    } catch (error) {
+      console.error('🔐 AuthContext: Sign out error:', error)
+    } finally {
+      // Always clear user state, regardless of Supabase sign out success
+      console.log('🔐 AuthContext: Clearing user state...')
+      setUser(null)
+      setUserId(null)
+      console.log('🔐 AuthContext: User state cleared')
+    }
   }
 
   const isProfileIncomplete = () => {
-    if (!user) return false
-    return !user.description || user.description.trim() === ''
+    // Since we're simplifying the profile system, we'll consider it complete if user exists
+    return !user
   }
 
   const value = {
     user,
     userId,
     loading,
-    signInWithRiot,
+    signInWithDiscord,
+    signInWithGoogle,
     signOut,
     checkProfileCompletion,
     isProfileIncomplete,

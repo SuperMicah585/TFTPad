@@ -52,16 +52,13 @@ export interface StudyGroup {
   id: number;
   group_name: string;
   description: string;
-  meeting_schedule: string[];
-  application_instructions: string;
-  time?: string;
-  timezone?: string;
   image_url?: string;
   created_at: string;
   updated_at: string;
   member_count?: number;
   total_elo?: number;
   avg_elo?: number;
+  owner?: number; // User ID of who created the group
 }
 
 export interface StudyGroupsResponse {
@@ -80,11 +77,8 @@ export interface StudyGroupsParams {
   page?: number;
   limit?: number;
   search?: string;
-  meeting_days?: string;
   minEloFilter?: number;
   maxEloFilter?: number;
-  time?: string;
-  timezone?: string;
   sort_by?: string;
   sort_order?: 'asc' | 'desc';
 }
@@ -92,18 +86,15 @@ export interface StudyGroupsParams {
 export interface User {
   id: number;
   created_at: string;
-  description: string;
-  available: number;
+  email: string;
 }
 
 export interface UserStudyGroup {
   id: number;
   created_at: string;
-  user_id: number;
+  riot_id: string;
   study_group_id: number;
-  owner: number; // 1 = owner, 0 = not owner
-  users?: User;
-  study_group?: StudyGroup;
+  owner?: number;
   elo?: number;
   rank?: string;
   summoner_name?: string;
@@ -118,11 +109,8 @@ export const studyGroupService = {
     if (params.page) queryParams.append('page', params.page.toString());
     if (params.limit) queryParams.append('limit', params.limit.toString());
     if (params.search) queryParams.append('search', params.search);
-    if (params.meeting_days !== undefined) queryParams.append('meeting_days', params.meeting_days);
     if (params.minEloFilter !== undefined) queryParams.append('minEloFilter', params.minEloFilter.toString());
     if (params.maxEloFilter !== undefined) queryParams.append('maxEloFilter', params.maxEloFilter.toString());
-    if (params.time) queryParams.append('time', params.time);
-    if (params.timezone) queryParams.append('timezone', params.timezone);
     if (params.sort_by) queryParams.append('sort_by', params.sort_by);
     if (params.sort_order) queryParams.append('sort_order', params.sort_order);
     
@@ -177,6 +165,43 @@ export const studyGroupService = {
     return data.user_study_groups;
   },
 
+  // Get study groups created by a specific user (owner)
+  async getStudyGroupsByOwner(ownerId: number): Promise<StudyGroup[]> {
+    const response = await retryWithBackoff(() => fetch(`${API_ENDPOINT}/users/${ownerId}/owned-study-groups`));
+    if (!response.ok) {
+      throw new Error(`Failed to fetch owned study groups: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.study_groups || [];
+  },
+
+  // Get study groups created by a specific user (owner) with member data
+  async getStudyGroupsByOwnerWithMembers(ownerId: number): Promise<StudyGroup[]> {
+    // Get the current session for authentication
+    const { supabase } = await import('../lib/supabase');
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      throw new Error('No authentication token available');
+    }
+    
+    const response = await retryWithBackoff(() => 
+      fetch(`${API_ENDPOINT}/users/${ownerId}/owned-study-groups-with-members`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+      })
+    );
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch owned study groups with members: ${response.statusText}`);
+    }
+    const data = await response.json();
+    return data.study_groups || [];
+  },
+
+
   // Get users in a specific study group
   async getStudyGroupUsers(groupId: number, updateRanks: boolean = true): Promise<UserStudyGroup[]> {
     const url = new URL(`${API_ENDPOINT}/study-groups/${groupId}/users`);
@@ -190,34 +215,17 @@ export const studyGroupService = {
     return data.study_group_users;
   },
 
-  // Switch captain for a study group
-  async switchCaptain(groupId: number, newCaptainSummonerName: string): Promise<{ message: string, new_captain_summoner_name: string }> {
-    const response = await retryWithBackoff(() => 
-      fetch(`${API_ENDPOINT}/study-groups/${groupId}/switch-captain`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ new_captain_summoner_name: newCaptainSummonerName }),
-      })
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to switch captain: ${response.statusText}`);
-    }
-    
-    return response.json();
-  },
+  // Captain functionality removed - this method is no longer needed
 
-  // Delete a study group (captain only)
-  async deleteStudyGroup(groupId: number, captainSummonerName: string): Promise<{ message: string, deleted_group_id: number }> {
+  // Delete a study group (any member can delete)
+  async deleteStudyGroup(groupId: number, userId: number): Promise<{ message: string, deleted_group_id: number }> {
     const response = await retryWithBackoff(() => 
       fetch(`${API_ENDPOINT}/study-groups/${groupId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ captain_summoner_name: captainSummonerName }),
+        body: JSON.stringify({ user_id: userId }),
       })
     );
     
@@ -297,6 +305,51 @@ export const studyGroupService = {
     
     if (!response.ok) {
       throw new Error(`Failed to leave study group: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
+
+  // Add a member directly to a study group
+  async addMemberToStudyGroup(groupId: number, userSummonerName: string, addedByUserId: number): Promise<{ message: string, added_user_id: number, study_group_id: number }> {
+    const response = await retryWithBackoff(() => 
+      fetch(`${API_ENDPOINT}/study-groups/${groupId}/add-member`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          user_summoner_name: userSummonerName,
+          added_by_user_id: addedByUserId
+        }),
+      })
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Failed to add member to study group: ${response.statusText}`);
+    }
+    
+    return response.json();
+  },
+
+  // Remove a member from a study group
+  async removeMemberFromStudyGroup(groupId: number, summonerName: string): Promise<{ message: string }> {
+    const response = await retryWithBackoff(() => 
+      fetch(`${API_ENDPOINT}/study-groups/${groupId}/remove-member`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          summoner_name: summonerName
+        }),
+      })
+    );
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.error || `Failed to remove member from study group: ${response.statusText}`);
     }
     
     return response.json();

@@ -1,19 +1,20 @@
 import { useState, useEffect, useRef } from 'react'
-import { UserCheck, Mail, Users, Crown, Calendar, Upload, Eye, SquareX, ChevronsLeft, Award, Star, TrendingUp, TrendingDown, Clock, Globe, FileText, Image, Settings, AlertTriangle, LogOut, UserPlus, CheckCircle, XCircle } from 'lucide-react'
+import { UserCheck, Users, Crown, Calendar, Upload, SquareX, ChevronsLeft, FileText, Image, Settings, Zap } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
-import { studyGroupInviteService, type StudyGroupInvite } from '../services/studyGroupInviteService'
-import { studyGroupRequestService, type StudyGroupRequest } from '../services/studyGroupRequestService'
+import { useLocation } from 'react-router-dom'
+
+
 import { teamStatsService } from '../services/teamStatsService'
 import { livePlayerService } from '../services/livePlayerService'
 
 import { playerStatsService } from '../services/playerStatsService'
 import { TeamStatsContent } from './TeamStatsContent'
 import { TFTStatsContent } from './TFTStatsContent'
-import { PlayerEloChart } from './PlayerEloChart'
-import { RiotLoginModal } from './auth/RiotLoginModal'
-import { RiotConnectModal } from './auth/RiotConnectModal'
+
+import { SupabaseLoginModal } from './auth/SupabaseLoginModal'
+
 import { useImageUpload } from '../hooks/useImageUpload'
 import { LoadingSpinner } from './auth/LoadingSpinner'
 
@@ -40,19 +41,15 @@ interface MyGroup {
 interface GroupMember {
   summoner_name: string;
   elo: number;
-  owner: number;
+  owner?: number;
   rank?: string;
   icon_id?: number;
-  user_id?: number;
+  riot_id?: string;
 }
 
 interface NewGroupData {
   name: string;
   description: string;
-  meeting_schedule: string[];
-  application_instructions: string;
-  time: string;
-  timezone: string;
 }
 
 interface GroupSettings {
@@ -70,15 +67,12 @@ const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:50
 
 export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) {
   const { userId } = useAuth()
+  const location = useLocation()
   const [myGroups, setMyGroups] = useState<MyGroup[]>([])
   const [error, setError] = useState<string | null>(null)
-  const [invitations, setInvitations] = useState<StudyGroupInvite[]>([])
-  const [invitationsLoading, setInvitationsLoading] = useState(false)
+
   
-  // Study group requests state
-  const [groupRequests, setGroupRequests] = useState<{ [groupId: number]: StudyGroupRequest[] }>({})
-  const [requestsLoading, setRequestsLoading] = useState<{ [groupId: number]: boolean }>({})
-  const [respondingToRequest, setRespondingToRequest] = useState<number | null>(null)
+
   
   // Placeholder state
   const [placeholderCount, setPlaceholderCount] = useState<number>(2) // Start with 2 placeholders
@@ -86,10 +80,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [isDataLoading, setIsDataLoading] = useState(false) // Track if we're actively fetching data
   const [isCountLoading, setIsCountLoading] = useState(false) // Track if we're fetching the count
   
-  // Cache state
-  const [lastFetched, setLastFetched] = useState<number | null>(null)
+  // Refresh trigger for manual refresh
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-  const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
   // Update loading states when auth loading state changes
   useEffect(() => {
@@ -101,7 +93,16 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
   }, [authLoading])
 
-  // Fetch user's study groups
+  // Force data refresh when navigating to this route
+  useEffect(() => {
+    if (userId && !authLoading && location.pathname === '/my-groups') {
+      console.log('🔄 Navigated to my-groups route, fetching fresh data')
+      setRefreshTrigger(prev => prev + 1)
+    }
+  }, [location.pathname, userId, authLoading])
+
+      // Fetch user's owned groups - always fresh data
+  // Shows only groups where the user is the owner (creator) - matches the 'owner' column in the database
   useEffect(() => {
     const fetchMyGroups = async () => {
       if (!userId && !authLoading) {
@@ -110,36 +111,34 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         return
       }
 
-      // Check if we have valid cached data
-      const isCacheValid = lastFetched && (Date.now() - lastFetched < CACHE_DURATION)
-      if (isCacheValid && myGroups.length > 0) {
-        return
-      }
-
       try {
         setError(null)
         setIsCountLoading(true) // Track loading state
+        setShowPlaceholders(true) // Show placeholders while loading
         
-        // Get the count of user's study groups first
-        let userStudyGroups: any[] = []
+
+        
+        // Get owned groups with member data in a single efficient call
+        let ownedGroups: any[] = []
         if (userId) {
-          userStudyGroups = await studyGroupService.getUserStudyGroupsByUser(userId)
-          setPlaceholderCount(Math.max(userStudyGroups.length, 2)) // At least 2 placeholders
+          console.log('🔍 Fetching owned groups with members for user ID:', userId)
+          ownedGroups = await studyGroupService.getStudyGroupsByOwnerWithMembers(parseInt(userId, 10))
+          console.log('📊 Received owned groups with members:', ownedGroups)
+          setPlaceholderCount(Math.max(ownedGroups.length, 2)) // At least 2 placeholders
           setIsCountLoading(false) // Hide loading spinner, got the count
           
           // Keep placeholders visible while processing data
           setIsDataLoading(true)
         }
         
-        // Transform the data to match the expected format (using enhanced data from backend)
-        const transformedGroups = userStudyGroups.map((userGroup: any) => {
-          const group = userGroup.study_group
+        // Transform the data to match the expected format - now using pre-fetched member data
+        const transformedGroups = ownedGroups.map((group: any) => {
           if (!group) return null
           
-          // Use the enhanced member data from the backend
-          const members = (userGroup.members || []).map((member: any) => ({
+          // Use the member data that comes with the group from the optimized endpoint
+          const members = (group.members || []).map((member: any) => ({
             summoner_name: member.summoner_name || 'Unknown User',
-            elo: member.elo || 0,
+            elo: member.elo || 0, // ELO might be 0 if not available from simplified query
             rank: member.rank || 'UNRANKED',
             owner: member.owner, // Preserve the owner field to identify captain
             icon_id: member.icon_id || undefined,
@@ -153,7 +152,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           return {
             id: group.id,
             name: group.group_name,
-            role: userGroup.owner === 1 ? "captain" : "member", // Use owner field to determine role
+            role: "owner", // User is the owner of these groups
             members: members,
             total_elo: totalElo,
             avg_elo: avgElo,
@@ -172,12 +171,11 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         // Filter out null values and set the groups
         const validGroups = transformedGroups.filter(group => group !== null)
         setMyGroups(validGroups)
-        setLastFetched(Date.now())
         setIsDataLoading(false)
         setShowPlaceholders(false) // Hide placeholders once real data is loaded
       } catch (err) {
         console.error('Failed to fetch my groups:', err)
-        setError('Failed to load your study groups. Please try again later.')
+        setError('Failed to load your groups. Please try again later.')
         setShowPlaceholders(false) // Hide placeholders on error
         setMyGroups([]) // Clear any existing groups on error
         setIsDataLoading(false)
@@ -186,37 +184,16 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
 
     fetchMyGroups()
-  }, [userId, refreshTrigger])
+  }, [userId, refreshTrigger, authLoading])
 
-  // Fetch user's pending invitations
-  const fetchInvitations = async () => {
-    if (!userId) return;
-    
-    try {
-      setInvitationsLoading(true);
-      const userInvites = await studyGroupInviteService.getUserInvites(userId);
-      setInvitations(userInvites);
-    } catch (error) {
-      console.error('Error fetching invitations:', error);
-    } finally {
-      setInvitationsLoading(false);
-    }
-  };
 
-  useEffect(() => {
-    fetchInvitations();
-  }, [userId, refreshTrigger]);
 
 
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newGroupData, setNewGroupData] = useState<NewGroupData>({
     name: "",
-    description: "",
-    meeting_schedule: [] as string[],
-    application_instructions: "",
-    time: "",
-    timezone: ""
+    description: ""
   });
 
   // Modal state for MyGroupCard modals
@@ -227,8 +204,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [members, setMembers] = useState<GroupMember[]>([]);
   const [membersLoading, setMembersLoading] = useState(false);
   const [newMemberName, setNewMemberName] = useState("");
-  const [captain, setCaptain] = useState("");
-  const [activeSection, setActiveSection] = useState<'members' | 'info' | 'manage' | 'team-stats'>('members');
+  // Captain state removed - no longer needed
+  const [activeSection, setActiveSection] = useState<'group-info' | 'manage' | 'team-stats' | 'members' | 'info'>('group-info');
 
   const [groupSettings, setGroupSettings] = useState<GroupSettings>({
     name: "",
@@ -238,21 +215,20 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     time: "",
     timezone: ""
   });
-  const [promoteLoading, setPromoteLoading] = useState<string | null>(null); // Track which member is being promoted
+  // Promote loading state removed - no longer needed
   const [deleteLoading, setDeleteLoading] = useState(false); // Track delete operation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // Show delete confirmation modal
 
   // Player modal state
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
+  const [selectedPlayerRiotId, setSelectedPlayerRiotId] = useState<string | null>(null);
   const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
   const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
-  const [activePlayerTab, setActivePlayerTab] = useState<'about' | 'stats'>('stats');
-  const [playerProfile, setPlayerProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
+  const [activePlayerTab, setActivePlayerTab] = useState<'stats'>('stats');
+
 
   // Player stats state
   const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
@@ -287,11 +263,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
   }, [selectedPlayer?.icon_id]);
 
-  // Authentication and Riot account state
+  // Authentication state
   const [showLoginModal, setShowLoginModal] = useState(false);
-
-  const [showRiotModal, setShowRiotModal] = useState(false);
-  const [riotAccount, setRiotAccount] = useState<any>(null);
   const [creatingGroup, setCreatingGroup] = useState(false);
   
 
@@ -302,22 +275,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Check if user has Riot account linked
-  useEffect(() => {
-    const checkRiotAccount = async () => {
-      if (!userId) return;
-      
-      try {
-        const account = await userService.getUserRiotAccount(userId);
-        setRiotAccount(account);
-      } catch (error) {
-        console.error('Error checking Riot account:', error);
-        setRiotAccount(null);
-      }
-    };
 
-    checkRiotAccount();
-  }, [userId]);
 
   // Image upload handlers
   const handleImageSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -332,33 +290,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
   };
 
-  const handleImageUpload = async (groupId: number) => {
-    if (!selectedImage) return;
 
-    try {
-      console.log('Starting image upload for group:', groupId);
-      console.log('Selected image:', selectedImage.name, selectedImage.size);
-      
-      const fileName = `groups/${groupId}/icon.${selectedImage.name.split('.').pop()}`;
-      console.log('Generated file name:', fileName);
-      
-      const result = await uploadImage(selectedImage, fileName);
-      console.log('Upload result:', result);
-      
-      if (result.error) {
-        console.error('Failed to upload image:', result.error);
-        return null;
-      }
-      
-      // Use the URL returned from the backend (which includes cache-busting)
-      const imageUrl = result.data.url;
-      console.log('Generated image URL:', imageUrl);
-      return imageUrl;
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      return null;
-    }
-  };
 
   const handleCreateGroup = async () => {
     // Check if user is logged in
@@ -367,32 +299,46 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       return;
     }
 
-    // Check if user has Riot account linked
-    if (!riotAccount) {
-      setShowRiotModal(true);
-      return;
-    }
-
     setCreatingGroup(true);
     try {
-      // Create the study group first
+      let imageUrl = null;
+      
+      // Upload image first if selected
+      if (selectedImage) {
+        console.log('Uploading image before creating group...');
+        // Generate a temporary path for the image
+        const tempFileName = `temp/${Date.now()}-${selectedImage.name}`;
+        const uploadResult = await uploadImage(selectedImage, tempFileName);
+        
+        if (uploadResult.error) {
+          console.error('Failed to upload image:', uploadResult.error);
+          alert('Failed to upload image. Please try again.');
+          return;
+        }
+        
+        imageUrl = uploadResult.data.url;
+        console.log('Image uploaded successfully:', imageUrl);
+      }
+
+      // Create the study group with image URL if available
       const result = await studyGroupService.createStudyGroup({
-        user_id: userId,
+        user_id: parseInt(userId, 10),
         group_name: newGroupData.name,
         description: newGroupData.description,
-        meeting_schedule: newGroupData.meeting_schedule,
-        application_instructions: newGroupData.application_instructions,
-        time: newGroupData.time,
-        timezone: newGroupData.timezone
+        image_url: imageUrl || ''
       });
 
-      // Upload image if selected and update the database with the image URL
-      if (selectedImage && result.group) {
-        const imageUrl = await handleImageUpload(result.group.id);
-        if (imageUrl) {
-          // Update the study group with the image URL
+      // If image was uploaded, rename it to the proper group path
+      if (imageUrl && result.group) {
+        console.log('Renaming image to proper group path...');
+        const newPath = `groups/${result.group.id}/icon.${selectedImage?.name.split('.').pop()}`;
+        
+        // Upload the image to the correct path
+        const finalUploadResult = await uploadImage(selectedImage!, newPath);
+        if (finalUploadResult.data?.url) {
+          // Update the group with the final image URL
           await studyGroupService.updateStudyGroup(result.group.id, {
-            image_url: imageUrl
+            image_url: finalUploadResult.data.url
           });
         }
       }
@@ -401,11 +347,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       setShowCreateModal(false);
       setNewGroupData({
         name: "",
-        description: "",
-        meeting_schedule: [],
-        application_instructions: "",
-        time: "",
-        timezone: ""
+        description: ""
       });
       setSelectedImage(null);
       setImagePreview(null);
@@ -415,83 +357,29 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       setRefreshTrigger(prev => prev + 1);
       setMyGroups([]);
 
-      // Show success message (you could add a toast notification here)
+      // Show success message
       console.log("Study group created successfully!");
       
     } catch (error) {
       console.error('Failed to create study group:', error);
-      // Show error message (you could add a toast notification here)
       alert('Failed to create study group. Please try again.');
     } finally {
       setCreatingGroup(false);
     }
   };
 
-  const handleMeetingScheduleChange = (day: string) => {
-    setNewGroupData(prev => ({
-      ...prev,
-      meeting_schedule: prev.meeting_schedule.includes(day)
-        ? prev.meeting_schedule.filter(d => d !== day)
-        : [...prev.meeting_schedule, day]
-    }));
-  };
 
-  // Handle switching captain
-  const handleSwitchCaptain = async (newCaptainSummonerName: string) => {
-    if (!selectedGroup) return;
-    
-    setPromoteLoading(newCaptainSummonerName); // Start loading
-    
-    try {
-      await studyGroupService.switchCaptain(selectedGroup.id, newCaptainSummonerName);
-      
-      // Update the local state to reflect the change
-      const updatedMembers = members.map(member => ({
-        ...member,
-        owner: member.summoner_name === newCaptainSummonerName ? 1 : 0
-      }))
-      
-      setMembers(updatedMembers);
-      setCaptain(newCaptainSummonerName);
-      
-      // Check if the current user is still the captain
-      const currentUserSummonerName = riotAccount?.summoner_name;
-      const isCurrentUserStillCaptain = newCaptainSummonerName === currentUserSummonerName;
-      
-      // Refresh the groups data to update ownership status
-      setRefreshTrigger(prev => prev + 1);
-      setMyGroups([]);
-      
-      // Show success message
-      console.log('Captain switched successfully');
-      
-      // Close modal if current user is no longer the captain (loses access to manage tab)
-      if (!isCurrentUserStillCaptain) {
-        console.log('Current user is no longer captain, closing modal');
-        setShowSettings(false);
-        setShowCombinedModal(false);
-      } else {
-        // If current user is still captain, just close the settings modal but keep the combined modal open
-        setShowSettings(false);
-      }
-      
-    } catch (error) {
-      console.error('Failed to switch captain:', error);
-      // Show error message (you could add a toast notification here)
-      alert('Failed to switch captain. Please try again.');
-    } finally {
-      setPromoteLoading(null); // Stop loading
-    }
-  };
+
+  // Captain switching functionality removed
 
   // Handle deleting study group
   const handleDeleteGroup = async () => {
-    if (!selectedGroup || !riotAccount) return;
+    if (!selectedGroup || !userId) return;
     
     setDeleteLoading(true);
     
     try {
-      await studyGroupService.deleteStudyGroup(selectedGroup.id, riotAccount.summoner_name);
+      await studyGroupService.deleteStudyGroup(selectedGroup.id, parseInt(userId, 10));
       
       // Close all modals
       setShowDeleteConfirm(false);
@@ -514,99 +402,11 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
   };
 
-  const handleRespondToInvite = async (inviteId: number, response: 'accept' | 'decline') => {
-    try {
-      await studyGroupInviteService.respondToInvite(inviteId, response);
-      
-      // Remove the invitation from the list
-      setInvitations(prev => prev.filter(invite => invite.id !== inviteId));
-      
-      // Refresh groups if accepted
-      if (response === 'accept') {
-        // Clear cache and force refresh
-        setLastFetched(null);
-        setMyGroups([]);
-        
-        // Small delay to ensure backend has processed the acceptance
-        setTimeout(() => {
-          setRefreshTrigger(prev => prev + 1);
-        }, 500);
-      }
-      
-      alert(`Invitation ${response}ed successfully!`);
-    } catch (error) {
-      console.error('Error responding to invitation:', error);
-      alert(error instanceof Error ? error.message : 'Failed to respond to invitation');
-    }
-  };
 
-  // Fetch requests for a specific group
-  const fetchGroupRequests = async (groupId: number) => {
-    try {
-      setRequestsLoading(prev => ({ ...prev, [groupId]: true }));
-      const requests = await studyGroupRequestService.getGroupRequests(groupId);
-      setGroupRequests(prev => ({ ...prev, [groupId]: requests }));
-    } catch (error) {
-      console.error('Error fetching group requests:', error);
-    } finally {
-      setRequestsLoading(prev => ({ ...prev, [groupId]: false }));
-    }
-  };
 
-  // Handle responding to a study group request
-  const handleRespondToRequest = async (requestId: number, response: 'approve' | 'reject') => {
-    setRespondingToRequest(requestId);
-    
-    try {
-      await studyGroupRequestService.respondToRequest(requestId, response);
-      
-      // Remove the request from all groups
-      setGroupRequests(prev => {
-        const updated = { ...prev };
-        Object.keys(updated).forEach(groupId => {
-          updated[parseInt(groupId)] = updated[parseInt(groupId)].filter(req => req.id !== requestId);
-        });
-        return updated;
-      });
-      
-      // Refresh groups if approved
-      if (response === 'approve') {
-        setRefreshTrigger(prev => prev + 1);
-        setMyGroups([]);
-      }
-      
-      alert(`Request ${response}ed successfully!`);
-    } catch (error) {
-      console.error('Error responding to request:', error);
-      alert(error instanceof Error ? error.message : 'Failed to respond to request');
-    } finally {
-      setRespondingToRequest(null);
-    }
-  };
 
-  // Handle leaving group
-  const handleLeaveGroup = async () => {
-    if (!selectedGroup || !userId) return;
-    
-    if (!confirm('Are you sure you want to leave this study group? This action cannot be undone.')) {
-      return;
-    }
-    
-    try {
-      await studyGroupService.leaveStudyGroup(selectedGroup.id, userId);
-      
-      // Remove the group from the list
-      setMyGroups(prev => prev.filter(group => group.id !== selectedGroup.id));
-      
-      // Close the modal
-      setShowCombinedModal(false);
-      
-      alert('Successfully left the study group!');
-    } catch (error) {
-      console.error('Error leaving group:', error);
-      alert(error instanceof Error ? error.message : 'Failed to leave study group');
-    }
-  };
+
+
 
   // Handle saving group settings
   const handleSaveGroupSettings = async () => {
@@ -621,14 +421,17 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       if (selectedImage) {
         console.log('New image selected, uploading...');
         
-        // Upload new image (will overwrite existing file due to upsert: true)
-        const uploadedImageUrl = await handleImageUpload(selectedGroup.id);
-        if (uploadedImageUrl) {
-          imageUrl = uploadedImageUrl;
-          console.log('New image uploaded successfully:', imageUrl);
-        } else {
+        // Upload new image to the proper group path
+        const newPath = `groups/${selectedGroup.id}/icon.${selectedImage.name.split('.').pop()}`;
+        const uploadResult = await uploadImage(selectedImage, newPath);
+        
+        if (uploadResult.error) {
+          console.error('Failed to upload image:', uploadResult.error);
           throw new Error('Failed to upload new image');
         }
+        
+        imageUrl = uploadResult.data.url;
+        console.log('New image uploaded successfully:', imageUrl);
       } else {
         console.log('No new image selected, keeping current image:', imageUrl);
       }
@@ -692,21 +495,51 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
   };
 
+  // Handle removing a member from the group
+  const handleRemoveMember = async (member: GroupMember) => {
+    if (!selectedGroup) return;
+    
+    try {
+      console.log('Removing member:', member.summoner_name, 'from group:', selectedGroup.id);
+      
+      // Call the service to remove the member
+      await studyGroupService.removeMemberFromStudyGroup(selectedGroup.id, member.summoner_name);
+      
+      // Update the local members list
+      setMembers(prevMembers => prevMembers.filter(m => m.summoner_name !== member.summoner_name));
+      
+      // No confirmation or success message - just remove silently
+      console.log('Member removed successfully!');
+      
+    } catch (error) {
+      console.error('Failed to remove member:', error);
+      alert('Failed to remove member. Please try again.');
+    }
+  };
+
+  // Handle group image upload
+  const handleGroupImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedImage(file);
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
+      clearImageError();
+    }
+  };
+
   // Player modal functions
-  const fetchPlayerLeagueData = async (userId: number) => {
+  const fetchPlayerLeagueData = async (_userId: number, riotId: string) => {
     try {
       setLeagueDataLoading(true);
       setLeagueDataError(null);
       
-      // Get user's riot account to get PUUID
-      const riotAccount = await userService.getUserRiotAccount(userId);
-      if (!riotAccount || !riotAccount.riot_id) {
-        setLeagueDataError('No Riot account found for this user');
-        return;
-      }
+      // Use the provided riotId - no fallback
+      const puuid = riotId;
 
       // Fetch league data using the riot_id (which contains the PUUID)
-      const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
+              const response = await fetch(`${API_BASE_URL}/api/tft-league/${puuid}`);
       if (!response.ok) {
         throw new Error('Failed to fetch league data');
       }
@@ -721,20 +554,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     }
   };
 
-  const fetchPlayerProfile = async (userId: number) => {
-    try {
-      setProfileLoading(true);
-      setProfileError(null);
-      
-      const profile = await userService.getUserProfile(userId);
-      setPlayerProfile(profile);
-    } catch (error) {
-      console.error('Error fetching player profile:', error);
-      setProfileError('Failed to load profile data');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
+
 
   const fetchPlayerStats = async (riotId: string) => {
     try {
@@ -839,33 +659,35 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   };
 
   const handlePlayerClick = async (member: any) => {
-    if (!member.user_id) {
-      console.error('No user_id found for member:', member);
+    if (!member.riot_id) {
+      console.error('No riot_id found for member:', member);
       return;
     }
     
     setSelectedPlayer(member);
-    setClickedMemberId(member.user_id);
+    setClickedMemberId(member.riot_id);
     setShowPlayerModal(true);
     setActivePlayerTab('stats');
     
-    // Get the riot account for this user to fetch player stats
-    let riotId = null;
+    const riotId = member.riot_id;
+    setSelectedPlayerRiotId(riotId);
+    
+    // Get user_id for other API calls if needed
+    let userId = null;
     try {
-      console.log('👤 Fetching riot account for user_id:', member.user_id);
-      const riotAccount = await userService.getUserRiotAccount(member.user_id);
-      riotId = riotAccount?.riot_id;
-      console.log('🎯 Riot account found:', riotAccount);
-      console.log('🎯 Riot ID:', riotId);
+      if (member.summoner_name) {
+        const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
+        userId = riotAccount?.user_id;
+      }
     } catch (error) {
-      console.error('Error fetching riot account for player stats:', error);
+      console.error('Error fetching user_id for player:', error);
     }
     
     // Fetch league data, profile data, and player stats for the player
     await Promise.all([
-      fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id),
-      ...(riotId ? [fetchPlayerStats(riotId)] : [])
+      ...(userId ? [fetchPlayerLeagueData(userId, riotId)] : []),
+      
+      fetchPlayerStats(riotId)
     ]);
   };
 
@@ -937,14 +759,14 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
             <div className="flex items-center gap-2">
-              <h2 className="text-2xl font-bold text-gray-800">My Study Groups</h2>
+              <h2 className="text-2xl font-bold text-gray-800">My Groups</h2>
               <div className="relative group">
                 <UserCheck 
                   size={20} 
                   className="text-gray-500 hover:text-gray-700 cursor-help transition-colors" 
                 />
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
-                  <div className="text-center">Manage groups you're part of and their settings</div>
+                  <div className="text-center">Manage groups you own and their settings</div>
                   <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
                 </div>
               </div>
@@ -953,28 +775,26 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
               onClick={() => {
                 if (!userId) {
                   setShowLoginModal(true);
-                } else if (!riotAccount) {
-                  setShowRiotModal(true);
                 } else {
                   setShowCreateModal(true);
                 }
               }}
-              disabled={!userId || !riotAccount}
+              disabled={!userId}
               className="text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: !userId || !riotAccount ? '#666' : '#964B00' }}
+              style={{ backgroundColor: !userId ? '#666' : '#964B00' }}
               onMouseEnter={(e) => {
-                if (!userId || !riotAccount) return;
+                if (!userId) return;
                 e.currentTarget.style.backgroundColor = '#7c3a00';
               }}
               onMouseLeave={(e) => {
-                if (!userId || !riotAccount) return;
+                if (!userId) return;
                 e.currentTarget.style.backgroundColor = '#964B00';
               }}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              {!userId ? 'Login Required' : !riotAccount ? 'Link Riot Account' : 'Create New Group'}
+              {!userId ? 'Login Required' : 'Create New Group'}
             </button>
           </div>
         </div>
@@ -984,7 +804,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
             <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Study Groups</h3>
+                            <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Groups</h3>
             <p className="text-red-700 mb-4">{error}</p>
             <button 
               onClick={() => {
@@ -1006,13 +826,20 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         ) : myGroups.length === 0 ? (
           <div className="text-center flex-1 flex flex-col items-center justify-center">
             <UserCheck className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Study Groups Yet</h3>
-            <p className="text-gray-600 mb-4">You haven't joined any study groups yet.</p>
+                            <h3 className="text-lg font-semibold text-gray-800 mb-2">No Groups Yet</h3>
+                <p className="text-gray-600 mb-4">You haven't created any groups yet. Create your first group to get started!</p>
             <button 
-              onClick={() => window.location.href = '/study-groups'}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              onClick={() => {
+                if (!userId) {
+                  setShowLoginModal(true);
+                } else {
+                  setShowCreateModal(true);
+                }
+              }}
+              disabled={!userId}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Browse Study Groups
+              {!userId ? 'Login Required' : 'Create Your First Group'}
             </button>
           </div>
         ) : (
@@ -1025,10 +852,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   setSelectedGroup(group);
                   setMembers(group.members); // Set initial members from cache
                   
-                  // Find the captain (member with owner = 1)
-                  const captainMember = group.members.find((m: GroupMember) => m.owner === 1);
-                  const currentCaptain = captainMember?.summoner_name || 'Unknown Captain';
-                  setCaptain(currentCaptain);
+                  // Captain functionality removed
                   setGroupSettings({
                     name: group.name,
                     meeting_schedule: group.meeting_schedule,
@@ -1054,7 +878,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       rank: relationship.rank || 'UNRANKED',
                       owner: relationship.owner,
                       icon_id: relationship.icon_id,
-                      user_id: relationship.user_id
+                      riot_id: relationship.riot_id
                     }));
                     setMembers(membersData);
                   } catch (error) {
@@ -1069,46 +893,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           </div>
         )}
 
-        {/* Invitations Section */}
-        <div className="mt-8">
-          <div className="flex items-center gap-2 mb-4">
-            <h2 className="text-2xl font-bold text-gray-800">Invitations</h2>
-            <div className="relative group">
-              <Mail 
-                size={20} 
-                className="text-gray-500 hover:text-gray-700 cursor-help transition-colors" 
-              />
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-2 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none whitespace-nowrap z-[9999] hidden sm:block">
-                <div className="text-center">View and respond to group invitations</div>
-                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-b-4 border-transparent border-b-gray-900"></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Mock invitations data - TODO: Replace with real invitations API */}
-          {invitationsLoading ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <LoadingSpinner size="md" className="mx-auto mb-4" />
-              <p className="text-blue-700">Loading invitations...</p>
-            </div>
-          ) : invitations.length === 0 ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
-              <Mail className="w-12 h-12 text-blue-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">No Invitations</h3>
-              <p className="text-blue-700">You don't have any pending group invitations.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {invitations.map((invitation) => (
-                <InvitationCard 
-                  key={invitation.id} 
-                  invitation={invitation} 
-                  onRespond={handleRespondToInvite}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        
 
         {/* Create New Group Modal */}
         {showCreateModal && (
@@ -1156,84 +941,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                    Meeting Schedule
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 ml-4">
-                    {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
-                      <label key={day} className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={newGroupData.meeting_schedule.includes(day)}
-                          onChange={() => handleMeetingScheduleChange(day)}
-                          className="mr-2"
-                        />
-                        {day}
-                      </label>
-                    ))}
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
-                      Preferred Time
-                    </label>
-                    <select
-                      id="time"
-                      value={newGroupData.time}
-                      onChange={(e) => setNewGroupData({...newGroupData, time: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400"
-                    >
-                      <option value="">Select time...</option>
-                      <option value="mornings">Mornings</option>
-                      <option value="afternoons">Afternoons</option>
-                      <option value="evenings">Evenings</option>
-                      <option value="flexible">Flexible</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label htmlFor="timezone" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      <Globe className="w-4 h-4 text-purple-600" />
-                      Timezone
-                    </label>
-                    <select
-                      id="timezone"
-                      value={newGroupData.timezone}
-                      onChange={(e) => setNewGroupData({...newGroupData, timezone: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400"
-                    >
-                      <option value="">Select timezone...</option>
-                      <option value="UTC-8">Pacific Time (UTC-8)</option>
-                      <option value="UTC-7">Mountain Time (UTC-7)</option>
-                      <option value="UTC-6">Central Time (UTC-6)</option>
-                      <option value="UTC-5">Eastern Time (UTC-5)</option>
-                      <option value="UTC+0">UTC</option>
-                      <option value="UTC+1">Central European Time (UTC+1)</option>
-                      <option value="UTC+2">Eastern European Time (UTC+2)</option>
-                      <option value="UTC+8">China Standard Time (UTC+8)</option>
-                      <option value="UTC+9">Japan Standard Time (UTC+9)</option>
-                      <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
-                    </select>
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-orange-600" />
-                    Application Instructions
-                  </label>
-                  <textarea
-                    id="instructions"
-                    value={newGroupData.application_instructions}
-                    onChange={(e) => setNewGroupData({...newGroupData, application_instructions: e.target.value})}
-                    rows={4}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400 resize-vertical"
-                    placeholder="What should potential members include in their application?"
-                  />
-                </div>
 
                 {/* Group Icon Upload */}
                 <div>
@@ -1364,7 +1072,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   <div key={index} className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 bg-gray-50 rounded-lg gap-2">
                     <div className="flex items-center gap-2">
                       <ProfileIcon 
-                        memberId={member.user_id || index}
+                        memberId={index}
                         summonerName={member.summoner_name}
                         iconId={member.icon_id}
                         size="sm"
@@ -1398,11 +1106,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       ) : (
                         <span className="text-gray-500 italic text-sm">No current ranked data</span>
                       )}
-                      {selectedGroup.role === 'captain' && member.summoner_name !== 'Moisturizar' && (
-                        <button className="text-red-500 hover:text-red-700 text-sm font-medium flex-shrink-0">
-                          Remove
-                        </button>
-                      )}
+                      {/* Remove functionality removed - no captain system */}
                     </div>
                   </div>
                 ))
@@ -1500,9 +1204,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   onClick={() => {
                     setActiveSection('manage');
                     // Fetch requests when manage tab is opened for captains
-                    if (selectedGroup?.role === 'captain') {
-                      fetchGroupRequests(selectedGroup.id);
-                    }
+                    // Request management removed - no captain system
                   }}
                   className={`flex-1 py-2 px-3 rounded-md font-medium transition-colors focus:outline-none text-xs sm:text-sm ${
                     activeSection === 'manage'
@@ -1516,69 +1218,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
 
               {/* Tab Content */}
               <div className="flex-1 overflow-y-auto">
-                {activeSection === 'members' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-semibold text-blue-800 mb-3">Switch Captain</h4>
-                    <p className="text-blue-700 text-sm mb-3">Promote another member to captain:</p>
-                    <ul className="space-y-2">
-                      {members.filter((m: GroupMember) => m.summoner_name !== captain).length === 0 ? (
-                        <li className="text-gray-500 text-sm">No other members to promote.</li>
-                      ) : (
-                        members.filter((m: GroupMember) => m.summoner_name !== captain).map((member: GroupMember, idx: number) => (
-                          <li key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white rounded px-3 py-2 border border-blue-100 gap-2">
-                            <div className="relative">
-                              <div className="text-gray-800 truncate">{member.summoner_name}</div>
-                              {member.owner === 1 && (
-                                <div className="absolute -top-2 -right-2 text-yellow-500">
-                                  <Crown className="w-4 h-4" />
-                                </div>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              {getCurrentRank(member) ? (
-                                <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
-                                  {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
-                                    <img 
-                                      src={getRankIconUrl(getRankTier(getCurrentRank(member)!) + '+')} 
-                                      alt={getRankTier(getCurrentRank(member)!)}
-                                      className="w-4 h-4 object-contain"
-                                      onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                      }}
-                                    />
-                                  )}
-                                  <span className="text-xs truncate">{getCurrentRank(member)}</span>
-                                </div>
-                              ) : (
-                                <span className="text-gray-500 italic text-xs">No current ranked data</span>
-                              )}
-                              <button
-                                className={`px-3 py-1 rounded text-xs font-medium transition-colors flex-shrink-0 ${
-                                  promoteLoading === member.summoner_name
-                                    ? 'bg-gray-400 text-white cursor-not-allowed'
-                                    : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                }`}
-                                onClick={() => handleSwitchCaptain(member.summoner_name)}
-                                disabled={promoteLoading === member.summoner_name}
-                              >
-                                {promoteLoading === member.summoner_name ? (
-                                  <div className="flex items-center gap-1">
-                                    <LoadingSpinner size="sm" />
-                                    <span>Promoting...</span>
-                                  </div>
-                                ) : (
-                                  'Promote'
-                                )}
-                              </button>
-                            </div>
-                          </li>
-                        ))
-                      )}
-                    </ul>
-                    <p className="text-xs text-gray-500 mt-3">Current captain: <span className="font-semibold">{captain}</span></p>
-                  </div>
-                )}
+                {/* Captain functionality removed */}
 
                 {activeSection === 'info' && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
@@ -1610,7 +1250,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                                                   <li key={idx} className="flex flex-col sm:flex-row sm:items-center sm:justify-between bg-white rounded px-2 py-1 border border-green-100 gap-2">
                           <div className="flex items-center gap-2">
                             <ProfileIcon 
-                              memberId={m.user_id || idx}
+                                                             memberId={idx}
                               summonerName={m.summoner_name}
                               iconId={m.icon_id}
                               size="sm"
@@ -1741,86 +1381,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       </div>
                     </div>
 
-                    {/* Pending Requests Section - Only show for captains */}
-                    {selectedGroup?.role === 'captain' && (
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <h4 className="font-semibold text-blue-800 flex items-center gap-2">
-                            <UserPlus className="w-5 h-5 text-blue-600" />
-                            Pending Requests
-                          </h4>
-                          <button
-                            onClick={() => fetchGroupRequests(selectedGroup.id)}
-                            disabled={requestsLoading[selectedGroup.id]}
-                            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                          >
-                            {requestsLoading[selectedGroup.id] ? 'Loading...' : 'Refresh'}
-                          </button>
-                        </div>
-                        
-                        {requestsLoading[selectedGroup.id] ? (
-                          <div className="text-center py-4">
-                            <LoadingSpinner size="sm" className="mx-auto mb-2" />
-                            <p className="text-blue-700 text-sm">Loading requests...</p>
-                          </div>
-                        ) : groupRequests[selectedGroup.id]?.length > 0 ? (
-                          <div className="space-y-3">
-                            {groupRequests[selectedGroup.id].map((request) => (
-                              <div key={request.id} className="bg-white rounded-lg p-3 border border-blue-100">
-                                <div className="flex items-center justify-between">
-                                  <div className="flex-1">
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <span className="font-medium text-gray-800">
-                                        {request.user?.summoner_name || 'Unknown User'}
-                                      </span>
-                                      {request.user?.rank && (
-                                        <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                                          {request.user.rank}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="text-xs text-gray-500">
-                                      Requested on {new Date(request.created_at).toLocaleDateString()}
-                                    </div>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <button
-                                      onClick={() => handleRespondToRequest(request.id, 'approve')}
-                                      disabled={respondingToRequest === request.id}
-                                      className="flex items-center gap-1 px-3 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {respondingToRequest === request.id ? (
-                                        <LoadingSpinner size="sm" />
-                                      ) : (
-                                        <CheckCircle className="w-3 h-3" />
-                                      )}
-                                      {respondingToRequest === request.id ? 'Approving...' : 'Approve'}
-                                    </button>
-                                    <button
-                                      onClick={() => handleRespondToRequest(request.id, 'reject')}
-                                      disabled={respondingToRequest === request.id}
-                                      className="flex items-center gap-1 px-3 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      {respondingToRequest === request.id ? (
-                                        <LoadingSpinner size="sm" />
-                                      ) : (
-                                        <XCircle className="w-3 h-3" />
-                                      )}
-                                      {respondingToRequest === request.id ? 'Rejecting...' : 'Reject'}
-                                    </button>
-                                  </div>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-4">
-                            <UserPlus className="w-8 h-8 text-blue-400 mx-auto mb-2" />
-                            <p className="text-blue-700 text-sm">No pending requests</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Request management removed - no captain system */}
                   </div>
                 )}
 
@@ -1832,27 +1393,12 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       </div>
 
       {/* Authentication Modals */}
-      <RiotLoginModal
+      <SupabaseLoginModal
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
-        onSuccess={(user) => {
-          console.log('Login successful:', user)
-        }}
       />
       
-      <RiotConnectModal
-        isOpen={showRiotModal}
-        onClose={() => setShowRiotModal(false)}
-        userId={userId || 0}
-        onSuccess={() => {
-          // Refresh Riot account data after successful connection
-          setShowRiotModal(false);
-          // Re-check Riot account
-          if (userId) {
-            userService.getUserRiotAccount(userId).then(setRiotAccount);
-          }
-        }}
-      />
+
 
 
 
@@ -1862,7 +1408,16 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           <div className="bg-white rounded-lg max-w-2xl w-full h-[600px] overflow-y-auto flex flex-col relative">
             {/* Close button - absolute positioned */}
             <button
-              onClick={() => setShowCombinedModal(false)}
+              onClick={() => {
+                setShowCombinedModal(false);
+                // Clear image preview when modal is closed
+                setSelectedImage(null);
+                setImagePreview(null);
+                if (fileInputRef.current) fileInputRef.current.value = '';
+                clearImageError();
+                // Trigger a refresh by incrementing the refresh trigger
+                setRefreshTrigger(prev => prev + 1);
+              }}
               className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
               style={{ lineHeight: 0 }}
             >
@@ -1918,34 +1473,17 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
             <div className="px-4 sm:px-6 border-b border-gray-200">
               <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
                 <button 
-                  onClick={() => setActiveSection('members')}
+                  onClick={() => setActiveSection('group-info')}
                   className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                    activeSection === 'members' 
-                      ? 'text-[#564ec7] border-[#564ec7]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
-                  }`}
-                >
-                  Members
-                </button>
-                <button 
-                  onClick={() => setActiveSection('info')}
-                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                    activeSection === 'info' 
+                    activeSection === 'group-info' 
                       ? 'text-[#564ec7] border-[#564ec7]' 
                       : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
                   }`}
                 >
                   Group Info
                 </button>
-                {(selectedGroup.role === 'captain' || selectedGroup.role === 'member') && (
-                                  <button 
-                  onClick={() => {
-                    setActiveSection('manage');
-                    // Fetch requests when manage tab is opened for captains
-                    if (selectedGroup?.role === 'captain') {
-                      fetchGroupRequests(selectedGroup.id);
-                    }
-                  }}
+                <button 
+                  onClick={() => setActiveSection('manage')}
                   className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                     activeSection === 'manage' 
                       ? 'text-[#564ec7] border-[#564ec7]' 
@@ -1954,7 +1492,6 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                 >
                   Manage
                 </button>
-                )}
                 <button 
                   onClick={() => {
                     setActiveSection('team-stats');
@@ -1975,563 +1512,308 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
             
             {/* Content */}
             <div className="flex-1 p-4 sm:p-6">
-              {/* Members Tab */}
-              {activeSection === 'members' && (
-                <div className="space-y-4">
+              {/* Group Info Tab - Combined Members and Description */}
+              {activeSection === 'group-info' && (
+                <div className="space-y-6">
+                  {/* Members Section */}
                   <div className="space-y-3">
-                    {members.map((member, index) => (
-                      <div 
-                        key={index} 
-                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all duration-300 ${
-                          clickedMemberId === member.user_id 
-                            ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
-                            : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                        }`}
-                      >
-                        {/* Member Icon */}
-                        <ProfileIcon 
-                          memberId={member.user_id || index}
-                          summonerName={member.summoner_name}
-                          iconId={member.icon_id}
-                          size="md"
-                          shape="rounded-full"
-                        />
-                        
-                        {/* Member Info */}
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span 
-                              className={`font-medium truncate cursor-pointer transition-all duration-300 ${
-                                clickedMemberId === member.user_id 
-                                  ? 'text-blue-600 scale-105' 
-                                  : 'text-gray-800 hover:text-blue-600'
-                              }`}
-                              onClick={() => handlePlayerClick(member)}
-                            >
-                              {member.summoner_name}
-                            </span>
-                            {member.owner === 1 && (
-                              <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Rank */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          {getCurrentRank(member) ? (
-                            <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
-                              {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
-                                <img 
-                                  src={getRankIconUrl(getRankTier(getCurrentRank(member)!) === 'challenger' || getRankTier(getCurrentRank(member)!) === 'grandmaster' ? getRankTier(getCurrentRank(member)!) : getRankTier(getCurrentRank(member)!) + '+')} 
-                                  alt={getRankTier(getCurrentRank(member)!)}
-                                  className="w-4 h-4 object-contain"
-                                  onError={(e) => {
-                                    const target = e.target as HTMLImageElement;
-                                    target.style.display = 'none';
-                                  }}
-                                />
-                              )}
-                              <span className="text-sm">{getCurrentRank(member)}</span>
-                            </div>
-                          ) : (
-                            <span className="text-gray-500 italic text-sm">No current ranked data</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Group Info Tab */}
-              {activeSection === 'info' && (
-                <div className="space-y-4 w-full">
-                  <div className="space-y-4 w-full">
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-green-600" />
-                        Description
-                      </h5>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                          {selectedGroup.description || "No description provided"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-orange-600" />
-                        Application Instructions
-                      </h5>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                          {selectedGroup.application_instructions || "No application instructions provided"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Manage Tab - Role-based content */}
-              {activeSection === 'manage' && (
-                <div className="space-y-4 w-full">
-                  <div className="space-y-4 w-full">
-                    {/* Captain-only content */}
-                    {selectedGroup.role === 'captain' && (
-                      <>
-                        {/* Pending Requests Section */}
-                        <div className="w-full">
-                          <div className="flex items-center justify-between mb-2">
-                            <h5 className="font-medium text-gray-800 text-left flex items-center gap-2">
-                              <UserPlus className="w-4 h-4 text-blue-600" />
-                              Pending Requests
-                            </h5>
-                            <button
-                              onClick={() => fetchGroupRequests(selectedGroup.id)}
-                              disabled={requestsLoading[selectedGroup.id]}
-                              className="text-blue-600 hover:text-blue-800 text-xs font-medium"
-                            >
-                              {requestsLoading[selectedGroup.id] ? 'Loading...' : 'Refresh'}
-                            </button>
-                          </div>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            {requestsLoading[selectedGroup.id] ? (
-                              <div className="text-center py-4">
-                                <LoadingSpinner size="sm" className="mx-auto mb-2" />
-                                <p className="text-gray-700 text-sm">Loading requests...</p>
-                              </div>
-                            ) : groupRequests[selectedGroup.id]?.length > 0 ? (
-                              <div className="space-y-3">
-                                {groupRequests[selectedGroup.id].map((request) => (
-                                  <div key={request.id} className="bg-white rounded-lg p-3 border border-gray-200">
-                                    <div className="flex items-center justify-between">
-                                      <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <span className="font-medium text-gray-800 truncate">
-                                            {request.user?.summoner_name || 'Unknown User'}
-                                          </span>
-                                          {request.user?.rank && (
-                                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded flex-shrink-0">
-                                              {request.user.rank}
-                                            </span>
-                                          )}
-                                        </div>
-                                        <div className="text-xs text-gray-500">
-                                          Requested on {new Date(request.created_at).toLocaleDateString()}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2 flex-shrink-0">
-                                        <button
-                                          onClick={() => handleRespondToRequest(request.id, 'approve')}
-                                          disabled={respondingToRequest === request.id}
-                                          className="flex items-center gap-1 px-2 py-1 bg-green-500 hover:bg-green-600 text-white rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          {respondingToRequest === request.id ? (
-                                            <LoadingSpinner size="sm" />
-                                          ) : (
-                                            <CheckCircle className="w-3 h-3" />
-                                          )}
-                                          {respondingToRequest === request.id ? 'Approving...' : 'Approve'}
-                                        </button>
-                                        <button
-                                          onClick={() => handleRespondToRequest(request.id, 'reject')}
-                                          disabled={respondingToRequest === request.id}
-                                          className="flex items-center gap-1 px-2 py-1 bg-red-500 hover:bg-red-600 text-white rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                        >
-                                          {respondingToRequest === request.id ? (
-                                            <LoadingSpinner size="sm" />
-                                          ) : (
-                                            <XCircle className="w-3 h-3" />
-                                          )}
-                                          {respondingToRequest === request.id ? 'Rejecting...' : 'Reject'}
-                                        </button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-4">
-                                <UserPlus className="w-6 h-6 text-gray-400 mx-auto mb-2" />
-                                <p className="text-gray-700 text-sm">No pending requests</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Switch Captain Section */}
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <Crown className="w-4 h-4 text-yellow-500" />
-                        Switch Captain
-                      </h5>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <p className="text-gray-700 text-sm mb-3">Promote another member to captain:</p>
-                        <div className="space-y-2">
-                          {members.filter((m: GroupMember) => m.summoner_name !== captain).length === 0 ? (
-                            <p className="text-gray-500 text-sm">No other members to promote.</p>
-                          ) : (
-                            members.filter((m: GroupMember) => m.summoner_name !== captain).map((member: GroupMember, idx: number) => (
-                              <div key={idx} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                  <ProfileIcon 
-                                    memberId={member.user_id || idx}
-                                    summonerName={member.summoner_name}
-                                    iconId={member.icon_id}
-                                    size="sm"
-                                    shape="rounded-full"
-                                  />
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-800 truncate">{member.summoner_name}</span>
-                                    {member.owner === 1 && (
-                                      <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                                    )}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2 flex-shrink-0">
-                                  {getCurrentRank(member) ? (
-                                    <div className="flex items-center gap-2 px-2 py-1 text-xs font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
-                                      {getCurrentRank(member) && getRankTier(getCurrentRank(member)!) && (
-                                        <img 
-                                          src={getRankIconUrl(getRankTier(getCurrentRank(member)!) === 'challenger' || getRankTier(getCurrentRank(member)!) === 'grandmaster' ? getRankTier(getCurrentRank(member)!) : getRankTier(getCurrentRank(member)!) + '+')} 
-                                          alt={getRankTier(getCurrentRank(member)!)}
-                                          className="w-3 h-3 object-contain"
-                                          onError={(e) => {
-                                            const target = e.target as HTMLImageElement;
-                                            target.style.display = 'none';
-                                          }}
-                                        />
-                                      )}
-                                      <span className="text-xs truncate">{getCurrentRank(member)}</span>
-                                    </div>
-                                  ) : (
-                                    <span className="text-gray-500 italic text-xs">No current ranked data</span>
-                                  )}
-                                  <button
-                                    className={`px-3 py-1 rounded text-xs font-medium transition-colors flex-shrink-0 ${
-                                      promoteLoading === member.summoner_name
-                                        ? 'bg-gray-400 text-white cursor-not-allowed'
-                                        : 'bg-[#564ec7] hover:bg-[#4a3fb8] text-white'
-                                    }`}
-                                    onClick={() => handleSwitchCaptain(member.summoner_name)}
-                                    disabled={promoteLoading === member.summoner_name}
-                                  >
-                                    {promoteLoading === member.summoner_name ? (
-                                      <div className="flex items-center gap-1">
-                                        <LoadingSpinner size="sm" />
-                                        <span>Promoting...</span>
-                                      </div>
-                                    ) : (
-                                      'Promote'
-                                    )}
-                                  </button>
-                                </div>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500 mt-3">Current captain: <span className="font-semibold">{captain}</span></p>
-                      </div>
-                    </div>
-
-                    {/* Group Settings Section */}
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <Settings className="w-4 h-4 text-purple-600" />
-                        Group Settings
-                      </h5>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full space-y-4">
-                        <div>
-                          <label htmlFor="groupName" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <Users className="w-4 h-4 text-blue-600" />
-                            Group Name
-                          </label>
-                          <input
-                            type="text"
-                            id="groupName"
-                            value={groupSettings.name}
-                            onChange={(e) => setGroupSettings({...groupSettings, name: e.target.value})}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#564ec7] focus:ring-1 focus:ring-[#564ec7]"
-                            placeholder="Group name"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                            Meeting Schedule
-                          </label>
-                          <div className="grid grid-cols-2 gap-2 ml-4">
-                            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map(day => (
-                              <label key={day} className="flex items-center text-sm">
-                                <input
-                                  type="checkbox"
-                                  checked={groupSettings.meeting_schedule.includes(day)}
-                                  onChange={() => setGroupSettings(prev => ({
-                                    ...prev,
-                                    meeting_schedule: prev.meeting_schedule.includes(day)
-                                      ? prev.meeting_schedule.filter(d => d !== day)
-                                      : [...prev.meeting_schedule, day]
-                                  }))}
-                                  className="mr-2 text-[#564ec7] focus:ring-[#564ec7]"
-                                />
-                                {day}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                        <div>
-                          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-green-600" />
-                            Description
-                          </label>
-                          <textarea
-                            id="description"
-                            value={groupSettings.description}
-                            onChange={(e) => setGroupSettings({...groupSettings, description: e.target.value})}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#564ec7] focus:ring-1 focus:ring-[#564ec7] resize-vertical"
-                            placeholder="Group description..."
-                          />
-                        </div>
-                        <div>
-                          <label htmlFor="instructions" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-orange-600" />
-                            Application Instructions
-                          </label>
-                          <textarea
-                            id="instructions"
-                            value={groupSettings.application_instructions}
-                            onChange={(e) => setGroupSettings({...groupSettings, application_instructions: e.target.value})}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#564ec7] focus:ring-1 focus:ring-[#564ec7] resize-vertical"
-                            placeholder="Application instructions..."
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label htmlFor="manageTime" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                              <Clock className="w-4 h-4" style={{ color: '#00c9ac' }} />
-                              Preferred Time
-                            </label>
-                            <select
-                              id="manageTime"
-                              value={groupSettings.time}
-                              onChange={(e) => setGroupSettings({...groupSettings, time: e.target.value})}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#564ec7] focus:ring-1 focus:ring-[#564ec7]"
-                            >
-                              <option value="">Select time...</option>
-                              <option value="mornings">Mornings</option>
-                              <option value="afternoons">Afternoons</option>
-                              <option value="evenings">Evenings</option>
-                              <option value="flexible">Flexible</option>
-                            </select>
-                          </div>
-                          <div>
-                            <label htmlFor="manageTimezone" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                              <Globe className="w-4 h-4 text-purple-600" />
-                              Timezone
-                            </label>
-                            <select
-                              id="manageTimezone"
-                              value={groupSettings.timezone}
-                              onChange={(e) => setGroupSettings({...groupSettings, timezone: e.target.value})}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-[#564ec7] focus:ring-1 focus:ring-[#564ec7]"
-                            >
-                              <option value="">Select timezone...</option>
-                              <option value="UTC-8">Pacific Time (UTC-8)</option>
-                              <option value="UTC-7">Mountain Time (UTC-7)</option>
-                              <option value="UTC-6">Central Time (UTC-6)</option>
-                              <option value="UTC-5">Eastern Time (UTC-5)</option>
-                              <option value="UTC+0">UTC</option>
-                              <option value="UTC+1">Central European Time (UTC+1)</option>
-                              <option value="UTC+2">Eastern European Time (UTC+2)</option>
-                              <option value="UTC+8">China Standard Time (UTC+8)</option>
-                              <option value="UTC+9">Japan Standard Time (UTC+9)</option>
-                              <option value="UTC+10">Australian Eastern Time (UTC+10)</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        {/* Group Icon Upload */}
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            <Image className="w-4 h-4 text-gray-600" />
-                            Group Icon (Optional)
-                          </label>
-                          <div className="space-y-3">
-                            {/* Current Image Preview */}
-                            {selectedGroup?.image_url && (
-                              <div className="space-y-2">
-                                <div className="flex items-center gap-2">
-                                  <img
-                                    src={selectedGroup.image_url}
-                                    alt="Current group icon"
-                                    className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
-                                  />
-                                  <div className="flex flex-col">
-                                    <span className="text-sm font-medium text-gray-700">Current Icon</span>
-                                    <span className="text-xs text-gray-500">This is your group's current icon</span>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-                            
-                            {/* New Image Preview - Only show when new image is uploaded */}
-                            {imagePreview && (
-                              <div className="relative inline-block">
-                                <img
-                                  src={imagePreview}
-                                  alt="New group icon preview"
-                                  className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedImage(null);
-                                    setImagePreview(null);
-                                    if (fileInputRef.current) fileInputRef.current.value = '';
-                                  }}
-                                  className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                                >
-                                  ×
-                                </button>
-                              </div>
-                            )}
-                            
-                            {/* Upload Button */}
-                            <div className="flex items-center gap-3">
-                              <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors text-gray-600 hover:text-gray-800"
-                              >
-                                <Upload className="w-4 h-4" />
-                                {selectedImage ? 'Change Image' : 'Upload New Group Icon'}
-                              </button>
-                              <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                onChange={handleImageSelect}
-                                className="hidden"
-                              />
-                              {selectedImage && (
-                                <span className="text-sm text-gray-500">
-                                  {selectedImage.name}
-                                </span>
-                              )}
-                            </div>
-                            
-                            {/* Error Display */}
-                            {imageUploadError && (
-                              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                                <p className="text-red-600 text-sm">{imageUploadError}</p>
-                                <button
-                                  type="button"
-                                  onClick={clearImageError}
-                                  className="text-red-500 hover:text-red-700 text-xs mt-1"
-                                >
-                                  Dismiss
-                                </button>
-                              </div>
-                            )}
-                            
-                            <p className="text-xs text-gray-500">
-                              Upload a square image (recommended: 256x256px) for your group icon.
-                            </p>
-                          </div>
-                        </div>
-
-                        <button
-                          className="w-full bg-[#564ec7] hover:bg-[#4a3fb8] text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                          onClick={handleSaveGroupSettings}
+                    <h5 className="font-medium text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Users className="w-4 h-4 text-blue-600" />
+                      Members ({members.length})
+                    </h5>
+                    <div className="space-y-3">
+                      {members.map((member, index) => (
+                        <div 
+                          key={index} 
+                          className={`flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                            clickedMemberId === (member.riot_id ? parseInt(member.riot_id) : null)
+                              ? 'bg-blue-50 border-blue-300 shadow-md scale-[1.02]' 
+                              : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                          }`}
+                          onClick={() => handlePlayerClick(member)}
                         >
-                          Save Settings
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Captain Leave Group Info */}
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <LogOut className="w-4 h-4 text-blue-600" />
-                        Leave Group
-                      </h5>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 w-full">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 mt-0.5">
-                            <Crown className="w-5 h-5 text-blue-600" />
+                          {/* Member Icon */}
+                          <ProfileIcon 
+                            memberId={index}
+                            summonerName={member.summoner_name}
+                            iconId={member.icon_id}
+                            size="md"
+                            shape="rounded-full"
+                          />
+                          
+                          {/* Member Info */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span 
+                                className={`font-medium transition-all duration-300 ${
+                                  clickedMemberId === (member.riot_id ? parseInt(member.riot_id) : null) 
+                                    ? 'text-blue-600 scale-105' 
+                                    : 'text-gray-800 hover:text-blue-600'
+                                }`}
+                              >
+                                {member.summoner_name}
+                              </span>
+                              {member.owner === 1 && (
+                                <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                              )}
+                            </div>
+                            
+                            {/* Rank and ELO - Below name on mobile, hidden on larger screens */}
+                            <div className="flex flex-row gap-2 text-xs sm:text-sm text-gray-600 sm:hidden">
+                              {member.rank && member.elo ? (
+                                <>
+                                  {/* Rank */}
+                                  <div className="flex items-center gap-1">
+                                                                      <img 
+                                    src={getRankIconUrl(getRankTier(member.rank) + '+')} 
+                                    alt={member.rank} 
+                                    className="w-4 h-4 sm:w-5 sm:h-5"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                    <span className="font-medium">{member.rank}</span>
+                                  </div>
+                                  
+                                  {/* ELO */}
+                                  <div className="flex items-center gap-1">
+                                    <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+                                    <span className="font-bold">{member.elo.toLocaleString()}</span>
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-gray-500 italic">No ranked data available</span>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <h6 className="font-medium text-blue-800">Captain Requirements</h6>
-                            <p className="text-blue-600 text-sm mt-1">
-                              As the captain of this study group, you must promote another member to captain before you can leave the group. 
-                              This ensures the group continues to have leadership and can function properly.
-                            </p>
-                            <p className="text-blue-600 text-sm mt-2">
-                              Use the "Switch Captain" section above to promote another member, then you'll be able to leave the group.
-                            </p>
+                          
+                          {/* Rank and ELO - To the right on larger screens, hidden on mobile */}
+                          <div className="hidden sm:flex sm:flex-row sm:items-center sm:gap-2">
+                            {member.rank && member.elo ? (
+                              <>
+                                {/* Rank */}
+                                <div className="flex items-center gap-2 text-sm text-gray-600">
+                                  <img 
+                                    src={getRankIconUrl(getRankTier(member.rank) + '+')} 
+                                    alt={member.rank} 
+                                    className="w-5 h-5"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                    }}
+                                  />
+                                  <span className="font-medium">{member.rank}</span>
+                                </div>
+                                
+                                {/* ELO */}
+                                <div className="flex items-center gap-1 text-sm text-gray-600">
+                                  <Zap className="w-4 h-4 text-yellow-500" />
+                                  <span className="font-bold">{member.elo.toLocaleString()}</span>
+                                </div>
+                              </>
+                            ) : (
+                              <span className="text-gray-500 italic text-sm">No ranked data available</span>
+                            )}
                           </div>
                         </div>
-                      </div>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  {/* Description Section */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-green-600" />
+                      Description
+                    </h5>
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
+                      <p className="text-gray-700 whitespace-pre-wrap text-left text-sm">
+                        {selectedGroup.description || "No description provided"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Manage Tab */}
+              {activeSection === 'manage' && (
+                <div className="space-y-6">
+                  {/* Group Settings Section */}
+                  <div className="space-y-4">
+                    <h5 className="font-medium text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Settings className="w-4 h-4 text-blue-600" />
+                      Group Settings
+                    </h5>
+                    
+                    {/* Group Name */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Group Name</label>
+                      <input
+                        type="text"
+                        value={groupSettings.name}
+                        onChange={(e) => setGroupSettings({...groupSettings, name: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Enter group name"
+                      />
                     </div>
 
-                    {/* Delete Group Section */}
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <AlertTriangle className="w-4 h-4 text-red-600" />
-                        Danger Zone
-                      </h5>
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 w-full">
-                        <div>
-                          <h6 className="font-medium text-red-800">Delete Study Group</h6>
-                          <p className="text-red-600 text-sm mt-1">
-                            This action cannot be undone. All members will be removed and all data will be permanently deleted.
+                    {/* Description */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-gray-700">Description</label>
+                      <textarea
+                        value={groupSettings.description}
+                        onChange={(e) => setGroupSettings({...groupSettings, description: e.target.value})}
+                        rows={4}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                        placeholder="Enter group description"
+                      />
+                    </div>
+
+                    {/* Save Settings Button */}
+                    <div className="pt-4">
+                      <button
+                        onClick={handleSaveGroupSettings}
+                        disabled={imageUploadLoading}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {imageUploadLoading ? (
+                          <div className="flex items-center justify-center gap-2">
+                            <LoadingSpinner size="sm" />
+                            <span>Saving...</span>
+                          </div>
+                        ) : (
+                          'Save Changes'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Member Management Section */}
+                  <div className="space-y-4">
+                    <h5 className="font-medium text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Users className="w-4 h-4 text-green-600" />
+                      Member Management
+                    </h5>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="space-y-3">
+                        {members.map((member, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                            <div className="flex items-center gap-3">
+                              <ProfileIcon 
+                                memberId={index}
+                                summonerName={member.summoner_name}
+                                iconId={member.icon_id}
+                                size="sm"
+                                shape="rounded-full"
+                              />
+                              <div>
+                                <div className="font-medium text-gray-800">{member.summoner_name}</div>
+                                <div className="text-sm text-gray-500">{member.rank || 'No rank'}</div>
+                              </div>
+                            </div>
+                            {member.owner !== 1 && (
+                              <button
+                                onClick={() => handleRemoveMember(member)}
+                                className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors"
+                              >
+                                Remove
+                              </button>
+                            )}
+                            {member.owner === 1 && (
+                              <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full">
+                                Owner
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Group Image Section */}
+                  <div className="space-y-4">
+                    <h5 className="font-medium text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Image className="w-4 h-4 text-purple-600" />
+                      Group Image
+                    </h5>
+                    
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-200 flex items-center justify-center">
+                          {imagePreview ? (
+                            <img
+                              src={imagePreview}
+                              alt="New group image preview"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : selectedGroup.image_url ? (
+                            <img
+                              src={selectedGroup.image_url}
+                              alt="Current group image"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="text-gray-400 text-2xl font-bold">
+                              {selectedGroup.name.charAt(0).toUpperCase()}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-gray-600 mb-2">
+                            {imagePreview ? 'New image selected' : 'Upload a new image for your group'}
                           </p>
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => document.getElementById('group-image-upload')?.click()}
+                              className="bg-purple-600 hover:bg-purple-700 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                            >
+                              {imagePreview ? 'Change Image' : 'Select Image'}
+                            </button>
+                            {imagePreview && (
+                              <button
+                                onClick={() => {
+                                  setSelectedImage(null);
+                                  setImagePreview(null);
+                                  if (fileInputRef.current) fileInputRef.current.value = '';
+                                }}
+                                className="bg-gray-500 hover:bg-gray-600 text-white text-sm font-medium py-2 px-4 rounded-lg transition-colors"
+                              >
+                                Clear
+                              </button>
+                            )}
+                          </div>
+                          <input
+                            id="group-image-upload"
+                            ref={fileInputRef}
+                            type="file"
+                            accept="image/*"
+                            onChange={handleGroupImageUpload}
+                            className="hidden"
+                          />
                         </div>
-                        <div className="flex justify-end mt-3">
+                      </div>
+                      
+                      {/* Error Display */}
+                      {imageUploadError && (
+                        <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3">
+                          <p className="text-red-600 text-sm">{imageUploadError}</p>
                           <button
-                            className="bg-[#ff8889] hover:bg-[#ff7778] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                            onClick={() => setShowDeleteConfirm(true)}
+                            type="button"
+                            onClick={clearImageError}
+                            className="text-red-500 hover:text-red-700 text-xs mt-1"
                           >
-                            Delete Group
+                            Dismiss
                           </button>
                         </div>
-                      </div>
+                      )}
                     </div>
-                      </>
-                    )}
-
-                    {/* Member-only content */}
-                    {selectedGroup.role === 'member' && (
-                      <div className="w-full">
-                        <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                          <LogOut className="w-4 h-4 text-orange-600" />
-                          Leave Group
-                        </h5>
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 w-full">
-                          <div>
-                            <h6 className="font-medium text-orange-800">Leave Study Group</h6>
-                            <p className="text-orange-600 text-sm mt-1">
-                              You will be removed from this study group and lose access to all group features.
-                            </p>
-                          </div>
-                          <div className="flex justify-end mt-3">
-                            <button
-                              className="bg-[#ff8889] hover:bg-[#ff7778] text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
-                              onClick={handleLeaveGroup}
-                            >
-                              Leave Group
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 </div>
               )}
+
+
 
               {/* Team Stats Tab */}
               {activeSection === 'team-stats' && (
@@ -2572,9 +1854,10 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                 onClick={() => {
                   setShowPlayerModal(false);
                   setSelectedPlayer(null);
+                  setSelectedPlayerRiotId(null);
                   setClickedMemberId(null);
                   setPlayerLeagueData([]);
-                  setPlayerProfile(null);
+          
                 }}
                 className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
                 style={{ lineHeight: 0 }}
@@ -2622,16 +1905,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
               {/* Navigation Tabs */}
               <div className="px-6 border-b border-gray-200">
                 <div className="flex space-x-6">
-                  <button 
-                    onClick={() => setActivePlayerTab('about')}
-                    className={`transition-colors pb-2 border-b-2 ${
-                      activePlayerTab === 'about' 
-                        ? 'text-[#00c9ac] border-[#00c9ac]' 
-                        : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                    }`}
-                  >
-                    About Me
-                  </button>
+
                   <button 
                     onClick={() => setActivePlayerTab('stats')}
                     className={`transition-colors pb-2 border-b-2 ${
@@ -2659,87 +1933,11 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                     getRankedTftData={getRankedTftData}
                     getTurboTftData={getTurboTftData}
                     className="w-full"
-                    userId={selectedPlayer?.user_id}
+                    riotId={selectedPlayerRiotId || undefined}
                   />
                 )}
                 
-                {/* About Me Section */}
-                {activePlayerTab === 'about' && (
-                  <div className="space-y-4">
-                    {profileLoading ? (
-                      <div className="flex justify-center items-center py-8">
-                        <div className="text-center">
-                          <LoadingSpinner size="md" className="mx-auto mb-2" />
-                          <p className="text-gray-500">Loading profile data...</p>
-                        </div>
-                      </div>
-                    ) : profileError ? (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <p className="text-red-600">{profileError}</p>
-                      </div>
-                    ) : playerProfile ? (
-                      <div className="space-y-4">
-                        {/* Description */}
-                        <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                            <FileText className="w-4 h-4 text-green-600" />
-                            Description
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                              {playerProfile.description || "No description provided"}
-                            </p>
-                          </div>
-                        </div>
 
-                        {/* Availability */}
-                        {playerProfile.days && playerProfile.days.length > 0 && (
-                          <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                              <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                              Availability
-                            </h4>
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                                                        <div className="text-gray-700 text-xs text-left">
-                            <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
-                          </div>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Time and Timezone */}
-                        {(playerProfile.time || playerProfile.timezone) && (
-                          <div className="w-full">
-                            <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                              </svg>
-                              Preferred Time
-                            </h4>
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                                                        <div className="text-gray-700 text-xs text-left">
-                            {playerProfile.time ? (
-                              <span>
-                                {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                              </span>
-                            ) : (
-                              <span>
-                                Timezone: {playerProfile.timezone}
-                              </span>
-                            )}
-                          </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                        <p className="text-gray-600">No profile data available</p>
-                      </div>
-                    )}
-                  </div>
-                )}
                 
 
               </div>
@@ -2762,7 +1960,7 @@ function getRankIconUrl(rank: string): string {
     'diamond+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Diamond.png',
     'master+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Master.png',
     'grandmaster+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_GrandMaster.png',
-    'challenger': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Challenger.png',
+    'challenger+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Challenger.png',
   };
   return rankIcons[rank] || '';
 }
@@ -2934,907 +2132,7 @@ function MyGroupCard({
 
 
 
-// Invitation Card Component
-function InvitationCard({ 
-  invitation, 
-  onRespond 
-}: { 
-  invitation: StudyGroupInvite;
-  onRespond: (inviteId: number, response: 'accept' | 'decline') => void;
-}) {
-  const [showDetails, setShowDetails] = useState(false);
-  const [responding, setResponding] = useState(false);
-  const [groupDetails, setGroupDetails] = useState<any>(null);
-  const [detailsLoading, setDetailsLoading] = useState(false);
-  const [groupMembers, setGroupMembers] = useState<any[]>([]);
-  const [membersLoading, setMembersLoading] = useState(false);
-  const [showPlayerModal, setShowPlayerModal] = useState(false);
-  const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
-  const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
-  const [leagueDataLoading, setLeagueDataLoading] = useState(false);
-  const [leagueDataError, setLeagueDataError] = useState<string | null>(null);
-  const [activePlayerTab, setActivePlayerTab] = useState<'about' | 'stats'>('stats');
-  const [playerProfile, setPlayerProfile] = useState<any>(null);
-  const [profileLoading, setProfileLoading] = useState(false);
-  const [profileError, setProfileError] = useState<string | null>(null);
 
-  // Player stats state
-  const [playerStatsData, setPlayerStatsData] = useState<any[]>([]);
-  const [playerStatsLoading, setPlayerStatsLoading] = useState(false);
-  const [playerStatsError, setPlayerStatsError] = useState<string | null>(null);
-
-  // Team stats state
-  const [teamStatsData, setTeamStatsData] = useState<any[]>([]);
-  const [teamStatsLoading, setTeamStatsLoading] = useState(false);
-  const [teamStatsError, setTeamStatsError] = useState<string | null>(null);
-  const [memberNames, setMemberNames] = useState<{ [riotId: string]: string }>({});
-  const [liveData, setLiveData] = useState<{ [summonerName: string]: any }>({});
-  const [liveDataLoading] = useState(false);
-
-  // Profile icon state for selected player
-  const [selectedPlayerIconUrl, setSelectedPlayerIconUrl] = useState<string>('');
-  const [selectedPlayerIconError, setSelectedPlayerIconError] = useState(false);
-  const [selectedPlayerIconLoading, setSelectedPlayerIconLoading] = useState(false);
-
-  const fetchGroupDetails = async () => {
-    if (!invitation.study_group_id) return;
-    
-    try {
-      setDetailsLoading(true);
-      const details = await studyGroupService.getStudyGroup(invitation.study_group_id);
-      setGroupDetails(details);
-    } catch (error) {
-      console.error('Error fetching group details:', error);
-      setGroupDetails(null);
-    } finally {
-      setDetailsLoading(false);
-    }
-  };
-
-  const fetchGroupMembers = async () => {
-    if (!invitation.study_group_id) return;
-    
-    try {
-      setMembersLoading(true);
-      const groupUsers = await studyGroupService.getStudyGroupUsers(invitation.study_group_id);
-      
-      console.log('Raw group users data:', groupUsers);
-      
-      // Transform members to ensure all fields are properly mapped
-      const members = groupUsers.map(member => ({
-        summoner_name: member.summoner_name || 'Unknown User',
-        elo: member.elo || 0,
-        rank: member.rank || 'UNRANKED',
-        owner: member.owner,
-        icon_id: member.icon_id || undefined,
-        user_id: member.user_id || undefined
-      }));
-      
-      console.log('Transformed members data:', members);
-      
-      setGroupMembers(members);
-    } catch (error) {
-      console.error('Error fetching group members:', error);
-      setGroupMembers([]);
-    } finally {
-      setMembersLoading(false);
-    }
-  };
-
-  // Fetch group details and members when component mounts
-  useEffect(() => {
-    fetchGroupDetails();
-    fetchGroupMembers();
-  }, [invitation.study_group_id]);
-
-  // Fetch team stats when group details are loaded
-  useEffect(() => {
-    if (groupDetails && invitation.study_group_id) {
-      fetchTeamStats(invitation.study_group_id, groupDetails.created_at);
-    }
-  }, [groupDetails, invitation.study_group_id]);
-
-  // Fetch selected player icon when selectedPlayer changes
-  useEffect(() => {
-    if (selectedPlayer?.icon_id) {
-      fetchSelectedPlayerIcon();
-    }
-  }, [selectedPlayer?.icon_id]);
-
-  const handleShowDetails = () => {
-    setShowDetails(true);
-  };
-
-  const fetchPlayerLeagueData = async (userId: number) => {
-    try {
-      setLeagueDataLoading(true);
-      setLeagueDataError(null);
-      
-      // Get user's riot account to get PUUID
-      const riotAccount = await userService.getUserRiotAccount(userId);
-      if (!riotAccount || !riotAccount.riot_id) {
-        setLeagueDataError('No Riot account found for this user');
-        return;
-      }
-
-      // Fetch league data using the riot_id (which contains the PUUID)
-      const response = await fetch(`${API_BASE_URL}/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch league data');
-      }
-      
-      const data = await response.json();
-      setPlayerLeagueData(data);
-    } catch (error) {
-      console.error('Error fetching player league data:', error);
-      setLeagueDataError('Failed to load league data');
-    } finally {
-      setLeagueDataLoading(false);
-    }
-  };
-
-  const fetchPlayerProfile = async (userId: number) => {
-    try {
-      setProfileLoading(true);
-      setProfileError(null);
-      
-      const profile = await userService.getUserProfile(userId);
-      setPlayerProfile(profile);
-    } catch (error) {
-      console.error('Error fetching player profile:', error);
-      setProfileError('Failed to load profile data');
-    } finally {
-      setProfileLoading(false);
-    }
-  };
-
-  const fetchPlayerStats = async (riotId: string) => {
-    try {
-      setPlayerStatsLoading(true);
-      setPlayerStatsError(null);
-      
-      const stats = await playerStatsService.getPlayerStats(riotId);
-      setPlayerStatsData(stats.events);
-    } catch (error) {
-      console.error('Error fetching player stats:', error);
-      setPlayerStatsError('Failed to load player stats');
-      setPlayerStatsData([]);
-    } finally {
-      setPlayerStatsLoading(false);
-    }
-  };
-
-  const fetchTeamStats = async (groupId: number, startDate: string) => {
-    try {
-      setTeamStatsLoading(true);
-      setTeamStatsError(null);
-      
-      // Clear cache and use direct API call - NO CACHING
-      teamStatsService.clearCache();
-      livePlayerService.clearCache();
-      
-      // Direct API call to bypass caching
-      const queryParams = new URLSearchParams();
-      queryParams.append('group_id', groupId.toString());
-      queryParams.append('start_date', startDate);
-      
-      const response = await fetch(`${import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001'}/api/team-stats/members?${queryParams}`);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch member stats: ${response.statusText}`);
-      }
-      const memberStats = await response.json();
-      
-      // Handle the new combined API response format
-      let allEvents: any[] = [];
-      let names: { [riotId: string]: string } = {};
-      let liveDataFromAPI: any = {};
-      
-      if (memberStats && memberStats.events && Array.isArray(memberStats.events)) {
-        // New combined format: {"events": [...], "memberNames": {...}, "liveData": {...}}
-        allEvents = memberStats.events;
-        
-        // Get member names from API response if available
-        if (memberStats.memberNames && typeof memberStats.memberNames === 'object') {
-          names = memberStats.memberNames as unknown as { [riotId: string]: string };
-        }
-        
-        // Get live data from API response if available
-        if (memberStats.liveData && typeof memberStats.liveData === 'object') {
-          liveDataFromAPI = memberStats.liveData as unknown as { [summonerName: string]: any };
-        }
-      } else if (memberStats && typeof memberStats === 'object' && Object.keys(memberStats).length > 0) {
-        // Old format: {summonerName: [events]}
-        allEvents = Object.values(memberStats).flat();
-        
-        // Create member names mapping from the API response
-        Object.keys(memberStats).forEach(summonerName => {
-          names[summonerName] = summonerName;
-        });
-      } else {
-        // No data available
-        allEvents = [];
-      }
-      
-      setTeamStatsData(allEvents);
-      setMemberNames(names);
-      setLiveData(liveDataFromAPI);
-      
-    } catch (error) {
-      console.error('Error fetching team stats:', error);
-      setTeamStatsError('Failed to load team stats');
-      setTeamStatsData([]);
-    } finally {
-      setTeamStatsLoading(false);
-    }
-  };
-
-  const handlePlayerClick = async (member: any) => {
-    if (!member.user_id) {
-      console.error('No user_id found for member:', member);
-      return;
-    }
-    
-    setSelectedPlayer(member);
-    setShowPlayerModal(true);
-    setActivePlayerTab('stats');
-    
-    // Get the riot account for this user to fetch player stats
-    let riotId = null;
-    try {
-      const riotAccount = await userService.getUserRiotAccount(member.user_id);
-      riotId = riotAccount?.riot_id;
-    } catch (error) {
-      console.error('Error fetching riot account for player stats:', error);
-    }
-    
-    // Fetch league data, profile data, and player stats for the player
-    await Promise.all([
-      fetchPlayerLeagueData(member.user_id),
-      fetchPlayerProfile(member.user_id),
-      ...(riotId ? [fetchPlayerStats(riotId)] : [])
-    ]);
-  };
-
-  const getRankedTftData = () => {
-    return playerLeagueData.find(data => data.queueType === 'RANKED_TFT');
-  };
-
-  const getTurboTftData = () => {
-    return playerLeagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
-  };
-
-  const fetchSelectedPlayerIcon = async () => {
-    if (!selectedPlayer?.icon_id) return;
-    
-    setSelectedPlayerIconLoading(true);
-    setSelectedPlayerIconError(false);
-    
-    try {
-      const version = await riotService.getCurrentVersion();
-      const iconUrl = riotService.getProfileIconUrl(selectedPlayer.icon_id, version);
-      setSelectedPlayerIconUrl(iconUrl);
-    } catch (error) {
-      console.error('Error fetching selected player icon:', error);
-      setSelectedPlayerIconError(true);
-    } finally {
-      setSelectedPlayerIconLoading(false);
-    }
-  };
-
-  return (
-    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-lg p-4 hover:shadow-lg transition-all duration-200 relative">
-      {/* Invitation badge */}
-      <div className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-        INVITATION
-      </div>
-      
-      {/* Group Icon and Name */}
-      <div className="flex items-start mb-3">
-        <div className="relative flex-shrink-0 mr-3">
-          <div className="w-12 h-12 rounded-lg border-2 border-white overflow-hidden">
-            {groupDetails?.image_url ? (
-              <img
-                src={groupDetails.image_url}
-                alt={`${invitation.study_group?.group_name || 'Group'} icon`}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.style.display = 'none';
-                  const placeholder = target.parentElement?.querySelector('.group-placeholder') as HTMLElement;
-                  if (placeholder) {
-                    placeholder.style.display = 'flex';
-                  }
-                }}
-              />
-            ) : null}
-            <div 
-              className={`group-placeholder w-full h-full flex items-center justify-center font-bold text-lg ${groupDetails?.image_url ? 'hidden' : 'flex'}`}
-              style={{ 
-                backgroundColor: ['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][invitation.study_group_id % 5],
-                color: getTextColor(['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][invitation.study_group_id % 5])
-              }}
-            >
-              {(invitation.study_group?.group_name || 'G').charAt(0).toUpperCase()}
-            </div>
-          </div>
-        </div>
-        <div className="min-w-0">
-          <h3 className="text-lg font-bold text-gray-800 truncate">{invitation.study_group?.group_name || 'Unknown Group'}</h3>
-          <p className="text-xs text-gray-500 mt-1 text-left">Sent {new Date(invitation.created_at).toLocaleDateString()}</p>
-        </div>
-      </div>
-
-      {/* Message positioned under the icon */}
-      <div className="flex mb-4">
-        <div className="flex-shrink-0"></div>
-        <div className="min-w-0">
-          <p className="text-gray-700 text-xs break-words">{invitation.message}</p>
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
-          <button 
-            onClick={() => {
-              setResponding(true);
-              onRespond(invitation.id, 'accept');
-            }}
-            disabled={responding}
-            className="bg-emerald-200 hover:bg-emerald-300 text-emerald-800 px-3 py-1.5 rounded-lg font-medium transition-colors text-sm border border-emerald-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {responding ? 'Accepting...' : 'Accept'}
-          </button>
-          <button 
-            onClick={() => {
-              setResponding(true);
-              onRespond(invitation.id, 'decline');
-            }}
-            disabled={responding}
-            className="bg-rose-200 hover:bg-rose-300 text-rose-800 px-3 py-1.5 rounded-lg font-medium transition-colors text-sm border border-rose-300 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {responding ? 'Declining...' : 'Decline'}
-          </button>
-        </div>
-        <button
-          onClick={handleShowDetails}
-          className="bg-blue-200 hover:bg-blue-300 text-blue-800 p-2 rounded-lg transition-colors border border-blue-300"
-          title="View Group Details"
-        >
-          <Eye className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Group Details Modal */}
-      {showDetails && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full h-[800px] overflow-y-auto flex flex-col relative">
-            {/* Close button */}
-            <button
-              onClick={() => setShowDetails(false)}
-              className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
-              style={{ lineHeight: 0 }}
-            >
-              <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
-            </button>
-            
-            {/* Profile Header */}
-            <div className="relative">
-              {/* Banner */}
-              <div className="h-32 bg-[#564ec7] relative">
-                {/* Group Icon */}
-                <div className="absolute -bottom-12 left-6">
-                  <div className="relative">
-                    <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
-                      {groupDetails?.image_url ? (
-                        <img
-                          src={groupDetails.image_url}
-                          alt={`${invitation.study_group?.group_name || 'Group'} icon`}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.style.display = 'none';
-                            const placeholder = target.parentElement?.querySelector('.group-placeholder') as HTMLElement;
-                            if (placeholder) {
-                              placeholder.style.display = 'flex';
-                            }
-                          }}
-                        />
-                      ) : null}
-                      <div 
-                        className={`group-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${groupDetails?.image_url ? 'hidden' : 'flex'}`}
-                        style={{ 
-                          backgroundColor: ['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][invitation.study_group_id % 5],
-                          color: getTextColor(['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][invitation.study_group_id % 5])
-                        }}
-                      >
-                        {(invitation.study_group?.group_name || 'G').charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Group name and info */}
-              <div className="pt-16 pb-4 px-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-1 text-left">{invitation.study_group?.group_name || 'Unknown Group'}</h3>
-                <p className="text-gray-500 text-sm text-left">Created: {new Date(invitation.created_at).toLocaleDateString()}</p>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 p-4 sm:p-6">
-              {detailsLoading ? (
-                <div className="flex justify-center items-center py-8">
-                  <div className="text-left">
-                    <LoadingSpinner size="md" className="mb-2" />
-                    <p className="text-gray-500">Loading group details...</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Group Members */}
-                  <div className="w-full">
-                    <h5 className="font-medium text-gray-800 mb-2 text-left">Group Members ({groupMembers.length})</h5>
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                      {membersLoading ? (
-                        <div className="flex justify-center items-center py-4">
-                          <LoadingSpinner size="sm" />
-                        </div>
-                      ) : groupMembers.length > 0 ? (
-                        <div className="space-y-3">
-                          {groupMembers.map((member, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3">
-                              {/* Member Icon */}
-                              <ProfileIcon 
-                                memberId={member.user_id || index}
-                                summonerName={member.summoner_name}
-                                iconId={member.icon_id}
-                                size="md"
-                                shape="rounded-full"
-                              />
-                              
-                              {/* Member Info */}
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span 
-                                    className="font-medium text-gray-800 truncate cursor-pointer hover:text-blue-600 transition-colors"
-                                    onClick={() => handlePlayerClick(member)}
-                                  >
-                                    {member.summoner_name}
-                                  </span>
-                                  {member.owner === 1 && (
-                                    <Crown className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                                  )}
-                                </div>
-                              </div>
-                              
-                              {/* Rank */}
-                              <div className="flex items-center gap-2 flex-shrink-0">
-                                {member.rank ? (
-                                  <div className="flex items-center gap-2 px-3 py-1 text-sm font-semibold rounded-full border" style={{ backgroundColor: '#f8e0db', color: '#8b4513', borderColor: '#e6c7c0' }}>
-                                    {member.rank && getRankTier(member.rank) && (
-                                      <img 
-                                        src={getRankIconUrl(getRankTier(member.rank) === 'challenger' || getRankTier(member.rank) === 'grandmaster' ? getRankTier(member.rank) : getRankTier(member.rank) + '+')} 
-                                        alt={getRankTier(member.rank)}
-                                        className="w-4 h-4 object-contain"
-                                        onError={(e) => {
-                                          const target = e.target as HTMLImageElement;
-                                          target.style.display = 'none';
-                                        }}
-                                      />
-                                    )}
-                                    <span className="text-sm">{member.rank}</span>
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-500 italic text-sm">No current ranked data</span>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500 text-center py-4">No members found</p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Group Description */}
-                  <div className="w-full">
-                    <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-green-600" />
-                      Description
-                    </h5>
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                        {groupDetails?.description || invitation.study_group?.description || "No description provided"}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Application Instructions */}
-                  {groupDetails?.application_instructions && (
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                        <FileText className="w-4 h-4 text-orange-600" />
-                        Application Instructions
-                      </h5>
-                                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                      <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                        {groupDetails.application_instructions}
-                      </p>
-                    </div>
-                    </div>
-                  )}
-
-                  {/* Meeting Schedule */}
-                  {groupDetails?.meeting_schedule && groupDetails.meeting_schedule.length > 0 && (
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Meeting Schedule</h5>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <div className="flex items-center gap-2 text-gray-700 text-xs">
-                          <Calendar className="w-4 h-4 flex-shrink-0" style={{ color: '#ff8889' }} />
-                          <span>{Array.isArray(groupDetails.meeting_schedule) ? groupDetails.meeting_schedule.join(", ") : groupDetails.meeting_schedule}</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Time and Timezone */}
-                  {groupDetails?.time && (
-                    <div className="w-full">
-                      <h5 className="font-medium text-gray-800 mb-2 text-left">Preferred Time</h5>
-                      <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                        <div className="flex items-center gap-2 text-gray-700 text-xs">
-                          <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                          </svg>
-                          <span>
-                            {groupDetails.time.charAt(0).toUpperCase() + groupDetails.time.slice(1)}
-                            {groupDetails.timezone && ` (${groupDetails.timezone})`}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Team Stats */}
-                  <div className="w-full">
-                    <h5 className="font-medium text-gray-800 mb-2 text-left flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-blue-600" />
-                      Team Performance
-                    </h5>
-                    <TeamStatsContent
-                      teamStatsData={teamStatsData}
-                      teamStatsLoading={teamStatsLoading}
-                      teamStatsError={teamStatsError}
-                      memberNames={memberNames}
-                      liveData={liveData}
-                      liveDataLoading={liveDataLoading}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Player Modal */}
-      {showPlayerModal && selectedPlayer && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full h-[800px] overflow-y-auto flex flex-col relative">
-            {/* Close button - absolute positioned */}
-            <button
-                              onClick={() => {
-                  setShowPlayerModal(false);
-                  setSelectedPlayer(null);
-                  setPlayerLeagueData([]);
-                  setPlayerProfile(null);
-                }}
-                className="absolute top-4 right-4 z-10 p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
-                style={{ lineHeight: 0 }}
-            >
-              <ChevronsLeft className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
-            </button>
-            
-            {/* Profile Header */}
-            <div className="relative">
-              {/* Banner - starts at top */}
-              <div className="h-32 bg-[#ff8889] relative">
-                {/* Profile Picture */}
-                <div className="absolute -bottom-12 left-6">
-                  <div className="relative">
-                    <div className="w-28 h-28 rounded-full border-4 border-white overflow-hidden">
-                      {selectedPlayerIconUrl && !selectedPlayerIconError && !selectedPlayerIconLoading ? (
-                        <img
-                          src={selectedPlayerIconUrl}
-                          alt={`${selectedPlayer.summoner_name} profile icon`}
-                          className="w-full h-full object-cover"
-                          onError={() => setSelectedPlayerIconError(true)}
-                        />
-                      ) : null}
-                      <div 
-                        className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${(selectedPlayerIconUrl && !selectedPlayerIconError && !selectedPlayerIconLoading) ? 'hidden' : 'flex'}`}
-                        style={{ 
-                          backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][selectedPlayer.user_id % 5],
-                          color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][selectedPlayer.user_id % 5])
-                        }}
-                      >
-                        {selectedPlayer.summoner_name.charAt(0).toUpperCase()}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Username and Tag */}
-              <div className="pt-16 pb-4 px-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-1 text-left">{selectedPlayer.summoner_name}</h3>
-                <p className="text-gray-500 text-sm text-left">Group Member</p>
-              </div>
-            </div>
-            
-            {/* Navigation Tabs */}
-            <div className="px-4 sm:px-6 border-b border-gray-200">
-              <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
-                <button 
-                  onClick={() => setActivePlayerTab('about')}
-                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                    activePlayerTab === 'about' 
-                      ? 'text-[#00c9ac] border-[#00c9ac]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                  }`}
-                >
-                  About Me
-                </button>
-                <button 
-                  onClick={() => setActivePlayerTab('stats')}
-                  className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
-                    activePlayerTab === 'stats' 
-                      ? 'text-[#00c9ac] border-[#00c9ac]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#00c9ac]'
-                  }`}
-                >
-                  TFT Stats
-                </button>
-              </div>
-            </div>
-            
-            {/* Content */}
-            <div className="flex-1 p-4 sm:p-6">
-              {/* TFT Stats Section */}
-              {activePlayerTab === 'stats' && (
-                <div className="space-y-4">
-                  {leagueDataLoading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-center">
-                        <LoadingSpinner size="md" className="mx-auto mb-2" />
-                        <p className="text-gray-500">Loading league data...</p>
-                      </div>
-                    </div>
-                  ) : leagueDataError ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-red-600">{leagueDataError}</p>
-                    </div>
-                  ) : playerLeagueData.length > 0 ? (
-                    <div className="space-y-4">
-                      {/* Ranked TFT */}
-                      {getRankedTftData() && (
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                          <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                            <div className="w-5 h-5 bg-amber-500 rounded-lg flex items-center justify-center">
-                              <svg className="w-3 h-3 text-amber-900" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            Ranked TFT
-                            
-                          </h5>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <Award className="w-3 h-3 text-amber-600" />
-                                <p className="text-xs text-gray-600">Rank</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.tier} {getRankedTftData()?.rank}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                                <p className="text-xs text-gray-600">LP</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.leaguePoints}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingUp className="w-3 h-3 text-green-600" />
-                                <p className="text-xs text-gray-600">Wins</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.wins}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingDown className="w-3 h-3 text-red-600" />
-                                <p className="text-xs text-gray-600">Losses</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getRankedTftData()?.losses}</p>
-                            </div>
-                          </div>
-                          <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                            <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                                                          <p className="font-bold text-gray-800 text-xl">
-                                {getRankedTftData() ? 
-                                  `${((getRankedTftData()!.wins / (getRankedTftData()!.wins + getRankedTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-
-                      {/* Turbo TFT */}
-                      {getTurboTftData() && (
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                          <h5 className="font-bold text-gray-800 mb-3 flex items-center gap-2">
-                            <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center">
-                              <svg className="w-3 h-3 text-purple-900" fill="currentColor" viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                              </svg>
-                            </div>
-                            Turbo TFT
-                          </h5>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <Award className="w-3 h-3 text-amber-600" />
-                                <p className="text-xs text-gray-600">Tier</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedTier}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <Star className="w-3 h-3 text-yellow-600" fill="currentColor" />
-                                <p className="text-xs text-gray-600">Rating</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.ratedRating}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingUp className="w-3 h-3 text-green-600" />
-                                <p className="text-xs text-gray-600">Wins</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.wins}</p>
-                            </div>
-                            <div className="text-center">
-                              <div className="flex items-center justify-center gap-1 mb-1">
-                                <TrendingDown className="w-3 h-3 text-red-600" />
-                                <p className="text-xs text-gray-600">Losses</p>
-                              </div>
-                              <p className="font-bold text-gray-800 text-lg">{getTurboTftData()?.losses}</p>
-                            </div>
-                          </div>
-                          <div className="text-center mt-4 pt-4 border-t border-gray-200">
-                            <p className="text-xs text-gray-600 mb-1">Win Rate</p>
-                            <p className="font-bold text-gray-800 text-xl">
-                              {getTurboTftData() ? 
-                                `${((getTurboTftData()!.wins / (getTurboTftData()!.wins + getTurboTftData()!.losses)) * 100).toFixed(1)}%` : 'N/A'}
-                            </p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                      <p className="text-gray-600">No league data available</p>
-                    </div>
-                  )}
-
-                  {/* Player ELO Chart */}
-                  {playerStatsLoading ? (
-                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-                      <div className="flex justify-center items-center py-8">
-                        <LoadingSpinner size="md" className="mx-auto mb-2" />
-                        <p className="text-gray-500">Loading ELO progression...</p>
-                      </div>
-                    </div>
-                  ) : playerStatsError ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-                      <p className="text-red-600">{playerStatsError}</p>
-                    </div>
-                  ) : playerStatsData.length > 0 ? (
-                    <PlayerEloChart 
-                      data={playerStatsData}
-                      liveData={getRankedTftData()}
-                      height={500}
-                      className="w-full"
-                    />
-                  ) : null}
-                </div>
-              )}
-              
-              {/* About Me Section */}
-              {activePlayerTab === 'about' && (
-                <div className="space-y-4">
-                  {profileLoading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-center">
-                        <LoadingSpinner size="md" className="mx-auto mb-2" />
-                        <p className="text-gray-500">Loading profile data...</p>
-                      </div>
-                    </div>
-                  ) : profileError ? (
-                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                      <p className="text-red-600">{profileError}</p>
-                    </div>
-                  ) : playerProfile ? (
-                    <div className="space-y-4">
-                      {/* Description */}
-                      <div className="w-full">
-                        <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-green-600" />
-                          Description
-                        </h4>
-                        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                          <p className="text-gray-700 whitespace-pre-wrap text-left text-xs">
-                            {playerProfile.description || "No description provided"}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Availability */}
-                      {playerProfile.days && playerProfile.days.length > 0 && (
-                        <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                            <Calendar className="w-4 h-4" style={{ color: '#ff8889' }} />
-                            Availability
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <div className="text-gray-700 text-xs text-left">
-                              <span>{Array.isArray(playerProfile.days) ? playerProfile.days.join(", ") : playerProfile.days}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Time and Timezone */}
-                      {(playerProfile.time || playerProfile.timezone) && (
-                        <div className="w-full">
-                          <h4 className="font-semibold text-gray-800 mb-3 text-left flex items-center gap-2">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style={{ color: '#00c9ac' }}>
-                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-                            </svg>
-                            Preferred Time
-                          </h4>
-                          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                            <div className="text-gray-700 text-xs text-left">
-                              {playerProfile.time ? (
-                                <span>
-                                  {playerProfile.time.charAt(0).toUpperCase() + playerProfile.time.slice(1)}
-                                  {playerProfile.timezone && ` (${playerProfile.timezone})`}
-                                </span>
-                              ) : (
-                                <span>
-                                  Timezone: {playerProfile.timezone}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-center">
-                      <p className="text-gray-600">No profile data available</p>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
 
 // Profile Icon Component
 function ProfileIcon({ 

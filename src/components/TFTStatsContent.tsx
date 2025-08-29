@@ -1,6 +1,5 @@
 
 import { Award, Star, TrendingUp, TrendingDown } from 'lucide-react';
-import { PlayerEloChart } from './PlayerEloChart';
 import { LoadingSpinner } from './auth/LoadingSpinner';
 import { PlacementHistory } from './PlacementHistory';
 import type { PlayerRankAuditEvent } from '../services/playerStatsService';
@@ -15,20 +14,18 @@ interface TFTStatsContentProps {
   getRankedTftData: () => any;
   getTurboTftData: () => any;
   className?: string;
-  userId?: number;
+  riotId?: string;
 }
 
 export function TFTStatsContent({
   leagueDataLoading,
   leagueDataError,
   playerLeagueData,
-  playerStatsLoading,
-  playerStatsError,
-  playerStatsData,
+
   getRankedTftData,
   getTurboTftData,
   className = '',
-  userId
+  riotId
 }: TFTStatsContentProps) {
   if (leagueDataLoading) {
     return (
@@ -168,34 +165,15 @@ export function TFTStatsContent({
       )}
 
       {/* Last 20 Games Placement History */}
-      {userId && (
+      {riotId && (
         <PlacementHistory 
-          key={`placement-history-${userId}`}
-          userId={userId}
+          key={`placement-history-${riotId}`}
+          riotId={riotId}
           className="w-full"
         />
       )}
 
-      {/* Player ELO Chart */}
-      {playerStatsLoading ? (
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <div className="flex justify-center items-center py-8">
-            <LoadingSpinner size="md" className="mx-auto mb-2" />
-            <p className="text-gray-500">Loading ELO progression...</p>
-          </div>
-        </div>
-      ) : playerStatsError ? (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-center">
-          <p className="text-red-600">{playerStatsError}</p>
-        </div>
-      ) : (playerStatsData.length > 0 || getRankedTftData()) ? (
-        <PlayerEloChart 
-          data={playerStatsData}
-          liveData={getRankedTftData()}
-          height={500}
-          className="w-full"
-        />
-      ) : null}
+
     </div>
   );
 } 

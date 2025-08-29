@@ -2,15 +2,22 @@ import { Users } from 'lucide-react'
 import { Footer } from './Footer'
 import { MyGroupsTab } from './MyGroupsTab'
 import { useAuth } from '../contexts/AuthContext'
-import { RiotLoginModal } from './auth/RiotLoginModal'
+import { SupabaseLoginModal } from './auth/SupabaseLoginModal'
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 
 // My Groups Page Component
 export function MyGroupsPage() {
   const { userId, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [navigationTimestamp, setNavigationTimestamp] = useState(Date.now());
+
+  // Update timestamp when location changes to force remount
+  useEffect(() => {
+    setNavigationTimestamp(Date.now());
+  }, [location.pathname]);
 
   // Show login modal when user is not logged in and auth is not loading
   useEffect(() => {
@@ -49,9 +56,9 @@ export function MyGroupsPage() {
             {/* Tab Content */}
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 w-full overflow-hidden">
               {loading ? (
-                <MyGroupsTab authLoading={true} />
+                <MyGroupsTab key={`loading-${navigationTimestamp}`} authLoading={true} />
               ) : userId ? (
-                <MyGroupsTab authLoading={false} />
+                <MyGroupsTab key={`user-${userId}-${navigationTimestamp}`} authLoading={false} />
               ) : (
                 <div className="p-8 text-center">
                   <div className="text-gray-500 mb-4">
@@ -69,15 +76,12 @@ export function MyGroupsPage() {
       </div>
 
       {/* Authentication Modal */}
-      <RiotLoginModal
+      <SupabaseLoginModal
         isOpen={showLoginModal}
         onClose={() => {
           setShowLoginModal(false);
           // Redirect to groups page when modal is closed
-          navigate('/study-groups');
-        }}
-        onSuccess={() => {
-          setShowLoginModal(false);
+          navigate('/groups');
         }}
       />
     </>

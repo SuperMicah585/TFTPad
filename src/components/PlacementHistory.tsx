@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { userService } from '../services/userService';
+
 import { matchHistoryService } from '../services/matchHistoryService';
 import type { MatchHistoryEntry as ApiMatchHistoryEntry } from '../services/matchHistoryService';
 
@@ -12,12 +12,12 @@ interface MatchHistoryEntry {
   champions: string[];
 }
 
-// Global cache to prevent multiple components from loading the same user's data
-const globalLoadingCache = new Set<number>();
-const globalDataCache = new Map<number, MatchHistoryEntry[]>();
+// Global cache to prevent multiple components from loading the same riot account's data
+const globalLoadingCache = new Set<string>();
+const globalDataCache = new Map<string, MatchHistoryEntry[]>();
 
 interface PlacementHistoryProps {
-  userId: number;
+  riotId: string;
   className?: string;
 }
 
@@ -36,15 +36,15 @@ const getPlacementColor = (placement: number): string => {
   }
 };
 
-export function PlacementHistory({ userId, className = '' }: PlacementHistoryProps) {
+export function PlacementHistory({ riotId, className = '' }: PlacementHistoryProps) {
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const loadingRef = useRef(false);
-  const hasLoadedRef = useRef<Set<number>>(new Set());
+  const hasLoadedRef = useRef<Set<string>>(new Set());
   const instanceId = useRef(Math.random().toString(36).substr(2, 9));
   
-  console.log('🎨 PlacementHistory: Component rendered - userId:', userId, 'instanceId:', instanceId.current);
+  console.log('🎨 PlacementHistory: Component rendered - riotId:', riotId, 'instanceId:', instanceId.current);
 
   // Fetch match history with retry logic
   const fetchMatchHistoryWithRetry = useCallback(async (puuid: string, region: string = 'americas'): Promise<ApiMatchHistoryEntry[]> => {
@@ -74,21 +74,21 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
 
   const loadMatchHistory = useCallback(async () => {
     // Check global cache first
-    if (globalDataCache.has(userId)) {
-      console.log('📦 PlacementHistory: Using cached data for userId:', userId, 'instanceId:', instanceId.current);
-      setMatches(globalDataCache.get(userId)!);
-      hasLoadedRef.current.add(userId);
+    if (globalDataCache.has(riotId)) {
+      console.log('📦 PlacementHistory: Using cached data for riotId:', riotId, 'instanceId:', instanceId.current);
+      setMatches(globalDataCache.get(riotId)!);
+      hasLoadedRef.current.add(riotId);
       return;
     }
     
-    if (!userId || loadingRef.current || hasLoadedRef.current.has(userId) || globalLoadingCache.has(userId)) {
-      console.log('🚫 PlacementHistory: Skipping load - userId:', userId, 'loadingRef.current:', loadingRef.current, 'hasLoaded:', hasLoadedRef.current.has(userId), 'globalLoading:', globalLoadingCache.has(userId), 'instanceId:', instanceId.current);
+    if (!riotId || loadingRef.current || hasLoadedRef.current.has(riotId) || globalLoadingCache.has(riotId)) {
+      console.log('🚫 PlacementHistory: Skipping load - riotId:', riotId, 'loadingRef.current:', loadingRef.current, 'hasLoaded:', hasLoadedRef.current.has(riotId), 'globalLoading:', globalLoadingCache.has(riotId), 'instanceId:', instanceId.current);
       return;
     }
     
-    console.log('🔄 PlacementHistory: Starting API call for userId:', userId, 'instanceId:', instanceId.current);
+    console.log('🔄 PlacementHistory: Starting API call for riotId:', riotId, 'instanceId:', instanceId.current);
     loadingRef.current = true;
-    globalLoadingCache.add(userId);
+    globalLoadingCache.add(riotId);
     setLoading(true);
     setError(null);
     
@@ -96,26 +96,18 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
     await new Promise(resolve => setTimeout(resolve, 10));
     
     // Double-check after the delay to prevent race conditions
-    if (hasLoadedRef.current.has(userId) || globalDataCache.has(userId)) {
-      console.log('🚫 PlacementHistory: Skipping load after delay - userId already loaded:', userId, 'instanceId:', instanceId.current);
+    if (hasLoadedRef.current.has(riotId) || globalDataCache.has(riotId)) {
+      console.log('🚫 PlacementHistory: Skipping load after delay - riotId already loaded:', riotId, 'instanceId:', instanceId.current);
       setLoading(false);
       loadingRef.current = false;
-      globalLoadingCache.delete(userId);
+      globalLoadingCache.delete(riotId);
       return;
     }
 
     try {
-      // Get user's riot account
-      const account = await userService.getUserRiotAccount(userId);
-      if (!account) {
-        setError('No Riot account connected');
-        setLoading(false);
-        loadingRef.current = false;
-        return;
-      }
-
-      // Fetch match history with retry logic
-      const matchHistory = await fetchMatchHistoryWithRetry(account.riot_id, account.region);
+      // Fetch match history with retry logic using the provided riotId
+      // For now, assume NA region - this could be enhanced to accept region as a prop
+      const matchHistory = await fetchMatchHistoryWithRetry(riotId, 'na1');
       
       // Take only the last 20 matches and transform to the expected format
       const last20Matches = matchHistory.slice(0, 20).map(match => ({
@@ -126,10 +118,10 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
         champions: match.champions.map(champ => champ.name)
       }));
       setMatches(last20Matches);
-      hasLoadedRef.current.add(userId);
-      globalDataCache.set(userId, last20Matches);
-      globalLoadingCache.delete(userId);
-      console.log('✅ PlacementHistory: Successfully loaded', last20Matches.length, 'matches for userId:', userId, 'instanceId:', instanceId.current);
+      hasLoadedRef.current.add(riotId);
+      globalDataCache.set(riotId, last20Matches);
+      globalLoadingCache.delete(riotId);
+      console.log('✅ PlacementHistory: Successfully loaded', last20Matches.length, 'matches for riotId:', riotId, 'instanceId:', instanceId.current);
     } catch (err) {
       console.error('❌ PlacementHistory: Error loading match history:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to load match history';
@@ -145,40 +137,40 @@ export function PlacementHistory({ userId, className = '' }: PlacementHistoryPro
     } finally {
       setLoading(false);
       loadingRef.current = false;
-      globalLoadingCache.delete(userId);
+      globalLoadingCache.delete(riotId);
     }
-  }, [userId]); // Removed fetchMatchHistoryWithRetry dependency since it's stable
+  }, [riotId]); // Removed fetchMatchHistoryWithRetry dependency since it's stable
 
-  // Track previous userId to detect changes
-  const prevUserIdRef = useRef<number | null>(null);
+  // Track previous riotId to detect changes
+  const prevRiotIdRef = useRef<string | null>(null);
   
   useEffect(() => {
-    console.log('🎯 PlacementHistory: useEffect triggered - userId:', userId, 'instanceId:', instanceId.current);
+    console.log('🎯 PlacementHistory: useEffect triggered - riotId:', riotId, 'instanceId:', instanceId.current);
     
-    // If userId changed, clear the hasLoaded set for the previous user
-    if (prevUserIdRef.current !== null && prevUserIdRef.current !== userId) {
-      console.log('🔄 PlacementHistory: User changed, clearing hasLoaded for previous user:', prevUserIdRef.current, 'instanceId:', instanceId.current);
-      hasLoadedRef.current.delete(prevUserIdRef.current);
+    // If riotId changed, clear the hasLoaded set for the previous riotId
+    if (prevRiotIdRef.current !== null && prevRiotIdRef.current !== riotId) {
+      console.log('🔄 PlacementHistory: RiotId changed, clearing hasLoaded for previous riotId:', prevRiotIdRef.current, 'instanceId:', instanceId.current);
+      hasLoadedRef.current.delete(prevRiotIdRef.current);
     }
     
-    prevUserIdRef.current = userId;
+    prevRiotIdRef.current = riotId;
     
     // Early return if already loaded or loading
-    if (!userId || hasLoadedRef.current.has(userId) || loadingRef.current) {
-      console.log('🚫 PlacementHistory: useEffect early return - userId:', userId, 'hasLoaded:', hasLoadedRef.current.has(userId), 'loading:', loadingRef.current, 'instanceId:', instanceId.current);
+    if (!riotId || hasLoadedRef.current.has(riotId) || loadingRef.current) {
+      console.log('🚫 PlacementHistory: useEffect early return - riotId:', riotId, 'hasLoaded:', hasLoadedRef.current.has(riotId), 'loading:', loadingRef.current, 'instanceId:', instanceId.current);
       return;
     }
     
-    if (userId) {
+    if (riotId) {
       loadMatchHistory();
     }
     
-    // Cleanup function to reset loading state when component unmounts or userId changes
+    // Cleanup function to reset loading state when component unmounts or riotId changes
     return () => {
       console.log('🧹 PlacementHistory: Cleanup - resetting loadingRef, instanceId:', instanceId.current);
       loadingRef.current = false;
     };
-  }, [userId, loadMatchHistory]);
+  }, [riotId, loadMatchHistory]);
 
   if (loading) {
     return (

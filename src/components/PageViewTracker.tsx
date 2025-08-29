@@ -10,14 +10,14 @@ function getPageTitle(pathname: string): string {
       return 'TFTPad - Blog';
     case '/contact':
       return 'TFTPad - Contact';
-    case '/study-groups':
-      return 'TFTPad - Study Groups - Browse Groups';
+    case '/groups':
+      return 'TFTPad - Groups - Browse Groups';
     case '/my-groups':
-      return 'TFTPad - Study Groups - My Groups & Invitations';
-    case '/free-agents':
-      return 'TFTPad - Study Groups - Free Agents';
+      return 'TFTPad - Groups - My Groups & Invitations';
+    case '/players':
+      return 'TFTPad - Groups - Players';
     case '/invitations':
-      return 'TFTPad - Study Groups - Invitations';
+      return 'TFTPad - Groups - Invitations';
     case '/profile':
       return 'TFTPad - Profile';
     // Blog posts
@@ -39,11 +39,11 @@ function getPageTitle(pathname: string): string {
       return 'TFTPad - Mana';
     // Dynamic routes
     default:
-      if (pathname.startsWith('/study-groups/') && pathname !== '/study-groups/') {
-        return 'TFTPad - Study Group Details';
+      if (pathname.startsWith('/groups/') && pathname !== '/groups/') {
+        return 'TFTPad - Group Details';
       }
-      if (pathname.startsWith('/free-agents/') && pathname !== '/free-agents/') {
-        return 'TFTPad - Free Agent Profile';
+      if (pathname.startsWith('/players/') && pathname !== '/players/') {
+        return 'TFTPad - Player Profile';
       }
       return 'TFTPad';
   }

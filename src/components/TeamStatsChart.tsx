@@ -32,7 +32,6 @@ export function TeamStatsChart({
 }: TeamStatsChartProps) {
   // State for legend filter
   const [searchQuery, setSearchQuery] = useState('');
-  const [compactView, setCompactView] = useState(false);
 
   console.log('📊 TeamStatsChart received data:', data);
   console.log('👥 TeamStatsChart received memberNames:', memberNames);
@@ -66,8 +65,8 @@ export function TeamStatsChart({
   // Process historic data if available
   if (hasHistoricData) {
     data.forEach((event: RankAuditEventWithName) => {
-      // Backend already adds summoner_name to each event
-      const summonerName = event.summoner_name || event.riot_id;
+      // Use memberNames mapping to get the actual summoner name from riot_id
+      const summonerName = memberNames[event.riot_id] || event.summoner_name || event.riot_id;
       if (!groupedData[summonerName]) {
         groupedData[summonerName] = [];
       }
@@ -401,20 +400,6 @@ export function TeamStatsChart({
         {/* Member Filter Header */}
         <div className="flex items-center justify-between mb-3">
           <label className="text-sm font-medium text-gray-700">Filter Members:</label>
-          <div className="flex gap-2">
-            {allMembers.length > 10 && (
-              <button
-                onClick={() => setCompactView(!compactView)}
-                className={`px-2 py-1 text-xs rounded transition-colors ${
-                  compactView 
-                    ? 'bg-orange-100 text-orange-800 hover:bg-orange-200' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                {compactView ? 'Normal' : 'Compact'}
-              </button>
-            )}
-          </div>
         </div>
 
         {/* Search Input */}
@@ -431,37 +416,31 @@ export function TeamStatsChart({
         </div>
         
         {/* Legend Display */}
-        <div className="flex flex-wrap gap-2 justify-center">
+        <div className="flex flex-wrap gap-2 justify-center mb-3">
           {legendData.length > 0 ? (
-            legendData.map((series, index) => (
-              <div
-                key={series.id}
-                className={`${
-                  compactView ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-xs'
-                } font-medium rounded-full flex items-center gap-1`}
-              >
-                <div 
-                  className="w-2 h-2 rounded-full"
-                  style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
-                />
-                {compactView ? series.summonerName.substring(0, 8) + (series.summonerName.length > 8 ? '...' : '') : series.summonerName}
-              </div>
-            ))
+            legendData.map((series, index) => {
+              const isCompact = allMembers.length >= 5;
+              return (
+                <div
+                  key={series.id}
+                  className={`${
+                    isCompact ? 'px-2 py-1 text-xs' : 'px-3 py-1.5 text-xs'
+                  } font-medium rounded-full flex items-center gap-1`}
+                >
+                  <div 
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: `hsl(${index * 60}, 70%, 50%)` }}
+                  />
+                  {isCompact ? series.summonerName.substring(0, 8) + (series.summonerName.length > 8 ? '...' : '') : series.summonerName}
+                </div>
+              );
+            })
           ) : null}
         </div>
         
-        {/* Search Results Info */}
-        <div className="text-center mt-2">
-          <span className="text-xs text-gray-500">
-            {searchQuery ? (
-              chartData.length > 0 
-                ? `Showing ${chartData.length} of ${allMembers.length} members on chart`
-                : null
-            ) : (
-              `Showing all ${chartData.length} members on chart`
-            )}
-          </span>
-        </div>
+
+        
+
       </div>
       
       {/* Chart Area */}

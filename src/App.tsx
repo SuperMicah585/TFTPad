@@ -1,20 +1,15 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
-import { Header } from './components/header'
-import { BlogPage } from './components/BlogPage'
-import { ContactPage } from './components/ContactPage'
-import { ProfilePage } from './components/ProfilePage'
-
+import { Routes, Route, Navigate, Link } from 'react-router-dom'
+import { GoogleAnalytics } from './components/GoogleAnalytics'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProfileProvider } from './contexts/ProfileContext'
-
-import { GoogleAnalytics } from './components/GoogleAnalytics'
-import './App.css'
-import { Link } from 'react-router-dom'
-
+import { Header } from './components/header'
 import { GroupsPage } from './components/GroupsPage'
-import { FreeAgentsPage } from './components/FreeAgentsPage'
-import { MyGroupsPage } from './components/MyGroupsPage'
 import { GroupDetailPage } from './components/GroupDetailPage'
+import { MyGroupsPage } from './components/MyGroupsPage'
+import { PlayersPage } from './components/FreeAgentsPage'
+import { ProfilePage } from './components/ProfilePage'
+import { BlogPage } from './components/BlogPage'
+import { ContactPage } from './components/ContactPage'
 import { FreeAgentProfilePage } from './components/FreeAgentProfilePage'
 import { PageViewTracker } from './components/PageViewTracker'
 import { Footer } from './components/Footer'
@@ -26,6 +21,8 @@ import { ItemPool } from './components/blog/ItemPool'
 import { UnderstandingDMG } from './components/blog/UnderstandingDMG'
 import { Mana } from './components/blog/Mana'
 import { BaseStatsComparison } from './components/blog/BaseStatsComparison'
+import { AuthCallback } from './components/auth/AuthCallback'
+import { AuthDebug } from './components/auth/AuthDebug'
 
 // Placeholder component for individual blog posts
 function BlogPost({ title, content }: { title: string; content: React.ReactNode }) {
@@ -86,14 +83,16 @@ function App() {
           {/* Main Content Area */}
           <div className="flex-1 relative z-10">
             <Routes>
-              <Route path="/" element={<Navigate to="/study-groups" replace />} />
+              <Route path="/" element={<Navigate to="/groups" replace />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/auth/debug" element={<AuthDebug />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/contact" element={<ContactPage />} />
-              <Route path="/study-groups" element={<GroupsPage />} />
-              <Route path="/study-groups/:groupId" element={<GroupDetailPage />} />
+              <Route path="/groups" element={<GroupsPage />} />
+              <Route path="/groups/:groupId" element={<GroupDetailPage />} />
               <Route path="/my-groups" element={<MyGroupsPage />} />
-              <Route path="/free-agents" element={<FreeAgentsPage />} />
-              <Route path="/free-agents/:user_id" element={<FreeAgentProfilePage />} />
+              <Route path="/players" element={<PlayersPage />} />
+              <Route path="/players/:user_id" element={<FreeAgentProfilePage />} />
               <Route path="/invitations" element={<GroupsPage />} />
               <Route path="/blog/defensive-stats" element={<BlogPost title="Defensive Stats" content={<DefensiveStats />} />} />
               <Route path="/blog/champion-pool" element={<BlogPost title="Champion Pool" content={<ChampionPool />} />} />

@@ -2,14 +2,11 @@ import { useState } from 'react'
 import { Footer } from './Footer'
 import { FreeAgentsTab } from './FreeAgentsTab'
 
-// Free Agents Page Component
-export function FreeAgentsPage() {
-  // Free Agents filter state
+// Players Page Component
+export function PlayersPage() {
+  // Players filter state
   const [minRankFilter, setMinRankFilter] = useState<string>("iron+");
   const [maxRankFilter, setMaxRankFilter] = useState<string>("challenger");
-  const [availabilityDaysFilter, setAvailabilityDaysFilter] = useState<string[]>([]);
-  const [availabilityTimeFilter, setAvailabilityTimeFilter] = useState<string>("");
-  const [availabilityTimezoneFilter, setAvailabilityTimezoneFilter] = useState<string>("");
   const [regionFilter, setRegionFilter] = useState<string>("");
 
   return (
@@ -19,7 +16,7 @@ export function FreeAgentsPage() {
         <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
           <div className="absolute inset-0 opacity-15 dark:opacity-20">
             <svg width="100%" height="100%">
-              <pattern id="notebook-lines-free-agents" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
+              <pattern id="notebook-lines-players" x="0" y="0" width="100%" height="24" patternUnits="userSpaceOnUse">
                 <line
                   x1="0"
                   y1="23"
@@ -30,7 +27,7 @@ export function FreeAgentsPage() {
                   className="text-blue-500 dark:text-blue-400"
                 />
               </pattern>
-              <rect width="100%" height="100%" fill="url(#notebook-lines-free-agents)" />
+              <rect width="100%" height="100%" fill="url(#notebook-lines-players)" />
             </svg>
           </div>
         </div>
@@ -46,12 +43,6 @@ export function FreeAgentsPage() {
                 setMinRankFilter={setMinRankFilter}
                 maxRankFilter={maxRankFilter}
                 setMaxRankFilter={setMaxRankFilter}
-                availabilityDaysFilter={availabilityDaysFilter}
-                setAvailabilityDaysFilter={setAvailabilityDaysFilter}
-                availabilityTimeFilter={availabilityTimeFilter}
-                setAvailabilityTimeFilter={setAvailabilityTimeFilter}
-                availabilityTimezoneFilter={availabilityTimezoneFilter}
-                setAvailabilityTimezoneFilter={setAvailabilityTimezoneFilter}
                 regionFilter={regionFilter}
                 setRegionFilter={setRegionFilter}
               />

@@ -77,7 +77,7 @@ function PlayerModal({
         try {
           const riotAccount = await userService.getUserRiotAccount(userId)
           if (riotAccount?.riot_id) {
-            const response = await fetch(`/api/tft-league/${riotAccount.riot_id}?user_id=${userId}`)
+            const response = await fetch(`/api/tft-league/${riotAccount.riot_id}`)
             if (response.ok) {
               return await response.json()
             }
