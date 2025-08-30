@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import { supabaseAuthService } from '../services/supabaseAuthService'
+import { jwtAuthService } from '../services/jwtAuthService'
 
 
 interface SupabaseUser {
@@ -16,12 +17,14 @@ interface SupabaseUser {
 interface AuthContextType {
   user: SupabaseUser | null
   userId: string | null
+  jwtUserId: number | null
   loading: boolean
   signInWithDiscord: () => Promise<{ error: string | null }>
   signInWithGoogle: () => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   checkProfileCompletion: () => Promise<void>
   isProfileIncomplete: () => boolean
+  exchangeTokenForJWT: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -29,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [userId, setUserId] = useState<string | null>(null)
+  const [jwtUserId, setJwtUserId] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
 
   const checkProfileCompletion = useCallback(async () => {
@@ -65,6 +69,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(userData);
           setUserId(userData.id);
           
+          // Exchange Supabase token for JWT token
+          try {
+            await exchangeTokenForJWT();
+          } catch (error) {
+            console.error('Failed to exchange token for JWT on mount:', error);
+          }
+          
           // Ensure we have the latest profile data
           await checkProfileCompletion();
         }
@@ -96,6 +107,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userData = await supabaseAuthService.getUserFromBackend(session.access_token);
             setUser(userData);
             setUserId(userData.id);
+            
+            // Exchange Supabase token for JWT token
+            try {
+              await exchangeTokenForJWT();
+            } catch (error) {
+              console.error('Failed to exchange token for JWT on sign in:', error);
+            }
+            
             await checkProfileCompletion();
           } catch (error) {
             console.error('Error getting user from backend:', error);
@@ -105,6 +124,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
           setUserId(null);
+          setJwtUserId(null);
+          jwtAuthService.clearAuth();
         }
         
         setLoading(false);
@@ -165,6 +186,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Always clear user state, regardless of Supabase sign out success
       setUser(null)
       setUserId(null)
+      setJwtUserId(null)
+      jwtAuthService.clearAuth()
     }
   }
 
@@ -173,15 +196,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return !user
   }
 
+  const exchangeTokenForJWT = async () => {
+    try {
+      if (!userId) {
+        throw new Error('No user ID available');
+      }
+      
+      // Create custom JWT token from user ID
+      await jwtAuthService.createTokenFromUserId(parseInt(userId, 10));
+      setJwtUserId(parseInt(userId, 10));
+      
+    } catch (error) {
+      console.error('Failed to exchange token for JWT:', error)
+      throw error
+    }
+  }
+
   const value = {
     user,
     userId,
+    jwtUserId,
     loading,
     signInWithDiscord,
     signInWithGoogle,
     signOut,
     checkProfileCompletion,
     isProfileIncomplete,
+    exchangeTokenForJWT,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

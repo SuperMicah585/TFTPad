@@ -197,20 +197,28 @@ export const supabaseAuthService = {
 
   // Get cached session or fetch from Supabase
   async getSession(): Promise<Session | null> {
+    console.log('🔐 getSession: Starting session retrieval...');
+    
     // Check if we have a valid cached session
     const now = Date.now();
     if (this._cachedSession && (now - this._sessionCacheTime) < this._sessionCacheDuration) {
+      console.log('🔐 getSession: Using cached session');
       return this._cachedSession;
     }
 
     try {
+      console.log('🔐 getSession: No cached session, fetching from Supabase...');
+      
       // Warm up the connection first if this is the first call
       if (!this._connectionWarmed) {
+        console.log('🔐 getSession: Warming up connection...');
         try {
           // Make a quick call to warm up the connection
           await supabase.auth.getUser();
           this._connectionWarmed = true;
+          console.log('🔐 getSession: Connection warmed up');
         } catch (warmupError) {
+          console.log('🔐 getSession: Warmup failed, continuing anyway:', warmupError);
           // Continue anyway if warmup fails
         }
       }
@@ -220,13 +228,18 @@ export const supabaseAuthService = {
       
       for (let attempt = 1; attempt <= 2; attempt++) {
         try {
+          console.log(`🔐 getSession: Attempt ${attempt}/2 - calling supabase.auth.getSession()`);
+          
           // Add timeout to prevent hanging
           const sessionPromise = supabase.auth.getSession();
           const timeoutPromise = new Promise<never>((_, reject) => {
             setTimeout(() => reject(new Error(`Session retrieval timeout after ${attempt === 1 ? 5 : 10} seconds`)), attempt === 1 ? 5000 : 10000);
           });
           
+          console.log(`🔐 getSession: Setting up timeout for ${attempt === 1 ? 5 : 10} seconds...`);
           const { data: { session }, error } = await Promise.race([sessionPromise, timeoutPromise]);
+          
+          console.log(`🔐 getSession: Supabase response received, error:`, !!error);
           
           if (error) {
             throw new Error(error.message);
@@ -236,13 +249,16 @@ export const supabaseAuthService = {
           this._cachedSession = session;
           this._sessionCacheTime = now;
           
+          console.log(`🔐 getSession: Session cached successfully`);
           return session;
           
         } catch (error) {
           lastError = error as Error;
+          console.log(`🔐 getSession: Attempt ${attempt} failed:`, error);
           
           // If this is the first attempt and it's a timeout, try warming up again
           if (attempt === 1 && error instanceof Error && error.message.includes('timeout')) {
+            console.log('🔐 getSession: Timeout on first attempt, resetting connection and retrying...');
             this._connectionWarmed = false; // Reset to force warmup
             await new Promise(resolve => setTimeout(resolve, 1000)); // Brief delay
             continue;
@@ -250,6 +266,7 @@ export const supabaseAuthService = {
           
           // If this is the last attempt, throw the error
           if (attempt === 2) {
+            console.log('🔐 getSession: All attempts failed, throwing error');
             throw error;
           }
         }
@@ -257,6 +274,7 @@ export const supabaseAuthService = {
       
       throw lastError || new Error('Session retrieval failed');
     } catch (error) {
+      console.log('🔐 getSession: Final error:', error);
       // Don't return null silently - throw the error so the caller knows what happened
       throw error;
     }

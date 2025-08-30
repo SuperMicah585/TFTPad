@@ -58,7 +58,6 @@ function getAuthHeaders(): Record<string, string> {
   if (token) {
     // Check if token is expired
     if (riotAuthService.isTokenExpired()) {
-      console.log('🔐 API call - Token is expired, clearing it');
       riotAuthService.removeToken()
       // Redirect to login
       window.location.href = '/login'
@@ -66,10 +65,6 @@ function getAuthHeaders(): Record<string, string> {
     }
     
     headers['Authorization'] = `Bearer ${token}`
-    console.log('🔐 API call - Token found and valid, adding Authorization header');
-    console.log('🔐 API call - Token preview:', token.substring(0, 20) + '...');
-  } else {
-    console.log('🔐 API call - No token found, making unauthenticated request');
   }
   
   return headers
@@ -187,12 +182,12 @@ export async function fetchWithAuthRetry(
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      // Get a valid session for each attempt
-      const { supabaseAuthService } = await import('./supabaseAuthService');
-      const session = await supabaseAuthService.getValidSession();
+      // Get custom JWT token for each attempt
+      const { jwtAuthService } = await import('./jwtAuthService');
+      const token = jwtAuthService.getToken();
       
-      if (!session?.access_token) {
-        throw new Error('No authentication token available');
+      if (!token) {
+        throw new Error('No JWT authentication token available');
       }
       
       // Add the auth header
@@ -200,7 +195,7 @@ export async function fetchWithAuthRetry(
         ...options,
         headers: {
           ...options.headers,
-          'Authorization': `Bearer ${session.access_token}`,
+          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         }
       };
@@ -214,9 +209,6 @@ export async function fetchWithAuthRetry(
       
       // If it's an auth error and we haven't exceeded retries, try to refresh
       if ((response.status === 401 || response.status === 403) && attempt < maxRetries) {
-        console.log(`🔄 Auth error on attempt ${attempt}, refreshing session...`);
-        await supabaseAuthService.refreshSession();
-        
         // Wait a bit before retrying
         await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         continue;

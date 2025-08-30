@@ -67,7 +67,7 @@ interface GroupSettings {
 const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
 
 export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) {
-  const { userId } = useAuth()
+  const { userId, jwtUserId, exchangeTokenForJWT } = useAuth()
   const location = useLocation()
   const [myGroups, setMyGroups] = useState<MyGroup[]>([])
   const [error, setError] = useState<string | null>(null)
@@ -150,44 +150,58 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           console.log('🔍 Fetching owned groups with members for user ID:', userId)
           console.log(userId,"test")
           
-                  // Add a timeout wrapper to prevent infinite loading
-        const timeoutPromise = new Promise<never>((_, reject) => {
-          setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000);
-        });
-        
-        // Try to fetch groups with automatic retry on auth failure
-        let retryCount = 0;
-        const maxRetries = 2;
-        
-        while (retryCount <= maxRetries) {
-          try {
-            ownedGroups = await Promise.race([
-              studyGroupService.getStudyGroupsByOwnerWithMembers(parseInt(userId, 10)),
-              timeoutPromise
-            ]);
-            break; // Success, exit the retry loop
-          } catch (error) {
-            retryCount++;
-            
-            // If it's an authentication error and we haven't exceeded retries, try to refresh the session
-            if (error instanceof Error && 
-                (error.message.includes('401') || error.message.includes('Authentication failed')) && 
-                retryCount <= maxRetries) {
-              console.log(`🔄 Authentication failed, attempting retry ${retryCount}/${maxRetries}...`);
-              
-              // Import and refresh the session
-              const { supabaseAuthService } = await import('../services/supabaseAuthService');
-              await supabaseAuthService.refreshSession();
-              
-              // Wait a bit before retrying
-              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
-              continue;
+          // Exchange Supabase token for JWT token if needed
+          if (!jwtUserId) {
+            try {
+              console.log('🔄 Exchanging Supabase token for JWT token...')
+              await exchangeTokenForJWT()
+            } catch (error) {
+              console.error('Failed to exchange token for JWT:', error)
+              throw new Error('Authentication failed: Unable to exchange token')
             }
-            
-            // If it's not an auth error or we've exceeded retries, throw the error
-            throw error;
           }
-        }
+          
+          // Add a timeout wrapper to prevent infinite loading
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000);
+          });
+          
+          // Try to fetch groups with automatic retry on auth failure
+          let retryCount = 0;
+          const maxRetries = 2;
+          
+          while (retryCount <= maxRetries) {
+            try {
+              ownedGroups = await Promise.race([
+                studyGroupService.getStudyGroupsByOwnerWithMembers(parseInt(userId, 10)),
+                timeoutPromise
+              ]);
+              break; // Success, exit the retry loop
+            } catch (error) {
+              retryCount++;
+              
+              // If it's an authentication error and we haven't exceeded retries, try to exchange token again
+              if (error instanceof Error && 
+                  (error.message.includes('401') || error.message.includes('Authentication failed')) && 
+                  retryCount <= maxRetries) {
+                console.log(`🔄 Authentication failed, attempting token exchange retry ${retryCount}/${maxRetries}...`);
+                
+                // Try to exchange token again
+                try {
+                  await exchangeTokenForJWT()
+                } catch (exchangeError) {
+                  console.error('Token exchange failed on retry:', exchangeError)
+                }
+                
+                // Wait a bit before retrying
+                await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+                continue;
+              }
+              
+              // If it's not an auth error or we've exceeded retries, throw the error
+              throw error;
+            }
+          }
           
           console.log('📊 Received owned groups with members:', ownedGroups)
           setPlaceholderCount(Math.max(ownedGroups.length, 2)) // At least 2 placeholders

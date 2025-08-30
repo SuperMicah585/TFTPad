@@ -1,5 +1,4 @@
 // Study Group API Service
-import { fetchWithAuthRetry } from './apiUtils';
 
 const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
 const API_ENDPOINT = `${API_BASE_URL}/api`;
@@ -21,42 +20,28 @@ async function retryWithBackoff<T>(
   timeout: number = RETRY_CONFIG.timeout
 ): Promise<T> {
   let lastError: Error;
-  const startTime = Date.now();
-  
-  console.log(`🔄 retryWithBackoff started - maxRetries: ${maxRetries}, timeout: ${timeout}ms`);
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
-    console.log(`🔄 Attempt ${attempt + 1}/${maxRetries + 1} starting...`);
-    
     try {
       // Add timeout to the fetch operation
-      console.log(`⏱️ Setting up timeout promise for ${timeout}ms...`);
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          console.log(`⏱️ Timeout triggered after ${timeout}ms`);
           reject(new Error(`Request timeout after ${timeout}ms`));
         }, timeout);
       });
       
-      console.log(`🏃 Executing function with timeout...`);
       const result = await Promise.race([fn(), timeoutPromise]);
-      console.log(`✅ Attempt ${attempt + 1} succeeded!`);
       return result;
     } catch (error) {
       lastError = error as Error;
-      const elapsed = Date.now() - startTime;
-      
-      console.warn(`❌ Attempt ${attempt + 1} failed after ${elapsed}ms:`, error);
       
       // Don't retry on client errors (4xx) or timeouts
       if (error instanceof Error && (error.message.includes('4') || error.message.includes('timeout'))) {
-        console.log(`🚫 Not retrying - client error or timeout detected`);
         throw error;
       }
       
       // If this is the last attempt, throw the error
       if (attempt === maxRetries) {
-        console.error(`💀 All ${maxRetries + 1} attempts failed. Total time: ${elapsed}ms`);
         throw error;
       }
       
@@ -66,7 +51,6 @@ async function retryWithBackoff<T>(
         maxDelay
       );
       
-      console.log(`⏳ Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -203,16 +187,9 @@ export const studyGroupService = {
 
   // Get study groups created by a specific user (owner) with member data
   async getStudyGroupsByOwnerWithMembers(ownerId: number): Promise<StudyGroup[]> {
-    // Get the current session for authentication using the existing service
+    // Use existing Supabase authentication instead of JWT
     try {
-      const { supabaseAuthService } = await import('./supabaseAuthService');
-      
-      // Use the new method that handles token refresh automatically
-      const session = await supabaseAuthService.getValidSession();
-      
-      if (!session?.access_token) {
-        throw new Error('No authentication token available');
-      }
+      const { fetchWithAuthRetry } = await import('./apiUtils');
       
       // Try multiple approaches for better reliability
       let lastError: Error | null = null;
@@ -265,8 +242,8 @@ export const studyGroupService = {
         throw lastError || fallbackError;
       }
       
-    } catch (sessionError) {
-      throw new Error(`Authentication failed: ${sessionError instanceof Error ? sessionError.message : 'Unknown error'}`);
+    } catch (authError) {
+      throw new Error(`Authentication failed: ${authError instanceof Error ? authError.message : 'Unknown error'}`);
     }
   },
 
