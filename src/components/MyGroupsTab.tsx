@@ -85,7 +85,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   // Riot accounts state
-  const [riotAccounts, setRiotAccounts] = useState<Array<{ riot_id: string, summoner_name: string, rank: string, region: string, created_at: string }>>([])
+  const [_riotAccounts, setRiotAccounts] = useState<Array<{ riot_id: string, summoner_name: string, rank: string, region: string, created_at: string }>>([])
   const [selectedRiotId, setSelectedRiotId] = useState<string>('')
 
   // Update loading states when auth loading state changes
