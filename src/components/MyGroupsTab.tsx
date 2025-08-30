@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { UserCheck, Users, Crown, Calendar, Upload, SquareX, ChevronsLeft, FileText, Image, Settings, Zap } from 'lucide-react'
+import { UserCheck, Users, Crown, Calendar, Upload, SquareX, ChevronsLeft, FileText, Image, Settings, Zap, Trash2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { studyGroupService } from '../services/studyGroupService'
 import { userService } from '../services/userService'
@@ -19,6 +19,7 @@ import { useImageUpload } from '../hooks/useImageUpload'
 import { LoadingSpinner } from './auth/LoadingSpinner'
 
 import { riotService } from '../services/riotService'
+import { useVersion } from '../contexts/VersionContext'
 
 interface MyGroup {
   id: number;
@@ -83,6 +84,10 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   // Refresh trigger for manual refresh
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
+  // Riot accounts state
+  const [riotAccounts, setRiotAccounts] = useState<Array<{ riot_id: string, summoner_name: string, rank: string, region: string, created_at: string }>>([])
+  const [selectedRiotId, setSelectedRiotId] = useState<string>('')
+
   // Update loading states when auth loading state changes
   useEffect(() => {
     if (authLoading) {
@@ -92,6 +97,27 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       setIsCountLoading(false)
     }
   }, [authLoading])
+
+  // Load Riot accounts when component mounts
+  useEffect(() => {
+    
+    const loadRiotAccounts = async () => {
+      try {
+        const response = await riotService.getAllRiotAccounts()
+        setRiotAccounts(response.accounts)
+        // Auto-select the first Riot account if available
+        if (response.accounts.length > 0 && !selectedRiotId) {
+          setSelectedRiotId(response.accounts[0].riot_id)
+        }
+      } catch (error) {
+        console.error('Failed to load Riot accounts:', error)
+      }
+    }
+
+    if (userId && !authLoading) {
+      loadRiotAccounts()
+    }
+  }, [userId, authLoading, selectedRiotId])
 
   // Force data refresh when navigating to this route
   useEffect(() => {
@@ -122,7 +148,47 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         let ownedGroups: any[] = []
         if (userId) {
           console.log('🔍 Fetching owned groups with members for user ID:', userId)
-          ownedGroups = await studyGroupService.getStudyGroupsByOwnerWithMembers(parseInt(userId, 10))
+          console.log(userId,"test")
+          
+                  // Add a timeout wrapper to prevent infinite loading
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Request timed out after 30 seconds')), 30000);
+        });
+        
+        // Try to fetch groups with automatic retry on auth failure
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            ownedGroups = await Promise.race([
+              studyGroupService.getStudyGroupsByOwnerWithMembers(parseInt(userId, 10)),
+              timeoutPromise
+            ]);
+            break; // Success, exit the retry loop
+          } catch (error) {
+            retryCount++;
+            
+            // If it's an authentication error and we haven't exceeded retries, try to refresh the session
+            if (error instanceof Error && 
+                (error.message.includes('401') || error.message.includes('Authentication failed')) && 
+                retryCount <= maxRetries) {
+              console.log(`🔄 Authentication failed, attempting retry ${retryCount}/${maxRetries}...`);
+              
+              // Import and refresh the session
+              const { supabaseAuthService } = await import('../services/supabaseAuthService');
+              await supabaseAuthService.refreshSession();
+              
+              // Wait a bit before retrying
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+              continue;
+            }
+            
+            // If it's not an auth error or we've exceeded retries, throw the error
+            throw error;
+          }
+        }
+          
           console.log('📊 Received owned groups with members:', ownedGroups)
           setPlaceholderCount(Math.max(ownedGroups.length, 2)) // At least 2 placeholders
           setIsCountLoading(false) // Hide loading spinner, got the count
@@ -175,11 +241,43 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         setShowPlaceholders(false) // Hide placeholders once real data is loaded
       } catch (err) {
         console.error('Failed to fetch my groups:', err)
-        setError('Failed to load your groups. Please try again later.')
+        
+        // Provide more specific error messages
+        let errorMessage = 'Failed to load your groups. Please try again later.';
+        let isRetryable = true;
+        
+        if (err instanceof Error) {
+          if (err.message.includes('timeout')) {
+            errorMessage = 'Request timed out. The server might be slow right now. Please try again.';
+            isRetryable = true;
+          } else if (err.message.includes('401') || err.message.includes('403') || err.message.includes('UNAUTHORIZED')) {
+            errorMessage = 'Your session has expired. Please refresh the page or log in again.';
+            isRetryable = false;
+          } else if (err.message.includes('500')) {
+            errorMessage = 'Server error. Please try again in a moment.';
+            isRetryable = true;
+          } else if (err.message.includes('No authentication token')) {
+            errorMessage = 'Please log in to view your groups.';
+            isRetryable = false;
+          } else if (err.message.includes('Failed to fetch')) {
+            errorMessage = 'Network error. Please check your connection and try again.';
+            isRetryable = true;
+          } else if (err.message.includes('Authentication failed')) {
+            errorMessage = 'Authentication failed. Please refresh the page and try again.';
+            isRetryable = false;
+          }
+        }
+        
+        setError(errorMessage)
         setShowPlaceholders(false) // Hide placeholders on error
         setMyGroups([]) // Clear any existing groups on error
         setIsDataLoading(false)
         setIsCountLoading(false)
+        
+        // If it's a retryable error, show a retry button
+        if (isRetryable) {
+          console.log('🔄 Error is retryable, user can retry manually');
+        }
       }
     }
 
@@ -223,6 +321,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [selectedPlayerRiotId, setSelectedPlayerRiotId] = useState<string | null>(null);
+  const [selectedPlayerRegion, setSelectedPlayerRegion] = useState<string | null>(null);
   const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
@@ -532,6 +631,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   // Player modal functions
   const fetchPlayerLeagueData = async (_userId: number, riotId: string) => {
     try {
+      console.log('🔍 Fetching league data for riot_id:', riotId);
       setLeagueDataLoading(true);
       setLeagueDataError(null);
       
@@ -539,12 +639,15 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       const puuid = riotId;
 
       // Fetch league data using the riot_id (which contains the PUUID)
-              const response = await fetch(`${API_BASE_URL}/api/tft-league/${puuid}`);
+      console.log('🔍 Making API call to:', `${API_BASE_URL}/api/tft-league/${puuid}`);
+      const response = await fetch(`${API_BASE_URL}/api/tft-league/${puuid}`);
       if (!response.ok) {
         throw new Error('Failed to fetch league data');
       }
       
       const data = await response.json();
+      console.log('🔍 League data received:', data);
+      console.log('🔍 League data length:', Array.isArray(data) ? data.length : 'N/A');
       setPlayerLeagueData(data);
     } catch (error) {
       console.error('Error fetching player league data:', error);
@@ -670,23 +773,24 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
     setActivePlayerTab('stats');
     
     const riotId = member.riot_id;
-    setSelectedPlayerRiotId(riotId);
     
-    // Get user_id for other API calls if needed
-    let userId = null;
+    // Get the region from the riot account
+    let playerRegion = null;
     try {
       if (member.summoner_name) {
         const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
-        userId = riotAccount?.user_id;
+        playerRegion = riotAccount?.region;
       }
     } catch (error) {
-      console.error('Error fetching user_id for player:', error);
+      console.error('Error fetching region for player:', error);
     }
     
-    // Fetch league data, profile data, and player stats for the player
+    setSelectedPlayerRiotId(riotId);
+    setSelectedPlayerRegion(playerRegion || null);
+    
+    // Fetch league data and player stats for the player
     await Promise.all([
-      ...(userId ? [fetchPlayerLeagueData(userId, riotId)] : []),
-      
+      fetchPlayerLeagueData(0, riotId), // Always fetch league data using riotId
       fetchPlayerStats(riotId)
     ]);
   };
@@ -1126,7 +1230,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Study Group</h3>
+                                <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Study Group</h3>
+                
                 <p className="text-sm text-gray-500 mb-6">
                   Are you sure you want to delete <strong>{selectedGroup.name}</strong>? This action cannot be undone.
                   <br /><br />
@@ -1134,6 +1239,8 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   <br />• Remove all members from the group
                   <br />• Delete all pending invitations
                   <br />• Permanently delete all group data
+                  <br /><br />
+                  <em>Only group owners can delete study groups.</em>
                 </p>
                 <div className="flex justify-center space-x-3">
                   <button
@@ -1810,6 +1917,33 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       )}
                     </div>
                   </div>
+
+                  {/* Delete Group Section */}
+                  <div className="space-y-4">
+                    <h5 className="font-medium text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Trash2 className="w-4 h-4 text-red-600" />
+                      Delete Group
+                    </h5>
+                    
+                    <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                      <div className="space-y-3">
+                        <p className="text-sm text-red-700">
+                          <strong>Warning:</strong> This action cannot be undone. Deleting the group will:
+                        </p>
+                        <ul className="text-sm text-red-700 list-disc list-inside space-y-1 ml-4">
+                          <li>Permanently remove all group data</li>
+                          <li>Remove all members from the group</li>
+                          <li>Delete all group settings and configurations</li>
+                        </ul>
+                        <button
+                          onClick={() => setShowDeleteConfirm(true)}
+                          className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                        >
+                          Delete Group
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -1855,6 +1989,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                   setShowPlayerModal(false);
                   setSelectedPlayer(null);
                   setSelectedPlayerRiotId(null);
+    setSelectedPlayerRegion(null);
                   setClickedMemberId(null);
                   setPlayerLeagueData([]);
           
@@ -1934,6 +2069,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                     getTurboTftData={getTurboTftData}
                     className="w-full"
                     riotId={selectedPlayerRiotId || undefined}
+                    region={selectedPlayerRegion || undefined}
                   />
                 )}
                 
@@ -2148,9 +2284,9 @@ function ProfileIcon({
   size?: 'sm' | 'md' | 'lg'
   shape?: 'rounded-lg' | 'rounded-full'
 }) {
+  const { version } = useVersion()
   const [profileIconUrl, setProfileIconUrl] = useState<string | null>(null)
   const [iconError, setIconError] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
@@ -2158,37 +2294,19 @@ function ProfileIcon({
     lg: 'w-12 h-12 text-lg'
   }
 
-  const fetchProfileIcon = async () => {
-    if (!iconId) {
-      console.log('ProfileIcon: No iconId provided for', summonerName)
-      setIconError(true)
+  useEffect(() => {
+    if (!iconId || !version) {
+      if (!iconId) setIconError(true)
       return
     }
 
-    console.log('ProfileIcon: Fetching icon for', summonerName, 'with iconId:', iconId)
-    setLoading(true)
-    try {
-      const version = await riotService.getCurrentVersion()
-      const iconUrl = riotService.getProfileIconUrl(iconId, version)
-      console.log('ProfileIcon: Generated URL for', summonerName, ':', iconUrl)
-      setProfileIconUrl(iconUrl)
-      setIconError(false)
-    } catch (error) {
-      console.error('Error fetching profile icon:', error)
-      setIconError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (iconId && !iconError) {
-      fetchProfileIcon()
-    }
-  }, [iconId])
+    const iconUrl = riotService.getProfileIconUrl(iconId, version)
+    setProfileIconUrl(iconUrl)
+    setIconError(false)
+  }, [iconId, version])
 
   // If we have a valid icon URL and no error, show the actual icon
-  if (profileIconUrl && !iconError && !loading) {
+  if (profileIconUrl && !iconError) {
     return (
       <img
         src={profileIconUrl}

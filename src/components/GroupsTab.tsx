@@ -9,6 +9,7 @@ import { teamStatsService } from '../services/teamStatsService'
 import { livePlayerService } from '../services/livePlayerService'
 
 import { riotService } from '../services/riotService'
+import { useVersion } from '../contexts/VersionContext'
 import { TeamStatsContent } from './TeamStatsContent'
 import { TFTStatsContent } from './TFTStatsContent'
 import { playerStatsService } from '../services/playerStatsService'
@@ -228,6 +229,7 @@ export function GroupsTab({
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [selectedPlayerRiotId, setSelectedPlayerRiotId] = useState<string | null>(null);
+  const [selectedPlayerRegion, setSelectedPlayerRegion] = useState<string | null>(null);
   const [clickedMemberId, setClickedMemberId] = useState<number | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
@@ -402,24 +404,28 @@ export function GroupsTab({
     
     // Get the riot account for this user to fetch player stats
     let riotId = null;
+    let playerRegion = null;
     try {
       // Try to get riot account by summoner name first
       if (member.summoner_name) {
         const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
         riotId = riotAccount?.riot_id;
+        playerRegion = riotAccount?.region;
       }
       
       // Fallback: try to get by user_id if summoner name approach fails
       if (!riotId) {
         const riotAccount = await userService.getUserRiotAccount(member.user_id);
         riotId = riotAccount?.riot_id;
+        playerRegion = riotAccount?.region;
       }
     } catch (error) {
       console.error('Error fetching riot account for player stats:', error);
     }
     
-    // Store the riotId for use in TFTStatsContent
+    // Store the riotId and region for use in TFTStatsContent
     setSelectedPlayerRiotId(riotId || null);
+    setSelectedPlayerRegion(playerRegion || null);
     
     // Set error if no riotId found
     if (!riotId) {
@@ -915,6 +921,7 @@ export function GroupsTab({
                   setShowPlayerModal(false);
                   setSelectedPlayer(null);
                   setSelectedPlayerRiotId(null);
+    setSelectedPlayerRegion(null);
                   setClickedMemberId(null);
                   setPlayerLeagueData([]);
           
@@ -994,6 +1001,7 @@ export function GroupsTab({
                     getTurboTftData={getTurboTftData}
                     className="w-full"
                     riotId={selectedPlayerRiotId || undefined}
+                    region={selectedPlayerRegion || undefined}
                   />
                 )}
                 
@@ -1348,9 +1356,9 @@ function ProfileIcon({
   size?: 'sm' | 'md' | 'lg'
   shape?: 'rounded-lg' | 'rounded-full'
 }) {
+  const { version } = useVersion()
   const [profileIconUrl, setProfileIconUrl] = useState<string | null>(null)
   const [iconError, setIconError] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
@@ -1358,34 +1366,19 @@ function ProfileIcon({
     lg: 'w-12 h-12 text-lg'
   }
 
-  const fetchProfileIcon = async () => {
-    if (!iconId) {
-      setIconError(true)
+  useEffect(() => {
+    if (!iconId || !version) {
+      if (!iconId) setIconError(true)
       return
     }
 
-    setLoading(true)
-    try {
-      const version = await riotService.getCurrentVersion()
-      const iconUrl = riotService.getProfileIconUrl(iconId, version)
-      setProfileIconUrl(await iconUrl)
-      setIconError(false)
-    } catch (error) {
-      console.error('Error fetching profile icon:', error)
-      setIconError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (iconId && !iconError) {
-      fetchProfileIcon()
-    }
-  }, [iconId])
+    const iconUrl = riotService.getProfileIconUrl(iconId, version)
+    setProfileIconUrl(iconUrl)
+    setIconError(false)
+  }, [iconId, version])
 
   // If we have a valid icon URL and no error, show the actual icon
-  if (profileIconUrl && !iconError && !loading) {
+  if (profileIconUrl && !iconError) {
     return (
       <img
         src={profileIconUrl}

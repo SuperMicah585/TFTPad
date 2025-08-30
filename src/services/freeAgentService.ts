@@ -125,9 +125,11 @@ export const freeAgentService = {
     }
   },
 
-  async getFreeAgentById(id: number): Promise<FreeAgent> {
+  async getFreeAgentById(id: string | number): Promise<FreeAgent> {
     try {
-      const url = `${API_BASE_URL}/api/free-agents/${id}`;
+      // Ensure the ID is properly URL-encoded for the API request
+      const encodedId = encodeURIComponent(String(id));
+      const url = `${API_BASE_URL}/api/free-agents/${encodedId}`;
       
       const response = await retryWithBackoff(() => fetch(url));
       

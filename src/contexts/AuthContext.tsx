@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     
     try {
       // Always refresh user data to get the latest profile information
-      const session = await supabaseAuthService.getSession()
+      const session = await supabaseAuthService.getValidSession()
       if (session?.access_token) {
         const userData = await supabaseAuthService.getUserFromBackend(session.access_token)
         setUser(userData)
@@ -52,55 +52,85 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const session = await supabaseAuthService.getSession()
+        // Warm up the connection early
+        try {
+          await supabaseAuthService.getCurrentUser();
+        } catch (warmupError) {
+          // Continue anyway if warmup fails
+        }
+        
+        const session = await supabaseAuthService.getValidSession();
         if (session?.access_token) {
-          const userData = await supabaseAuthService.getUserFromBackend(session.access_token)
-          setUser(userData)
-          setUserId(userData.id)
+          const userData = await supabaseAuthService.getUserFromBackend(session.access_token);
+          setUser(userData);
+          setUserId(userData.id);
           
           // Ensure we have the latest profile data
-          await checkProfileCompletion()
+          await checkProfileCompletion();
         }
       } catch (error) {
-        console.error('Session verification failed:', error)
-        setUser(null)
-        setUserId(null)
+        console.error('Session verification failed:', error);
+        // Don't clear user state immediately on session errors - might be temporary
+        // Only clear if it's a clear authentication error
+        if (error instanceof Error && (
+          error.message.includes('401') || 
+          error.message.includes('403') || 
+          error.message.includes('No authentication token')
+        )) {
+          setUser(null);
+          setUserId(null);
+        }
       }
-      setLoading(false)
-    }
+      setLoading(false);
+    };
 
-    checkAuth()
-  }, [checkProfileCompletion])
+    checkAuth();
+  }, [checkProfileCompletion]);
 
   // Listen to auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabaseAuthService.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session)
-        
         if (event === 'SIGNED_IN' && session?.access_token) {
           try {
-            const userData = await supabaseAuthService.getUserFromBackend(session.access_token)
-            setUser(userData)
-            setUserId(userData.id)
-            await checkProfileCompletion()
+            const userData = await supabaseAuthService.getUserFromBackend(session.access_token);
+            setUser(userData);
+            setUserId(userData.id);
+            await checkProfileCompletion();
           } catch (error) {
-            console.error('Error getting user from backend:', error)
-            setUser(null)
-            setUserId(null)
+            console.error('Error getting user from backend:', error);
+            setUser(null);
+            setUserId(null);
           }
         } else if (event === 'SIGNED_OUT') {
-          console.log('Auth state: SIGNED_OUT detected, clearing user state')
-          setUser(null)
-          setUserId(null)
+          setUser(null);
+          setUserId(null);
         }
         
-        setLoading(false)
+        setLoading(false);
       }
     )
 
     return () => subscription.unsubscribe()
   }, [checkProfileCompletion])
+
+  // Set up periodic session refresh to prevent token expiration
+  useEffect(() => {
+    if (!userId) return; // Only refresh if user is logged in
+    
+    const refreshInterval = setInterval(async () => {
+      try {
+        console.log('🔄 Periodic session refresh...');
+        await supabaseAuthService.refreshSession();
+      } catch (error) {
+        console.error('Periodic session refresh failed:', error);
+        // If refresh fails, the user might need to log in again
+        // Don't clear the user state immediately, let the next API call handle it
+      }
+    }, 45 * 60 * 1000); // Refresh every 45 minutes (tokens typically expire after 1 hour)
+    
+    return () => clearInterval(refreshInterval);
+  }, [userId]);
 
   const signInWithDiscord = async () => {
     try {
@@ -128,17 +158,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      console.log('🔐 AuthContext: Starting sign out...')
       await supabaseAuthService.signOut()
-      console.log('🔐 AuthContext: Supabase sign out completed, clearing user state...')
     } catch (error) {
-      console.error('🔐 AuthContext: Sign out error:', error)
+      console.error('Sign out error:', error)
     } finally {
       // Always clear user state, regardless of Supabase sign out success
-      console.log('🔐 AuthContext: Clearing user state...')
       setUser(null)
       setUserId(null)
-      console.log('🔐 AuthContext: User state cleared')
     }
   }
 

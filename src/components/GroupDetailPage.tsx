@@ -12,6 +12,7 @@ import { api } from '../services/apiUtils';
 
 
 import { riotService } from '../services/riotService';
+import { useVersion } from '../contexts/VersionContext';
 import { riotAuthService } from '../services/riotAuthService';
 import { useAuth } from '../contexts/AuthContext';
 import { TeamStatsContent } from './TeamStatsContent';
@@ -131,6 +132,7 @@ export function GroupDetailPage() {
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<any>(null);
   const [selectedPlayerRiotId, setSelectedPlayerRiotId] = useState<string | null>(null);
+  const [selectedPlayerRegion, setSelectedPlayerRegion] = useState<string | null>(null);
   const [clickedMemberId, setClickedMemberId] = useState<string | null>(null);
   const [playerLeagueData, setPlayerLeagueData] = useState<any[]>([]);
   const [leagueDataLoading, setLeagueDataLoading] = useState(false);
@@ -1026,8 +1028,20 @@ export function GroupDetailPage() {
     // Use the riot_id directly from the member data
     const riotId = member.riot_id;
     
-    // Store the riotId for use in TFTStatsContent
+    // Get the region from the riot account
+    let playerRegion = null;
+    try {
+      if (member.summoner_name) {
+        const riotAccount = await userService.getRiotAccountBySummoner(member.summoner_name);
+        playerRegion = riotAccount?.region;
+      }
+    } catch (error) {
+      console.error('Error fetching region for player:', error);
+    }
+    
+    // Store the riotId and region for use in TFTStatsContent
     setSelectedPlayerRiotId(riotId);
+    setSelectedPlayerRegion(playerRegion || null);
     
     // Fetch league data, profile data, and player stats for the player
     await Promise.all([
@@ -1586,6 +1600,7 @@ export function GroupDetailPage() {
                 setShowPlayerModal(false);
                 setSelectedPlayer(null);
                 setSelectedPlayerRiotId(null);
+    setSelectedPlayerRegion(null);
                 setClickedMemberId(null);
                 setPlayerLeagueData([]);
         
@@ -1666,7 +1681,8 @@ export function GroupDetailPage() {
                   getRankedTftData={getRankedTftData}
                   getTurboTftData={getTurboTftData}
                   className="w-full"
-                  riotId={selectedPlayerRiotId || undefined}
+                                      riotId={selectedPlayerRiotId || undefined}
+                    region={selectedPlayerRegion || undefined}
                 />
 
                 
@@ -1697,9 +1713,9 @@ function ProfileIcon({
   size?: 'sm' | 'md' | 'lg'
   shape?: 'rounded-lg' | 'rounded-full'
 }) {
+  const { version } = useVersion();
   const [profileIconUrl, setProfileIconUrl] = useState<string>('');
   const [iconError, setIconError] = useState(false);
-  const [iconLoading, setIconLoading] = useState(false);
 
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -1707,33 +1723,17 @@ function ProfileIcon({
     lg: 'w-12 h-12'
   };
 
-  const fetchProfileIcon = async () => {
-    if (!iconId) return;
-    
-    setIconLoading(true);
-    setIconError(false);
-    
-    try {
-      const version = await riotService.getCurrentVersion();
-      const iconUrl = riotService.getProfileIconUrl(iconId, version);
-      setProfileIconUrl(iconUrl);
-    } catch (error) {
-      console.error('Error fetching profile icon:', error);
-      setIconError(true);
-    } finally {
-      setIconLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (iconId) {
-      fetchProfileIcon();
-    }
-  }, [iconId]);
+    if (!iconId || !version) return;
+    
+    const iconUrl = riotService.getProfileIconUrl(iconId, version);
+    setProfileIconUrl(iconUrl);
+    setIconError(false);
+  }, [iconId, version]);
 
   return (
     <div className={`${sizeClasses[size]} ${shape} overflow-hidden bg-gray-200 flex items-center justify-center`}>
-      {profileIconUrl && !iconError && !iconLoading ? (
+      {profileIconUrl && !iconError ? (
         <img
           src={profileIconUrl}
           alt={`${summonerName} profile icon`}
@@ -1742,7 +1742,7 @@ function ProfileIcon({
         />
       ) : null}
       <div 
-        className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-sm ${(profileIconUrl && !iconError && !iconLoading) ? 'hidden' : 'flex'}`}
+        className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-sm ${(profileIconUrl && !iconError) ? 'hidden' : 'flex'}`}
         style={{ 
           backgroundColor: ['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][(memberId || 0) % 5] || '#564ec7',
           color: getTextColor(['#564ec7', '#007760', '#de8741', '#ffa65f', '#ffc77e'][(memberId || 0) % 5] || '#564ec7')

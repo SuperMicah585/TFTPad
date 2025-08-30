@@ -15,17 +15,18 @@ interface TFTStatsContentProps {
   getTurboTftData: () => any;
   className?: string;
   riotId?: string;
+  region?: string; // Add region prop
 }
 
 export function TFTStatsContent({
   leagueDataLoading,
   leagueDataError,
   playerLeagueData,
-
   getRankedTftData,
   getTurboTftData,
   className = '',
-  riotId
+  riotId,
+  region
 }: TFTStatsContentProps) {
   if (leagueDataLoading) {
     return (
@@ -169,6 +170,7 @@ export function TFTStatsContent({
         <PlacementHistory 
           key={`placement-history-${riotId}`}
           riotId={riotId}
+          region={region}
           className="w-full"
         />
       )}

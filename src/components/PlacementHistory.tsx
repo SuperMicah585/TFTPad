@@ -18,6 +18,7 @@ const globalDataCache = new Map<string, MatchHistoryEntry[]>();
 
 interface PlacementHistoryProps {
   riotId: string;
+  region?: string; // Add region prop
   className?: string;
 }
 
@@ -36,7 +37,7 @@ const getPlacementColor = (placement: number): string => {
   }
 };
 
-export function PlacementHistory({ riotId, className = '' }: PlacementHistoryProps) {
+export function PlacementHistory({ riotId, region, className = '' }: PlacementHistoryProps) {
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +106,9 @@ export function PlacementHistory({ riotId, className = '' }: PlacementHistoryPro
     }
 
     try {
-      // Fetch match history with retry logic using the provided riotId
-      // For now, assume NA region - this could be enhanced to accept region as a prop
-      const matchHistory = await fetchMatchHistoryWithRetry(riotId, 'na1');
+      // Fetch match history with retry logic using the provided riotId and region
+      const playerRegion = region || 'na1'; // Default to na1 if no region provided
+      const matchHistory = await fetchMatchHistoryWithRetry(riotId, playerRegion);
       
       // Take only the last 20 matches and transform to the expected format
       const last20Matches = matchHistory.slice(0, 20).map(match => ({

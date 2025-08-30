@@ -142,3 +142,101 @@ export const api = {
 
 // Export the base URL and retry function for services that need them
 export { API_BASE_URL, retryWithBackoff } 
+
+// Global authentication error handler
+export async function handleAuthError(error: any): Promise<boolean> {
+  // Check if this is an authentication error
+  if (error instanceof Error && 
+      (error.message.includes('401') || 
+       error.message.includes('403') || 
+       error.message.includes('Authentication failed') ||
+       error.message.includes('UNAUTHORIZED'))) {
+    
+    try {
+      console.log('🔄 Authentication error detected, attempting to refresh session...');
+      
+      // Import the auth service
+      const { supabaseAuthService } = await import('./supabaseAuthService');
+      
+      // Try to refresh the session
+      const newSession = await supabaseAuthService.refreshSession();
+      
+      if (newSession?.access_token) {
+        console.log('✅ Session refreshed successfully');
+        return true; // Indicate that the session was refreshed
+      } else {
+        console.log('❌ Session refresh failed');
+        return false; // Indicate that the session refresh failed
+      }
+    } catch (refreshError) {
+      console.error('Failed to refresh session:', refreshError);
+      return false;
+    }
+  }
+  
+  return false; // Not an auth error
+}
+
+// Enhanced fetch wrapper with automatic auth retry
+export async function fetchWithAuthRetry(
+  url: string, 
+  options: RequestInit = {}, 
+  maxRetries: number = 2
+): Promise<Response> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      // Get a valid session for each attempt
+      const { supabaseAuthService } = await import('./supabaseAuthService');
+      const session = await supabaseAuthService.getValidSession();
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token available');
+      }
+      
+      // Add the auth header
+      const authOptions = {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        }
+      };
+      
+      const response = await fetch(url, authOptions);
+      
+      // If the response is successful, return it
+      if (response.ok) {
+        return response;
+      }
+      
+      // If it's an auth error and we haven't exceeded retries, try to refresh
+      if ((response.status === 401 || response.status === 403) && attempt < maxRetries) {
+        console.log(`🔄 Auth error on attempt ${attempt}, refreshing session...`);
+        await supabaseAuthService.refreshSession();
+        
+        // Wait a bit before retrying
+        await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        continue;
+      }
+      
+      // If it's not an auth error or we've exceeded retries, throw the error
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      
+    } catch (error) {
+      lastError = error as Error;
+      
+      // If this is the last attempt, throw the error
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retrying
+      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+    }
+  }
+  
+  throw lastError || new Error('Request failed after all retries');
+} 

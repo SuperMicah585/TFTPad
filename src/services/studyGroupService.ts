@@ -1,4 +1,6 @@
 // Study Group API Service
+import { fetchWithAuthRetry } from './apiUtils';
+
 const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
 const API_ENDPOINT = `${API_BASE_URL}/api`;
 
@@ -7,30 +9,54 @@ const RETRY_CONFIG = {
   maxRetries: 3,
   baseDelay: 1000, // 1 second
   maxDelay: 10000, // 10 seconds
+  timeout: 30000, // 30 seconds total timeout
 };
 
-// Utility function for exponential backoff retry
+// Utility function for exponential backoff retry with timeout
 async function retryWithBackoff<T>(
   fn: () => Promise<T>,
   maxRetries: number = RETRY_CONFIG.maxRetries,
   baseDelay: number = RETRY_CONFIG.baseDelay,
-  maxDelay: number = RETRY_CONFIG.maxDelay
+  maxDelay: number = RETRY_CONFIG.maxDelay,
+  timeout: number = RETRY_CONFIG.timeout
 ): Promise<T> {
   let lastError: Error;
+  const startTime = Date.now();
+  
+  console.log(`🔄 retryWithBackoff started - maxRetries: ${maxRetries}, timeout: ${timeout}ms`);
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    console.log(`🔄 Attempt ${attempt + 1}/${maxRetries + 1} starting...`);
+    
     try {
-      return await fn();
+      // Add timeout to the fetch operation
+      console.log(`⏱️ Setting up timeout promise for ${timeout}ms...`);
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => {
+          console.log(`⏱️ Timeout triggered after ${timeout}ms`);
+          reject(new Error(`Request timeout after ${timeout}ms`));
+        }, timeout);
+      });
+      
+      console.log(`🏃 Executing function with timeout...`);
+      const result = await Promise.race([fn(), timeoutPromise]);
+      console.log(`✅ Attempt ${attempt + 1} succeeded!`);
+      return result;
     } catch (error) {
       lastError = error as Error;
+      const elapsed = Date.now() - startTime;
       
-      // Don't retry on client errors (4xx)
-      if (error instanceof Error && error.message.includes('4')) {
+      console.warn(`❌ Attempt ${attempt + 1} failed after ${elapsed}ms:`, error);
+      
+      // Don't retry on client errors (4xx) or timeouts
+      if (error instanceof Error && (error.message.includes('4') || error.message.includes('timeout'))) {
+        console.log(`🚫 Not retrying - client error or timeout detected`);
         throw error;
       }
       
       // If this is the last attempt, throw the error
       if (attempt === maxRetries) {
+        console.error(`💀 All ${maxRetries + 1} attempts failed. Total time: ${elapsed}ms`);
         throw error;
       }
       
@@ -40,7 +66,7 @@ async function retryWithBackoff<T>(
         maxDelay
       );
       
-      
+      console.log(`⏳ Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries + 1})`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -177,28 +203,71 @@ export const studyGroupService = {
 
   // Get study groups created by a specific user (owner) with member data
   async getStudyGroupsByOwnerWithMembers(ownerId: number): Promise<StudyGroup[]> {
-    // Get the current session for authentication
-    const { supabase } = await import('../lib/supabase');
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) {
-      throw new Error('No authentication token available');
+    // Get the current session for authentication using the existing service
+    try {
+      const { supabaseAuthService } = await import('./supabaseAuthService');
+      
+      // Use the new method that handles token refresh automatically
+      const session = await supabaseAuthService.getValidSession();
+      
+      if (!session?.access_token) {
+        throw new Error('No authentication token available');
+      }
+      
+      // Try multiple approaches for better reliability
+      let lastError: Error | null = null;
+      
+      // Approach 1: Quick timeout with retry
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const response = await fetchWithAuthRetry(`${API_ENDPOINT}/users/${ownerId}/owned-study-groups-with-members`, {
+            signal: AbortSignal.timeout(15000) // 15 second timeout per attempt
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch owned study groups with members: ${response.status} ${response.statusText}`);
+          }
+          
+          const data = await response.json();
+          return data.study_groups || [];
+          
+        } catch (error) {
+          lastError = error as Error;
+          
+          // If it's a client error (4xx), don't retry
+          if (error instanceof Error && error.message.includes('4')) {
+            throw error;
+          }
+          
+          // If this is the last attempt, try the fallback
+          if (attempt === 3) {
+            break;
+          }
+          
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+        }
+      }
+      
+      // Approach 2: Fallback - try the simpler endpoint
+      try {
+        const fallbackGroups = await this.getStudyGroupsByOwner(ownerId);
+        
+        // Transform the data to match expected format
+        const transformedGroups = fallbackGroups.map(group => ({
+          ...group,
+          members: [] // Empty members array since we don't have member data
+        }));
+        
+        return transformedGroups;
+        
+      } catch (fallbackError) {
+        throw lastError || fallbackError;
+      }
+      
+    } catch (sessionError) {
+      throw new Error(`Authentication failed: ${sessionError instanceof Error ? sessionError.message : 'Unknown error'}`);
     }
-    
-    const response = await retryWithBackoff(() => 
-      fetch(`${API_ENDPOINT}/users/${ownerId}/owned-study-groups-with-members`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-      })
-    );
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch owned study groups with members: ${response.statusText}`);
-    }
-    const data = await response.json();
-    return data.study_groups || [];
   },
 
 
@@ -217,7 +286,7 @@ export const studyGroupService = {
 
   // Captain functionality removed - this method is no longer needed
 
-  // Delete a study group (any member can delete)
+  // Delete a study group (only owners can delete)
   async deleteStudyGroup(groupId: number, userId: number): Promise<{ message: string, deleted_group_id: number }> {
     const response = await retryWithBackoff(() => 
       fetch(`${API_ENDPOINT}/study-groups/${groupId}`, {
@@ -292,14 +361,14 @@ export const studyGroupService = {
   },
 
   // Leave a study group
-  async leaveStudyGroup(groupId: number, userId: number): Promise<{ message: string }> {
+  async leaveStudyGroup(groupId: number, riotId: string): Promise<{ message: string }> {
     const response = await retryWithBackoff(() => 
       fetch(`${API_ENDPOINT}/study-groups/${groupId}/leave`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify({ riot_id: riotId }),
       })
     );
     

@@ -13,6 +13,7 @@ import { PlayerEloChart } from './PlayerEloChart';
 
 import { Footer } from './Footer';
 import { riotService } from '../services/riotService';
+import { useVersion } from '../contexts/VersionContext';
 
 interface FreeAgentProfilePageProps {}
 
@@ -39,6 +40,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   const { user_id } = useParams<{ user_id: string }>();
   const navigate = useNavigate();
   const { userId } = useAuth();
+  const { version } = useVersion();
   
   // Agent data state
   const [agent, setAgent] = useState<FreeAgent | null>(null);
@@ -68,7 +70,6 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   // Profile icon state
   const [profileIconUrl, setProfileIconUrl] = useState<string | null>(null);
   const [iconError, setIconError] = useState(false);
-  const [iconLoading, setIconLoading] = useState(false);
 
 
   // Fetch agent data on mount
@@ -76,12 +77,12 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     if (user_id) {
       // Scroll to top when navigating to this page
       window.scrollTo(0, 0);
-      fetchInitialData(parseInt(user_id));
+      fetchInitialData(user_id);
     }
   }, [user_id]);
 
   // Fetch initial data with optimized loading
-  const fetchInitialData = async (id: number) => {
+  const fetchInitialData = async (id: string) => {
     try {
       // Get agent data immediately
       const agentData = await freeAgentService.getFreeAgentById(id);
@@ -116,31 +117,16 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   }, [userId]);
 
   // Fetch profile icon when agent data is loaded
-  const fetchProfileIcon = async () => {
-    if (!agent?.icon_id) {
-      setIconError(true);
+  useEffect(() => {
+    if (!agent?.icon_id || !version) {
+      if (!agent?.icon_id) setIconError(true);
       return;
     }
 
-    setIconLoading(true);
-    try {
-      const version = await riotService.getCurrentVersion();
-      const iconUrl = riotService.getProfileIconUrl(agent.icon_id, version);
-      setProfileIconUrl(iconUrl);
-      setIconError(false);
-    } catch (error) {
-      console.error('Error fetching profile icon:', error);
-      setIconError(true);
-    } finally {
-      setIconLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (agent?.icon_id && !iconError) {
-      fetchProfileIcon();
-    }
-  }, [agent?.icon_id]);
+    const iconUrl = riotService.getProfileIconUrl(agent.icon_id, version);
+    setProfileIconUrl(iconUrl);
+    setIconError(false);
+  }, [agent?.icon_id, version]);
 
   // Retry helper function with exponential backoff
   const retryWithBackoff = async <T,>(
@@ -192,7 +178,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     }
   };
 
-  const fetchAgentLeagueData = async (_agentId: number, agentData?: FreeAgent) => {
+  const fetchAgentLeagueData = async (_agentId: string, agentData?: FreeAgent) => {
     setLeagueDataError(null);
     
     try {
@@ -318,8 +304,22 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
     return leagueData.find(data => data.queueType === 'RANKED_TFT_TURBO');
   };
 
+  // Function to generate a hash code from a string
+  const hashCode = (str: string): number => {
+    let hash = 0;
+    if (str.length === 0) return hash;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32-bit integer
+    }
+    return Math.abs(hash);
+  };
+
   // Function to get text color based on background color
-  const getTextColor = (backgroundColor: string): string => {
+  const getTextColor = (backgroundColor: string | undefined): string => {
+    if (!backgroundColor) return '#333333';
+    
     // Simple contrast calculation
     const hex = backgroundColor.replace('#', '');
     const r = parseInt(hex.substr(0, 2), 16);
@@ -408,7 +408,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
             <div className="absolute -bottom-8 sm:-bottom-12 left-4 sm:left-6">
               <div className="relative">
                 <div className="w-20 h-20 sm:w-28 sm:h-28 rounded-full border-4 border-white overflow-hidden">
-                  {profileIconUrl && !iconError && !iconLoading ? (
+                  {profileIconUrl && !iconError ? (
                     <img
                       src={profileIconUrl}
                       alt={`${agent.summoner_name} profile icon`}
@@ -417,10 +417,19 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                     />
                   ) : null}
                   <div 
-                    className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${(profileIconUrl && !iconError && !iconLoading) ? 'hidden' : 'flex'}`}
+                    className={`profile-placeholder w-full h-full flex items-center justify-center font-bold text-3xl ${(profileIconUrl && !iconError) ? 'hidden' : 'flex'}`}
                     style={{ 
-                      backgroundColor: ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][agent.id % 5],
-                      color: getTextColor(['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'][agent.id % 5])
+                      backgroundColor: (() => {
+                        const colors = ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'];
+                        const idString = String(agent.id || '');
+                        return colors[hashCode(idString) % 5];
+                      })(),
+                      color: (() => {
+                        const colors = ['#964b00', '#b96823', '#de8741', '#ffa65f', '#ffc77e'];
+                        const idString = String(agent.id || '');
+                        const bgColor = colors[hashCode(idString) % 5];
+                        return getTextColor(bgColor);
+                      })()
                     }}
                   >
                     {agent.summoner_name.charAt(0).toUpperCase()}
@@ -471,6 +480,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
                       getTurboTftData={getTurboTftData}
                       className="w-full"
                       riotId={agent?.riot_id}
+                      region={agent?.region}
                     />
                   </div>
                   

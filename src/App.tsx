@@ -2,6 +2,7 @@ import { Routes, Route, Navigate, Link } from 'react-router-dom'
 import { GoogleAnalytics } from './components/GoogleAnalytics'
 import { AuthProvider } from './contexts/AuthContext'
 import { ProfileProvider } from './contexts/ProfileContext'
+import { VersionProvider } from './contexts/VersionContext'
 import { Header } from './components/header'
 import { GroupsPage } from './components/GroupsPage'
 import { GroupDetailPage } from './components/GroupDetailPage'
@@ -56,7 +57,8 @@ function App() {
       <PageViewTracker />
       <AuthProvider>
         <ProfileProvider>
-          <div className="min-h-screen bg-white text-gray-800 relative flex flex-col">
+          <VersionProvider>
+            <div className="min-h-screen bg-white text-gray-800 relative flex flex-col">
           {/* Notebook Lines Background - Full Viewport */}
           <div className="absolute inset-0 overflow-hidden" style={{ backgroundColor: '#F0F3F0' }}>
             <div className="absolute inset-0 opacity-15 dark:opacity-20">
@@ -107,6 +109,7 @@ function App() {
             </Routes>
           </div>
                   </div>
+            </VersionProvider>
         </ProfileProvider>
       </AuthProvider>
     </>

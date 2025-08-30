@@ -26,8 +26,12 @@ export interface SummonerData {
 
 const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:5001';
 
+// Cache for the current version
+let versionCache: { version: string; timestamp: number } | null = null;
+const VERSION_CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+
 export const riotService = {
-  async connectRiotAccount(gameName: string, tagLine: string, userId: number, region: string): Promise<RiotAccountResponse> {
+  async connectRiotAccount(gameName: string, tagLine: string, region: string): Promise<RiotAccountResponse> {
     const response = await fetch(`${API_BASE_URL}/api/riot-account`, {
       method: 'POST',
       headers: {
@@ -36,7 +40,6 @@ export const riotService = {
       body: JSON.stringify({
         gameName, // camelCase
         tagLine,  // camelCase
-        userId,   // Add userId
         region    // Add region
       })
     })
@@ -50,14 +53,55 @@ export const riotService = {
   },
 
   async getCurrentVersion(): Promise<string> {
+    // Check if we have a valid cached version
+    const now = Date.now();
+    if (versionCache && (now - versionCache.timestamp) < VERSION_CACHE_DURATION) {
+      return versionCache.version;
+    }
+
     try {
       const response = await fetch('https://ddragon.leagueoflegends.com/api/versions.json')
       const versions = await response.json()
-      return versions[0] // Return the latest version
+      const latestVersion = versions[0]; // Return the latest version
+      
+      // Cache the version
+      versionCache = {
+        version: latestVersion,
+        timestamp: now
+      };
+      
+      return latestVersion;
     } catch (error) {
       console.error('Error fetching version:', error)
-      return '15.12.1' // Fallback version
+      // Return cached version if available, otherwise fallback
+      return versionCache?.version || '15.12.1';
     }
+  },
+
+  // Function to clear the version cache (useful for testing or manual refresh)
+  clearVersionCache(): void {
+    versionCache = null;
+  },
+
+  // Function to get cached version without fetching (for synchronous access)
+  getCachedVersion(): string | null {
+    if (versionCache && (Date.now() - versionCache.timestamp) < VERSION_CACHE_DURATION) {
+      return versionCache.version;
+    }
+    return null;
+  },
+
+  // Debug function to check cache status (for development/testing)
+  getCacheStatus(): { hasCache: boolean; version: string | null; age: number | null } {
+    if (!versionCache) {
+      return { hasCache: false, version: null, age: null };
+    }
+    const age = Date.now() - versionCache.timestamp;
+    return {
+      hasCache: age < VERSION_CACHE_DURATION,
+      version: versionCache.version,
+      age: age
+    };
   },
 
   async getSummonerData(puuid: string, region: string): Promise<SummonerData> {
@@ -73,5 +117,22 @@ export const riotService = {
 
   getProfileIconUrl(profileIconId: number, version: string): string {
     return `https://ddragon.leagueoflegends.com/cdn/${version}/img/profileicon/${profileIconId}.png`
+  },
+
+  // Get all available Riot accounts
+  async getAllRiotAccounts(): Promise<{ accounts: Array<{ riot_id: string, summoner_name: string, rank: string, region: string, created_at: string }> }> {
+    const response = await fetch(`${API_BASE_URL}/api/riot-accounts`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.error || 'Failed to get Riot accounts')
+    }
+
+    return response.json()
   }
 } 

@@ -4,6 +4,7 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import { freeAgentService, type FreeAgent, type FreeAgentFilters } from '../services/freeAgentService'
 import { useAuth } from '../contexts/AuthContext'
 import { riotService } from '../services/riotService'
+import { useVersion } from '../contexts/VersionContext'
 import { HiOutlineAdjustmentsHorizontal } from "react-icons/hi2";
 import { FaSearch } from "react-icons/fa";
 import { LoadingSpinner } from './auth/LoadingSpinner'
@@ -344,9 +345,9 @@ function ProfileIcon({
   size?: 'sm' | 'md' | 'lg'
   shape?: 'rounded-lg' | 'rounded-full'
 }) {
+  const { version } = useVersion()
   const [profileIconUrl, setProfileIconUrl] = useState<string | null>(null)
   const [iconError, setIconError] = useState(false)
-  const [loading, setLoading] = useState(false)
 
   const sizeClasses = {
     sm: 'w-8 h-8 text-sm',
@@ -354,34 +355,19 @@ function ProfileIcon({
     lg: 'w-12 h-12 text-lg'
   }
 
-  const fetchProfileIcon = async () => {
-    if (!iconId) {
-      setIconError(true)
+  useEffect(() => {
+    if (!iconId || !version) {
+      if (!iconId) setIconError(true)
       return
     }
 
-    setLoading(true)
-    try {
-      const version = await riotService.getCurrentVersion()
-      const iconUrl = riotService.getProfileIconUrl(iconId, version)
-      setProfileIconUrl(iconUrl)
-      setIconError(false)
-    } catch (error) {
-      console.error('Error fetching profile icon:', error)
-      setIconError(true)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (iconId && !iconError) {
-      fetchProfileIcon()
-    }
-  }, [iconId])
+    const iconUrl = riotService.getProfileIconUrl(iconId, version)
+    setProfileIconUrl(iconUrl)
+    setIconError(false)
+  }, [iconId, version])
 
   // If we have a valid icon URL and no error, show the actual icon
-  if (profileIconUrl && !iconError && !loading) {
+  if (profileIconUrl && !iconError) {
     return (
       <img
         src={profileIconUrl}
@@ -516,6 +502,8 @@ export function FreeAgentsTab({
 
 
 
+
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   // Use props if provided, otherwise use local state
@@ -601,6 +589,22 @@ export function FreeAgentsTab({
       applyFilters();
     }
   }, [hasInitialized, activeSearchQuery, minRankFilter, maxRankFilter, regionFilter, sortBy, sortOrder]);
+
+  // Listen for riot account updates to refresh the players list
+  useEffect(() => {
+    const handleRiotAccountUpdated = () => {
+      // Refresh the players list when a new player is added
+      if (hasInitialized) {
+        applyFilters();
+      }
+    };
+
+    window.addEventListener('riotAccountUpdated', handleRiotAccountUpdated);
+
+    return () => {
+      window.removeEventListener('riotAccountUpdated', handleRiotAccountUpdated);
+    };
+  }, [hasInitialized, applyFilters]);
 
   // Mark as initialized after first load - allow non-logged in users to browse
   useEffect(() => {
@@ -885,7 +889,6 @@ export function FreeAgentsTab({
       <RiotConnectModal
         isOpen={showRiotModal}
         onClose={() => setShowRiotModal(false)}
-        userId={userId || ''}
         onSuccess={() => {
           // Refresh Riot account data after successful connection
           setShowRiotModal(false);
@@ -911,7 +914,7 @@ function FreeAgentCard({
   return (
     <div 
       className="border-2 rounded-lg p-4 hover:shadow-xl transition-all duration-200 shadow-md backdrop-blur-sm flex flex-col cursor-pointer group relative h-full bg-gray-50 border-gray-200" 
-                      onClick={() => navigate(`/players/${agent.id}`)}
+                      onClick={() => navigate(`/players/${encodeURIComponent(agent.id)}`)}
     >
       {/* Hover arrow */}
       <div className="absolute top-1/2 right-4 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
