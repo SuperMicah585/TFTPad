@@ -71,8 +71,8 @@ export function GroupsPage() {
   // Available meeting days for filtering
 
 
-  // Sort state
-  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
+  // Sort state - default to ELO descending for groups
+  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('avg_elo');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Track previous sort values to detect changes

@@ -15,16 +15,16 @@ import { RiotConnectModal } from './auth/RiotConnectModal'
 // Function to get TFT rank icon URL
 function getRankIconUrl(rank: string): string {
     const rankIcons: { [key: string]: string } = {
-        'iron+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Iron.png',
-        'bronze+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Bronze.png',
-        'silver+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Silver.png',
-        'gold+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Gold.png',
-        'platinum+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Platinum.png',
-        'emerald+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Emerald.png',
-        'diamond+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Diamond.png',
-        'master+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Master.png',
-        'grandmaster+': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_GrandMaster.png',
-        'challenger': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Challenger.png',
+        'IRON': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Iron.png',
+        'BRONZE': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Bronze.png',
+        'SILVER': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Silver.png',
+        'GOLD': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Gold.png',
+        'PLATINUM': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Platinum.png',
+        'EMERALD': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Emerald.png',
+        'DIAMOND': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Diamond.png',
+        'MASTER': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Master.png',
+        'GRANDMASTER': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_GrandMaster.png',
+        'CHALLENGER': 'https://ddragon.leagueoflegends.com/cdn/13.24.1/img/tft-regalia/TFT_Regalia_Challenger.png',
     };
     return rankIcons[rank] || '';
 }
@@ -208,7 +208,7 @@ function RankRangeDropdown({
                         setIsMinOpen(!isMinOpen);
                         setIsMaxOpen(false);
                     }}
-                    className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm min-w-32 flex items-center justify-between shadow-lg"
+                    className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm min-w-32 flex items-center justify-between shadow-lg"
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
@@ -222,7 +222,7 @@ function RankRangeDropdown({
                                 }}
                             />
                         </div>
-                        <span className="truncate text-xs">{minRank.charAt(0).toUpperCase() + minRank.slice(1)}</span>
+                        <span className="truncate text-xs">{minRank.charAt(0).toUpperCase() + minRank.slice(1).toLowerCase()}</span>
                     </div>
                     <svg className="w-3 h-3 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -230,7 +230,7 @@ function RankRangeDropdown({
                 </button>
                 
                 {isMinOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg z-[9999] max-h-60 overflow-y-auto shadow-xl min-w-32">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg z-[9999] max-h-40 overflow-y-auto shadow-xl min-w-32">
                         {rankOptions.map(rank => (
                             <button
                                 key={rank}
@@ -238,7 +238,7 @@ function RankRangeDropdown({
                                     onMinRankChange(rank);
                                     setIsMinOpen(false);
                                 }}
-                                className="w-full px-3 py-2 text-left text-gray-800 hover:bg-gray-100 flex items-center gap-2 border-b border-gray-200 last:border-b-0 transition-colors"
+                                className="w-full px-2 py-1.5 text-left text-gray-800 hover:bg-gray-100 flex items-center gap-2 border-b border-gray-200 last:border-b-0 transition-colors"
                                 style={{ backgroundColor: rank === minRank ? '#f3f4f6' : '#ffffff' }}
                             >
                                 <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
@@ -252,7 +252,7 @@ function RankRangeDropdown({
                                         }}
                                     />
                                 </div>
-                                <span className="truncate text-xs">{rank.charAt(0).toUpperCase() + rank.slice(1)}</span>
+                                <span className="truncate text-xs">{rank.charAt(0).toUpperCase() + rank.slice(1).toLowerCase()}</span>
                             </button>
                         ))}
                     </div>
@@ -268,7 +268,7 @@ function RankRangeDropdown({
                         setIsMaxOpen(!isMaxOpen);
                         setIsMinOpen(false);
                     }}
-                    className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm min-w-32 flex items-center justify-between shadow-lg"
+                    className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-2 py-1.5 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm min-w-32 flex items-center justify-between shadow-lg"
                 >
                     <div className="flex items-center gap-2">
                         <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
@@ -282,7 +282,7 @@ function RankRangeDropdown({
                                 }}
                             />
                         </div>
-                        <span className="truncate text-xs">{maxRank.charAt(0).toUpperCase() + maxRank.slice(1)}</span>
+                        <span className="truncate text-xs">{maxRank.charAt(0).toUpperCase() + maxRank.slice(1).toLowerCase()}</span>
                     </div>
                     <svg className="w-3 h-3 ml-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -290,7 +290,7 @@ function RankRangeDropdown({
                 </button>
                 
                 {isMaxOpen && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg z-[9999] max-h-60 overflow-y-auto shadow-xl min-w-32">
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-gray-300 rounded-lg z-[9999] max-h-40 overflow-y-auto shadow-xl min-w-32">
                         {rankOptions.map(rank => (
                             <button
                                 key={rank}
@@ -298,7 +298,7 @@ function RankRangeDropdown({
                                     onMaxRankChange(rank);
                                     setIsMaxOpen(false);
                                 }}
-                                className="w-full px-3 py-2 text-left text-gray-800 hover:bg-gray-100 flex items-center gap-2 border-b border-gray-200 last:border-b-0 transition-colors"
+                                className="w-full px-2 py-1.5 text-left text-gray-800 hover:bg-gray-100 flex items-center gap-2 border-b border-gray-200 last:border-b-0 transition-colors"
                                 style={{ backgroundColor: rank === maxRank ? '#f3f4f6' : '#ffffff' }}
                             >
                                 <div className="w-5 h-5 flex items-center justify-center flex-shrink-0">
@@ -312,7 +312,7 @@ function RankRangeDropdown({
                                         }}
                                     />
                                 </div>
-                                <span className="truncate text-xs">{rank.charAt(0).toUpperCase() + rank.slice(1)}</span>
+                                <span className="truncate text-xs">{rank.charAt(0).toUpperCase() + rank.slice(1).toLowerCase()}</span>
                             </button>
                         ))}
                     </div>
@@ -507,8 +507,8 @@ export function FreeAgentsTab({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeSearchQuery, setActiveSearchQuery] = useState("");
   // Use props if provided, otherwise use local state
-  const [localMinRankFilter, setLocalMinRankFilter] = useState("iron+");
-  const [localMaxRankFilter, setLocalMaxRankFilter] = useState("challenger");
+  const [localMinRankFilter, setLocalMinRankFilter] = useState("IRON");
+  const [localMaxRankFilter, setLocalMaxRankFilter] = useState("CHALLENGER");
 
 
   const minRankFilter = propMinRankFilter ?? localMinRankFilter;
@@ -520,13 +520,13 @@ export function FreeAgentsTab({
   const regionFilter = propRegionFilter ?? localRegionFilter;
   const setRegionFilter = propSetRegionFilter ?? setLocalRegionFilter;
 
-  // Sort state
-  const [sortBy, setSortBy] = useState<'created_at' | 'elo'>('created_at');
+  // Sort state - default to ELO (rank) descending for players
+  const [sortBy, setSortBy] = useState<'created_at' | 'elo'>('elo');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Rank options for dropdown
+  // Rank options for dropdown - using uppercase format that backend expects
   const rankOptions = [
-    'iron+', 'bronze+', 'silver+', 'gold+', 'platinum+', 'emerald+', 'diamond+', 'master+', 'grandmaster+', 'challenger'
+    'IRON', 'BRONZE', 'SILVER', 'GOLD', 'PLATINUM', 'EMERALD', 'DIAMOND', 'MASTER', 'GRANDMASTER', 'CHALLENGER'
   ];
 
   // Availability filters removed - no longer using users table
@@ -576,10 +576,10 @@ export function FreeAgentsTab({
 
   // Clear all filters
   const clearFilters = () => {
-    setMinRankFilter("iron+");
-    setMaxRankFilter("challenger");
+    setMinRankFilter("IRON");
+    setMaxRankFilter("CHALLENGER");
     setRegionFilter("");
-    setSortBy('created_at');
+    setSortBy('elo');
     setSortOrder('desc');
   };
 
@@ -946,7 +946,7 @@ function FreeAgentCard({
             <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
               {getRankTier(agent.rank) && (
                 <img 
-                  src={getRankIconUrl(getRankTier(agent.rank) === 'challenger' || getRankTier(agent.rank) === 'grandmaster' ? getRankTier(agent.rank) : getRankTier(agent.rank) + '+')} 
+                  src={getRankIconUrl(getRankTier(agent.rank).toUpperCase())} 
                   alt={getRankTier(agent.rank)}
                   className="w-4 h-4 object-contain"
                   onError={(e) => {
@@ -1001,7 +1001,7 @@ function FreeAgentCard({
             <div className="flex items-center gap-2 text-gray-600 font-semibold text-sm">
               {getRankTier(agent.rank) && (
                 <img 
-                  src={getRankIconUrl(getRankTier(agent.rank) === 'challenger' || getRankTier(agent.rank) === 'grandmaster' ? getRankTier(agent.rank) : getRankTier(agent.rank) + '+')} 
+                  src={getRankIconUrl(getRankTier(agent.rank).toUpperCase())} 
                   alt={getRankTier(agent.rank)}
                   className="w-4 h-4 object-contain"
                   onError={(e) => {

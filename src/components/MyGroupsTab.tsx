@@ -76,10 +76,10 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
 
   
   // Placeholder state
-  const [placeholderCount, setPlaceholderCount] = useState<number>(2) // Start with 2 placeholders
-  const [showPlaceholders, setShowPlaceholders] = useState(true) // Show placeholders immediately
+  const [placeholderCount, setPlaceholderCount] = useState<number>(0) // Start with 0 placeholders
+  const [showPlaceholders, setShowPlaceholders] = useState(false) // Don't show placeholders immediately
   const [isDataLoading, setIsDataLoading] = useState(false) // Track if we're actively fetching data
-  const [isCountLoading, setIsCountLoading] = useState(false) // Track if we're fetching the count
+  const [isCountLoading, setIsCountLoading] = useState(true) // Start with loading state
   
   // Refresh trigger for manual refresh
   const [refreshTrigger, setRefreshTrigger] = useState(0)
@@ -92,11 +92,14 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
   useEffect(() => {
     if (authLoading) {
       setIsCountLoading(true) // Track loading during auth
-      setShowPlaceholders(true) // Show placeholders during auth
+      setShowPlaceholders(false) // Don't show placeholders during auth loading
     } else {
-      setIsCountLoading(false)
+      // Keep loading state true until we fetch the actual data
+      setIsCountLoading(true)
     }
   }, [authLoading])
+
+
 
   // Load Riot accounts when component mounts
   useEffect(() => {
@@ -134,6 +137,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       if (!userId && !authLoading) {
         setShowPlaceholders(false) // Hide placeholders if not logged in and not loading
         setIsCountLoading(false)
+        setPlaceholderCount(0) // No placeholders for non-logged in users
         return
       }
 
@@ -204,7 +208,19 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           }
           
           console.log('📊 Received owned groups with members:', ownedGroups)
-          setPlaceholderCount(Math.max(ownedGroups.length, 2)) // At least 2 placeholders
+          // Set placeholder count based on actual number of groups
+          // Show 1-3 placeholders for 0-2 groups, show actual count for 3+ groups
+          const actualCount = ownedGroups.length;
+          console.log('🔢 Actual count:', actualCount, 'Type:', typeof actualCount)
+          
+          // Filter out null/invalid groups first to get the real count
+          const validGroups = ownedGroups.filter(group => group !== null && group !== undefined);
+          const validCount = validGroups.length;
+          console.log('✅ Valid groups count:', validCount)
+          
+          const placeholderCount = validCount;
+          console.log('🎯 Calculated placeholder count:', placeholderCount)
+          setPlaceholderCount(placeholderCount)
           setIsCountLoading(false) // Hide loading spinner, got the count
           
           // Keep placeholders visible while processing data
@@ -285,6 +301,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
         setError(errorMessage)
         setShowPlaceholders(false) // Hide placeholders on error
         setMyGroups([]) // Clear any existing groups on error
+        setPlaceholderCount(0) // Reset to 0 placeholders on error
         setIsDataLoading(false)
         setIsCountLoading(false)
         
@@ -917,6 +934,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
           </div>
         </div>
 
+
         {error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-center flex-1 flex flex-col items-center justify-center">
             <svg className="w-12 h-12 text-red-400 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
@@ -935,7 +953,14 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
               Try Again
             </button>
           </div>
-        ) : (showPlaceholders || isDataLoading || isCountLoading) ? (
+        ) : isCountLoading ? (
+          <div className="flex justify-center items-center py-12">
+            <div className="text-center">
+              <LoadingSpinner size="lg" className="mx-auto mb-4" />
+              <p className="text-gray-600">Loading your groups...</p>
+            </div>
+          </div>
+        ) : (showPlaceholders || isDataLoading) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({ length: placeholderCount }, (_, index) => (
               <PlaceholderGroupCard key={`placeholder-${index}`} />

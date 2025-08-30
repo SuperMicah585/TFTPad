@@ -60,17 +60,7 @@ export function Header() {
                        My Groups
                    </Link>
 
-                   <Link 
-                       to="/blog" 
-                       onClick={() => trackNavigation('/blog')}
-                       className={`px-4 py-1 rounded-lg font-medium transition-all duration-200 ${
-                           location.pathname === '/blog'
-                               ? 'bg-orange-300 text-gray-800 shadow-md hover:text-gray-800'
-                               : 'text-orange-200 hover:text-white hover:bg-orange-300/20'
-                       }`}
-                   >
-                       Blog
-                   </Link>
+
                    <Link 
                        to="/contact" 
                        onClick={() => trackNavigation('/contact')}
@@ -175,17 +165,7 @@ export function Header() {
                        >
                            My Groups
                        </Link>
-                       <Link 
-                           to="/blog" 
-                           onClick={() => { trackNavigation('/blog'); setIsMobileMenuOpen(false); }}
-                           className={`block px-3 py-2 rounded-lg font-medium transition-colors ${
-                               location.pathname === '/blog'
-                                   ? 'bg-orange-100 text-orange-800'
-                                   : 'text-gray-700 hover:bg-gray-100'
-                           }`}
-                       >
-                           Blog
-                       </Link>
+
                        <Link 
                            to="/contact" 
                            onClick={() => { trackNavigation('/contact'); setIsMobileMenuOpen(false); }}

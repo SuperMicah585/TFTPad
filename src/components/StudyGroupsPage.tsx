@@ -48,8 +48,8 @@ export function StudyGroupsPage() {
   const debouncedMaxEloFilter = useDebounce(maxEloFilter, 1000);
 
   // Free Agents filter state
-  const [minRankFilter, setMinRankFilter] = useState<string>("iron+");
-  const [maxRankFilter, setMaxRankFilter] = useState<string>("challenger");
+  const [minRankFilter, setMinRankFilter] = useState<string>("IRON");
+  const [maxRankFilter, setMaxRankFilter] = useState<string>("CHALLENGER");
   const [regionFilter, setRegionFilter] = useState<string>("");
 
   // Real data state with caching
@@ -83,12 +83,12 @@ export function StudyGroupsPage() {
   // Login modal state
   const [showLoginModal, setShowLoginModal] = useState(false);
 
-  // Sort state
-  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
+  // Sort state - default to ELO descending for groups
+  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('avg_elo');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Track previous sort values to detect changes
-  const [prevSortBy, setPrevSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
+  const [prevSortBy, setPrevSortBy] = useState<'created_at' | 'avg_elo'>('avg_elo');
   const [prevSortOrder, setPrevSortOrder] = useState<'asc' | 'desc'>('desc');
   
 
