@@ -97,7 +97,6 @@ export function RiotConnectModal({ isOpen, onClose, onSuccess }: RiotConnectModa
           onClick={handleClose}
           className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
           style={{ lineHeight: 0 }}
-          disabled={loading}
         >
           <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
         </button>
@@ -162,15 +161,20 @@ export function RiotConnectModal({ isOpen, onClose, onSuccess }: RiotConnectModa
             <button
               type="button"
               onClick={handleClose}
-              className="flex-1 bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={loading}
+              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={!riotId || loading}
-              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+              style={{ backgroundColor: '#964B00' }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = '#7c3a00';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#964B00';
+              }}
             >
               {loading ? 'Adding Player...' : 'Add Player'}
             </button>

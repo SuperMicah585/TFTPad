@@ -257,7 +257,15 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
   };
 
   const handleAddToGroup = async () => {
-    if (!userId || !selectedStudyGroupId || !agent) return;
+    if (!userId || !agent) {
+      alert('User authentication required.');
+      return;
+    }
+    
+    if (!selectedStudyGroupId) {
+      alert('Please select a study group.');
+      return;
+    }
     
     setAddLoading(true);
     try {
@@ -449,9 +457,10 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
               {userId && (
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors w-fit"
+                  className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm w-fit shadow-lg flex items-center gap-2"
                 >
-                  Add to Study Group
+                  <span>+</span>
+                  <span>Add to Study Group</span>
                 </button>
               )}
             </div>
@@ -519,35 +528,41 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
 
       {/* Add to Study Group Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999] p-4">
-          <div className="bg-white rounded-lg p-6 max-w-lg w-full max-h-[80vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-800">Add to Study Group</h3>
-              <button
-                onClick={() => { 
-                  setShowAddModal(false); 
-                  setSelectedStudyGroupId(null);
-                }}
-                className="p-0 bg-transparent border-none w-10 h-10 flex items-center justify-center group hover:bg-transparent"
-                style={{ lineHeight: 0 }}
-              >
-                <SquareX className="w-10 h-10 text-black group-hover:opacity-80 transition-opacity" />
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-[9999] p-2 sm:p-4">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 w-full max-w-lg max-h-[80vh] overflow-y-auto relative">
+            {/* Close Button - styled to match other modals */}
+            <button
+              onClick={() => { 
+                setShowAddModal(false); 
+                setSelectedStudyGroupId(null);
+              }}
+              className="absolute top-2 right-2 sm:top-4 sm:right-4 z-10 p-0 bg-transparent border-none w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center group hover:bg-transparent"
+              style={{ lineHeight: 0 }}
+            >
+              <SquareX className="w-6 h-6 sm:w-10 sm:h-10 text-black group-hover:opacity-80 transition-opacity" />
+            </button>
+
+            {/* Header */}
+            <div className="px-6 pt-6 pb-4">
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Add to Study Group</h2>
+              <p className="text-gray-600">Add this free agent to your study group</p>
             </div>
-            <div className="space-y-4">
-              <div className="bg-[#00c9ac]/10 border border-[#00c9ac]/20 rounded-lg p-4">
-                <h4 className="font-semibold text-[#00c9ac] mb-2">Adding {agent.summoner_name}</h4>
-                <p className="text-[#00c9ac] text-sm">Add this free agent directly to your study group.</p>
+            {/* Form */}
+            <div className="px-6 pb-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-semibold text-blue-800 mb-2">Adding {agent.summoner_name}</h4>
+                <p className="text-blue-700 text-sm">Add this free agent directly to your study group.</p>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label htmlFor="studyGroup" className="block text-sm font-medium text-gray-700 mb-2">
                   Select Study Group *
                 </label>
                 <select
+                  id="studyGroup"
                   value={selectedStudyGroupId || ''}
                   onChange={(e) => setSelectedStudyGroupId(Number(e.target.value) || null)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
                   required
                 >
                   <option value="">Choose a study group...</option>
@@ -566,20 +581,27 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
               
               <div className="flex gap-3 pt-4">
                 <button
+                  type="button"
                   onClick={() => { 
                     setShowAddModal(false); 
                     setSelectedStudyGroupId(null);
                   }}
-                  className="flex-1 bg-[#ff8889] hover:bg-[#ff8889]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-                  disabled={addLoading}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
                 >
                   Cancel
                 </button>
                 {userId && (
                   <button
+                    type="submit"
                     onClick={handleAddToGroup}
-                    disabled={!selectedStudyGroupId || addLoading}
-                    className="flex-1 bg-[#00c9ac] hover:bg-[#00c9ac]/80 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex-1 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+                    style={{ backgroundColor: '#964B00' }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = '#7c3a00';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = '#964B00';
+                    }}
                   >
                     {addLoading ? 'Adding...' : 'Add to Group'}
                   </button>

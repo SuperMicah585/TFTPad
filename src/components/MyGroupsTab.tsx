@@ -429,37 +429,51 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
       return;
     }
 
+    // Validate all required fields
+    if (!newGroupData.name.trim()) {
+      alert('Please enter a group name.');
+      return;
+    }
+
+    if (!newGroupData.description.trim()) {
+      alert('Please enter a group description.');
+      return;
+    }
+
+    if (!selectedImage) {
+      alert('Please upload a group background image.');
+      return;
+    }
+
     setCreatingGroup(true);
     try {
       let imageUrl = null;
       
-      // Upload image first if selected
-      if (selectedImage) {
-        console.log('Uploading image before creating group...');
-        // Generate a temporary path for the image
-        const tempFileName = `temp/${Date.now()}-${selectedImage.name}`;
-        const uploadResult = await uploadImage(selectedImage, tempFileName);
-        
-        if (uploadResult.error) {
-          console.error('Failed to upload image:', uploadResult.error);
-          alert('Failed to upload image. Please try again.');
-          return;
-        }
-        
-        imageUrl = uploadResult.data.url;
-        console.log('Image uploaded successfully:', imageUrl);
+      // Upload image first (required)
+      console.log('Uploading image before creating group...');
+      // Generate a temporary path for the image
+      const tempFileName = `temp/${Date.now()}-${selectedImage.name}`;
+      const uploadResult = await uploadImage(selectedImage, tempFileName);
+      
+      if (uploadResult.error) {
+        console.error('Failed to upload image:', uploadResult.error);
+        alert('Failed to upload image. Please try again.');
+        return;
       }
+      
+      imageUrl = uploadResult.data.url;
+      console.log('Image uploaded successfully:', imageUrl);
 
-      // Create the study group with image URL if available
+      // Create the study group with image URL (required)
       const result = await studyGroupService.createStudyGroup({
         user_id: parseInt(userId, 10),
         group_name: newGroupData.name,
         description: newGroupData.description,
-        image_url: imageUrl || ''
+        image_url: imageUrl
       });
 
-      // If image was uploaded, rename it to the proper group path
-      if (imageUrl && result.group) {
+      // Rename image to the proper group path
+      if (result.group) {
         console.log('Renaming image to proper group path...');
         const newPath = `groups/${result.group.id}/icon.${selectedImage?.name.split('.').pop()}`;
         
@@ -915,16 +929,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                 }
               }}
               disabled={!userId}
-              className="text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ backgroundColor: !userId ? '#666' : '#964B00' }}
-              onMouseEnter={(e) => {
-                if (!userId) return;
-                e.currentTarget.style.backgroundColor = '#7c3a00';
-              }}
-              onMouseLeave={(e) => {
-                if (!userId) return;
-                e.currentTarget.style.backgroundColor = '#964B00';
-              }}
+              className="bg-white border-2 border-gray-300 text-gray-800 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 hover:border-gray-400 transition-colors font-medium text-sm flex items-center justify-center gap-2 w-full sm:w-auto disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1072,12 +1077,13 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                 <div>
                   <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <FileText className="w-4 h-4 text-green-600" />
-                    Description
+                    Description *
                   </label>
                   <textarea
                     id="description"
                     value={newGroupData.description}
                     onChange={(e) => setNewGroupData({...newGroupData, description: e.target.value})}
+                    required
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-400 resize-vertical"
                     placeholder="Describe your study group's focus and goals..."
@@ -1086,11 +1092,11 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
 
 
 
-                {/* Group Icon Upload */}
+                {/* Group Background Upload */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
                     <Image className="w-4 h-4 text-gray-600" />
-                    Group Icon (Optional)
+                    Group Background *
                   </label>
                   <div className="space-y-3">
                     {/* Image Preview - Only show when image is uploaded */}
@@ -1098,7 +1104,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       <div className="relative inline-block">
                         <img
                           src={imagePreview}
-                          alt="Group icon preview"
+                          alt="Group background preview"
                           className="w-20 h-20 object-cover rounded-lg border-2 border-gray-200"
                         />
                         <button
@@ -1123,7 +1129,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                         className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-gray-400 transition-colors text-gray-600 hover:text-gray-800"
                       >
                         <Upload className="w-4 h-4" />
-                        {selectedImage ? 'Change Image' : 'Upload Group Icon'}
+                        {selectedImage ? 'Change Image' : 'Upload Group Background'}
                       </button>
                       <input
                         ref={fileInputRef}
@@ -1154,7 +1160,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                     )}
                     
                     <p className="text-xs text-gray-500">
-                      Upload a square image (recommended: 256x256px) for your group icon.
+                      Upload a square image (recommended: 256x256px) for your group background.
                     </p>
                   </div>
                 </div>
@@ -1619,7 +1625,12 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
             <div className="px-4 sm:px-6 border-b border-gray-200">
               <div className="flex space-x-2 sm:space-x-6 overflow-x-auto">
                 <button 
-                  onClick={() => setActiveSection('group-info')}
+                  onClick={() => {
+                    setActiveSection('group-info');
+                    if (selectedGroup) {
+                      fetchTeamStats(selectedGroup.id, selectedGroup.created_date);
+                    }
+                  }}
                   className={`transition-colors pb-2 border-b-2 whitespace-nowrap text-sm sm:text-base ${
                     activeSection === 'group-info' 
                       ? 'text-[#564ec7] border-[#564ec7]' 
@@ -1638,27 +1649,13 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                 >
                   Manage
                 </button>
-                <button 
-                  onClick={() => {
-                    setActiveSection('team-stats');
-                    if (selectedGroup) {
-                      fetchTeamStats(selectedGroup.id, selectedGroup.created_date);
-                    }
-                  }}
-                  className={`transition-colors pb-2 border-b-2 ${
-                    activeSection === 'team-stats' 
-                      ? 'text-[#564ec7] border-[#564ec7]' 
-                      : 'text-gray-500 hover:text-gray-800 border-transparent hover:border-[#564ec7]'
-                  }`}
-                >
-                  Team Stats
-                </button>
+
               </div>
             </div>
             
             {/* Content */}
             <div className="flex-1 p-4 sm:p-6">
-              {/* Group Info Tab - Combined Members and Description */}
+              {/* Group Info Tab - Combined Members, Description, and Team Stats */}
               {activeSection === 'group-info' && (
                 <div className="space-y-6">
                   {/* Members Section */}
@@ -1777,6 +1774,34 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
                       <p className="text-gray-700 whitespace-pre-wrap text-left text-sm">
                         {selectedGroup.description || "No description provided"}
                       </p>
+                    </div>
+                  </div>
+                  
+                  {/* Team Stats Section */}
+                  <div className="space-y-3">
+                    <h5 className="font-medium text-gray-800 mb-3 text-left flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-yellow-600" />
+                      Team Statistics
+                    </h5>
+                    <div className="space-y-4">
+                      {teamStatsLoading ? (
+                        <div className="flex justify-center items-center py-8">
+                          <div className="text-center">
+                            <LoadingSpinner size="md" className="mx-auto mb-2" />
+                            <p className="text-gray-500">Loading team stats...</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <TeamStatsContent
+                          teamStatsData={teamStatsData}
+                          teamStatsLoading={teamStatsLoading}
+                          teamStatsError={teamStatsError}
+                          memberNames={memberNames}
+                          liveData={liveData}
+                          liveDataLoading={liveDataLoading}
+                          className="w-full"
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1988,29 +2013,7 @@ export function MyGroupsTab({ authLoading = false }: { authLoading?: boolean }) 
 
 
 
-              {/* Team Stats Tab */}
-              {activeSection === 'team-stats' && (
-                <div className="space-y-4 w-full">
-                  {teamStatsLoading ? (
-                    <div className="flex justify-center items-center py-8">
-                      <div className="text-center">
-                        <LoadingSpinner size="md" className="mx-auto mb-2" />
-                        <p className="text-gray-500">Loading team stats...</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <TeamStatsContent
-                      teamStatsData={teamStatsData}
-                      teamStatsLoading={teamStatsLoading}
-                      teamStatsError={teamStatsError}
-                      memberNames={memberNames}
-                      liveData={liveData}
-                      liveDataLoading={liveDataLoading}
-                      className="w-full"
-                    />
-                  )}
-                </div>
-              )}
+
             </div>
 
 

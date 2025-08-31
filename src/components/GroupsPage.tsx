@@ -36,6 +36,33 @@ export function GroupsPage() {
   // Debounced ELO filters to prevent excessive API calls
   const debouncedMinEloFilter = useDebounce(minEloFilter, 1000);
   const debouncedMaxEloFilter = useDebounce(maxEloFilter, 1000);
+  
+  // Track when filters are cleared to force immediate re-fetch
+  const [filtersCleared, setFiltersCleared] = useState<boolean>(false);
+  
+  // Wrapper functions for setting ELO filters
+  const handleSetMinEloFilter = (value: number) => {
+    setMinEloFilter(value);
+    // If setting to 0 (clearing), mark as cleared
+    if (value === 0) {
+      setFiltersCleared(true);
+    }
+  };
+  
+  const handleSetMaxEloFilter = (value: number) => {
+    setMaxEloFilter(value);
+    // If setting to 5000 (clearing), mark as cleared
+    if (value === 5000) {
+      setFiltersCleared(true);
+    }
+  };
+  
+  // Function to clear all filters at once
+  const clearAllFilters = () => {
+    setMinEloFilter(0);
+    setMaxEloFilter(5000);
+    setFiltersCleared(true);
+  };
 
 
   // Real data state with caching
@@ -71,12 +98,10 @@ export function GroupsPage() {
   // Available meeting days for filtering
 
 
-  // Sort state - default to ELO descending for groups
-  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('avg_elo');
+  // Sort state - only ELO sorting for groups
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Track previous sort values to detect changes
-  const [prevSortBy, setPrevSortBy] = useState<'created_at' | 'avg_elo'>('created_at');
   const [prevSortOrder, setPrevSortOrder] = useState<'asc' | 'desc'>('desc');
 
 
@@ -104,9 +129,9 @@ export function GroupsPage() {
     const fetchStudyGroups = async (isRetry: boolean = false) => {
       const isCacheValid = lastFetched && (Date.now() - lastFetched < CACHE_DURATION);
       const hasActiveFilters = activeSearchQuery || debouncedMinEloFilter !== 0 || debouncedMaxEloFilter !== 5000;
-      const hasSortingChanged = sortBy !== prevSortBy || sortOrder !== prevSortOrder;
+      const hasSortingChanged = sortOrder !== prevSortOrder;
       
-      if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !hasSortingChanged && !isRetry) {
+      if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !hasSortingChanged && !filtersCleared && !isRetry) {
         return;
       }
       
@@ -123,7 +148,7 @@ export function GroupsPage() {
           search: activeSearchQuery || undefined,
           minEloFilter: debouncedMinEloFilter,
           maxEloFilter: debouncedMaxEloFilter,
-          sort_by: sortBy,
+          sort_by: 'avg_elo',
           sort_order: sortOrder
         };
 
@@ -147,9 +172,9 @@ export function GroupsPage() {
         setHasMore(response.pagination.has_next);
         setLastFetched(Date.now());
         
-        setPrevSortBy(sortBy);
         setPrevSortOrder(sortOrder);
         setRetryCount(0);
+        setFiltersCleared(false); // Reset filters cleared flag
         
         // Hide placeholders and finish loading
         setShowPlaceholders(false);
@@ -175,7 +200,7 @@ export function GroupsPage() {
     if (hasInitialized) {
       fetchStudyGroups();
     }
-  }, [activeSearchQuery, debouncedMinEloFilter, debouncedMaxEloFilter, sortBy, sortOrder, hasInitialized]);
+  }, [activeSearchQuery, debouncedMinEloFilter, debouncedMaxEloFilter, sortOrder, hasInitialized, filtersCleared]);
 
   // Load more groups when scrolling
   const loadMoreGroups = async () => {
@@ -190,7 +215,7 @@ export function GroupsPage() {
         search: activeSearchQuery || undefined,
         minEloFilter: debouncedMinEloFilter,
         maxEloFilter: debouncedMaxEloFilter,
-        sort_by: sortBy,
+        sort_by: 'avg_elo',
         sort_order: sortOrder
       };
 
@@ -257,7 +282,7 @@ export function GroupsPage() {
         const params = {
           page: 1,
           limit: 10,
-          sort_by: 'created_at',
+          sort_by: 'avg_elo',
           sort_order: 'desc' as const
         };
         
@@ -312,9 +337,10 @@ export function GroupsPage() {
                 setActiveSearchQuery={setActiveSearchQuery}
                 updateSearchInURL={updateSearchInURL}
                 minEloFilter={minEloFilter}
-                setMinEloFilter={setMinEloFilter}
+                setMinEloFilter={handleSetMinEloFilter}
                 maxEloFilter={maxEloFilter}
-                setMaxEloFilter={setMaxEloFilter}
+                setMaxEloFilter={handleSetMaxEloFilter}
+                onClearFilters={clearAllFilters}
                 loading={isCountLoading || isDataLoading}
                 error={error}
                 memberCounts={memberCounts}
@@ -323,8 +349,6 @@ export function GroupsPage() {
                 loadingMore={loadingMore}
                 onRetry={handleRetry}
 
-                sortBy={sortBy}
-                setSortBy={setSortBy}
                 sortOrder={sortOrder}
                 setSortOrder={setSortOrder}
                 placeholderCount={placeholderCount}

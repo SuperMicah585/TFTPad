@@ -35,14 +35,10 @@ const API_BASE_URL = import.meta.env.VITE_API_SERVER_URL || 'http://localhost:50
 
 // Custom Sort Dropdown Component
 function SortDropdown({ 
-    sortBy, 
     sortOrder, 
-    onSortByChange, 
     onSortOrderChange 
 }: { 
-    sortBy: 'created_at' | 'avg_elo'; 
     sortOrder: 'asc' | 'desc'; 
-    onSortByChange: (sortBy: 'created_at' | 'avg_elo') => void; 
     onSortOrderChange: (sortOrder: 'asc' | 'desc') => void; 
 }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -65,14 +61,6 @@ function SortDropdown({
         };
     }, [isOpen]);
 
-    const getSortByLabel = (sortBy: string) => {
-        switch (sortBy) {
-            case 'created_at': return 'Date Created';
-            case 'avg_elo': return 'Average ELO';
-            default: return 'Date Created';
-        }
-    };
-
     const getSortOrderIcon = (order: string) => {
         return order === 'asc' ? '↑' : '↓';
     };
@@ -87,7 +75,7 @@ function SortDropdown({
                     <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
                     </svg>
-                    <span className="truncate">{getSortByLabel(sortBy)} {getSortOrderIcon(sortOrder)}</span>
+                    <span className="truncate">Average ELO {getSortOrderIcon(sortOrder)}</span>
                 </div>
                 <svg className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -97,57 +85,30 @@ function SortDropdown({
             {isOpen && (
                 <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-40 sm:min-w-48 max-w-64">
                     <div className="p-2">
-                        <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Sort By</div>
+                        <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Sort Order</div>
                         <div className="space-y-1">
                             <button
                                 onClick={() => {
-                                    onSortByChange('created_at');
+                                    onSortOrderChange('desc');
                                     setIsOpen(false);
                                 }}
                                 className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
-                                    sortBy === 'created_at' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                    sortOrder === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                 }`}
                             >
-                                Date Created
+                                Descending ↓ (Highest ELO first)
                             </button>
                             <button
                                 onClick={() => {
-                                    onSortByChange('avg_elo');
+                                    onSortOrderChange('asc');
                                     setIsOpen(false);
                                 }}
                                 className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
-                                    sortBy === 'avg_elo' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                                    sortOrder === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
                                 }`}
                             >
-                                Average ELO
+                                Ascending ↑ (Lowest ELO first)
                             </button>
-                        </div>
-                        <div className="border-t border-gray-200 mt-2 pt-2">
-                            <div className="text-xs font-semibold text-gray-600 mb-2 px-2">Order</div>
-                            <div className="space-y-1">
-                                <button
-                                    onClick={() => {
-                                        onSortOrderChange('desc');
-                                        setIsOpen(false);
-                                    }}
-                                    className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
-                                        sortOrder === 'desc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                                    }`}
-                                >
-                                    Descending ↓
-                                </button>
-                                <button
-                                    onClick={() => {
-                                        onSortOrderChange('asc');
-                                        setIsOpen(false);
-                                    }}
-                                    className={`w-full text-left px-2 py-1 rounded text-xs sm:text-sm hover:bg-gray-100 ${
-                                        sortOrder === 'asc' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
-                                    }`}
-                                >
-                                    Ascending ↑
-                                </button>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -177,13 +138,12 @@ export function GroupsTab({
   loadingMore,
   onRetry,
 
-  sortBy,
-  setSortBy,
   sortOrder,
   setSortOrder,
   placeholderCount,
   showPlaceholders,
-  isCountLoading
+  isCountLoading,
+  onClearFilters
 }: {
   studyGroups: StudyGroup[]
   searchQuery: string
@@ -204,13 +164,12 @@ export function GroupsTab({
   loadingMore?: boolean
   onRetry?: () => void
 
-  sortBy?: 'created_at' | 'avg_elo'
-  setSortBy?: (sortBy: 'created_at' | 'avg_elo') => void
   sortOrder?: 'asc' | 'desc'
   setSortOrder?: (sortOrder: 'asc' | 'desc') => void
   placeholderCount?: number
   showPlaceholders?: boolean
   isCountLoading?: boolean
+  onClearFilters?: () => void
 }) {
   const navigate = useNavigate();
   
@@ -484,9 +443,12 @@ export function GroupsTab({
 
   // Clear all filters
   const clearFilters = () => {
-    setMinEloFilter(0);
-    setMaxEloFilter(5000);
-    if (setSortBy) setSortBy('created_at');
+    if (onClearFilters) {
+      onClearFilters();
+    } else {
+      setMinEloFilter(0);
+      setMaxEloFilter(5000);
+    }
     if (setSortOrder) setSortOrder('desc');
   };
 
@@ -528,9 +490,7 @@ export function GroupsTab({
           {/* Sort and Filter Controls */}
           <div className="flex flex-row gap-2 items-center w-full">
             <SortDropdown
-              sortBy={sortBy || 'created_at'}
               sortOrder={sortOrder || 'desc'}
-              onSortByChange={setSortBy || (() => {})}
               onSortOrderChange={setSortOrder || (() => {})}
             />
             <button
@@ -1238,10 +1198,7 @@ function StudyGroupCard({
               {group.group_name}
             </h3>
             
-            {/* Created Date */}
-            <p className="text-xs text-gray-500">
-              Created: {new Date(group.created_at).toLocaleDateString()}
-            </p>
+
           </div>
           
           {/* Stats Row */}

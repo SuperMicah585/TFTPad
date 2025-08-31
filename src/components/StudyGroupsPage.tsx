@@ -46,6 +46,33 @@ export function StudyGroupsPage() {
   // Debounced ELO filters to prevent excessive API calls
   const debouncedMinEloFilter = useDebounce(minEloFilter, 1000);
   const debouncedMaxEloFilter = useDebounce(maxEloFilter, 1000);
+  
+  // Track when filters are cleared to force immediate re-fetch
+  const [filtersCleared, setFiltersCleared] = useState<boolean>(false);
+  
+  // Wrapper functions for setting ELO filters
+  const handleSetMinEloFilter = (value: number) => {
+    setMinEloFilter(value);
+    // If setting to 0 (clearing), mark as cleared
+    if (value === 0) {
+      setFiltersCleared(true);
+    }
+  };
+  
+  const handleSetMaxEloFilter = (value: number) => {
+    setMaxEloFilter(value);
+    // If setting to 5000 (clearing), mark as cleared
+    if (value === 5000) {
+      setFiltersCleared(true);
+    }
+  };
+  
+  // Function to clear all filters at once
+  const clearAllFilters = () => {
+    setMinEloFilter(0);
+    setMaxEloFilter(5000);
+    setFiltersCleared(true);
+  };
 
   // Free Agents filter state
   const [minRankFilter, setMinRankFilter] = useState<string>("IRON");
@@ -84,7 +111,7 @@ export function StudyGroupsPage() {
   const [showLoginModal, setShowLoginModal] = useState(false);
 
   // Sort state - default to ELO descending for groups
-  const [sortBy, setSortBy] = useState<'created_at' | 'avg_elo'>('avg_elo');
+  const [sortBy] = useState<'created_at' | 'avg_elo'>('avg_elo');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   
   // Track previous sort values to detect changes
@@ -139,10 +166,9 @@ export function StudyGroupsPage() {
       
   
       
-      // Always fetch if any filter is applied or if sorting has changed
+      // Always fetch if any filter is applied, if sorting has changed, or if filters were just cleared
       // This ensures we get fresh data whenever filters change, even if they're empty
-      if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !hasSortingChanged && !isRetry) {
-
+      if (isCacheValid && studyGroups.length > 0 && !hasActiveFilters && !hasSortingChanged && !filtersCleared && !isRetry) {
         return;
       }
       
@@ -177,6 +203,7 @@ export function StudyGroupsPage() {
         setPrevSortOrder(sortOrder);
 
         setRetryCount(0); // Reset retry count on success
+        setFiltersCleared(false); // Reset filters cleared flag
         
 
       } catch (err) {
@@ -203,7 +230,7 @@ export function StudyGroupsPage() {
       
       fetchStudyGroups();
     }
-  }, [activeSearchQuery, debouncedMinEloFilter, debouncedMaxEloFilter, sortBy, sortOrder, hasInitialized]);
+  }, [activeSearchQuery, debouncedMinEloFilter, debouncedMaxEloFilter, sortBy, sortOrder, hasInitialized, filtersCleared]);
 
   // Load more groups when scrolling
   const loadMoreGroups = async () => {
@@ -362,9 +389,10 @@ export function StudyGroupsPage() {
                     setActiveSearchQuery={setActiveSearchQuery}
                     updateSearchInURL={updateSearchInURL}
                     minEloFilter={minEloFilter}
-                    setMinEloFilter={setMinEloFilter}
+                    setMinEloFilter={handleSetMinEloFilter}
                     maxEloFilter={maxEloFilter}
-                    setMaxEloFilter={setMaxEloFilter}
+                    setMaxEloFilter={handleSetMaxEloFilter}
+                    onClearFilters={clearAllFilters}
                     loading={loading}
                     error={error}
                     memberCounts={memberCounts}
@@ -372,9 +400,6 @@ export function StudyGroupsPage() {
                     hasMore={hasMore}
                     loadingMore={loadingMore}
                     onRetry={handleRetry}
-
-                    sortBy={sortBy}
-                    setSortBy={setSortBy}
                     sortOrder={sortOrder}
                     setSortOrder={setSortOrder}
                   />
