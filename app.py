@@ -4559,7 +4559,7 @@ def update_server():
     """Simple webhook endpoint for GitHub to update the server"""
     try:
         print("🔄 Update server webhook called")
-        
+         #sdassdasd
         # Verify the request is from GitHub using webhook secret
         github_secret = os.environ.get('GITHUB_WEBHOOK_SECRET')
         if github_secret:
