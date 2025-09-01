@@ -4640,9 +4640,23 @@ def update_server():
             try:
                 import subprocess
                 # Initialize git repository
-                subprocess.run(['git', 'init'], cwd=current_dir, check=True, capture_output=True, text=True)
-                subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/SuperMicah585/TFTPad.git'], cwd=current_dir, check=True, capture_output=True, text=True)
-                subprocess.run(['git', 'fetch', 'origin'], cwd=current_dir, check=True, capture_output=True, text=True)
+                print("🔄 Initializing git repository...")
+                result = subprocess.run(['git', 'init'], cwd=current_dir, capture_output=True, text=True)
+                if result.returncode != 0:
+                    print(f"❌ Git init failed: {result.stderr}")
+                    return jsonify({'error': 'Failed to initialize git repository', 'details': result.stderr}), 500
+                
+                print("🔄 Adding remote origin...")
+                result = subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/SuperMicah585/TFTPad.git'], cwd=current_dir, capture_output=True, text=True)
+                if result.returncode != 0:
+                    print(f"❌ Adding remote failed: {result.stderr}")
+                    return jsonify({'error': 'Failed to add remote origin', 'details': result.stderr}), 500
+                
+                print("🔄 Fetching from origin...")
+                result = subprocess.run(['git', 'fetch', 'origin'], cwd=current_dir, capture_output=True, text=True)
+                if result.returncode != 0:
+                    print(f"❌ Fetch failed: {result.stderr}")
+                    return jsonify({'error': 'Failed to fetch from origin', 'details': result.stderr}), 500
                 
                 # Add all existing files to git
                 subprocess.run(['git', 'add', '.'], cwd=current_dir, check=True, capture_output=True, text=True)
@@ -4650,18 +4664,39 @@ def update_server():
                 
                 # Try to pull with rebase to avoid conflicts
                 try:
-                    subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=current_dir, check=True, capture_output=True, text=True)
-                except subprocess.CalledProcessError:
-                    # If rebase fails, force reset to origin/main
-                    print("🔄 Rebase failed, resetting to origin/main...")
+                    print("🔄 Attempting to pull with rebase...")
+                    result = subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=current_dir, capture_output=True, text=True)
+                    if result.returncode != 0:
+                        print(f"🔄 Rebase failed: {result.stderr}")
+                        # If rebase fails, force reset to origin/main
+                        print("🔄 Resetting to origin/main...")
+                        subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=current_dir, check=True, capture_output=True, text=True)
+                    else:
+                        print("✅ Rebase successful")
+                except subprocess.CalledProcessError as e:
+                    print(f"🔄 Rebase failed with error: {e}")
+                    # Force reset to origin/main
+                    print("🔄 Resetting to origin/main...")
                     subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=current_dir, check=True, capture_output=True, text=True)
                 
                 print("✅ Git repository initialized successfully")
                 
-                # Now try to pull again
-                repo = git.Repo(current_dir)
-                origin = repo.remotes.origin
-                origin.pull()
+                # Now try to pull again with better error handling
+                try:
+                    repo = git.Repo(current_dir)
+                    origin = repo.remotes.origin
+                    print("🔄 Pulling latest changes...")
+                    origin.pull()
+                    print("✅ Pull successful")
+                except Exception as e:
+                    print(f"❌ Final pull failed: {e}")
+                    # Try subprocess as fallback
+                    print("🔄 Trying subprocess fallback...")
+                    result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=current_dir, capture_output=True, text=True)
+                    if result.returncode != 0:
+                        print(f"❌ Subprocess pull failed: {result.stderr}")
+                        return jsonify({'error': 'Failed to pull latest changes', 'details': result.stderr}), 500
+                    print("✅ Subprocess pull successful")
                 
                 return jsonify({
                     'message': 'Git repository initialized and updated successfully',
