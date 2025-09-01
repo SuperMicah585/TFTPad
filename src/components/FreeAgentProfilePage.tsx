@@ -87,7 +87,7 @@ export function FreeAgentProfilePage({}: FreeAgentProfilePageProps) {
       // Get agent data immediately
       const agentData = await freeAgentService.getFreeAgentById(id);
       setAgent(agentData);
-      
+      //console.log
       // Show the page with placeholders
       setIsInitialLoading(false);
       setIsLeagueDataLoading(true);
