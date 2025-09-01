@@ -4635,7 +4635,45 @@ def update_server():
             
         except git.exc.InvalidGitRepositoryError:
             print("❌ Not a git repository")
-            return jsonify({'error': 'Not a git repository'}), 500
+            print("🔄 Attempting to initialize git repository...")
+            
+            try:
+                import subprocess
+                # Initialize git repository
+                subprocess.run(['git', 'init'], cwd=current_dir, check=True, capture_output=True, text=True)
+                subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/SuperMicah585/TFTPad.git'], cwd=current_dir, check=True, capture_output=True, text=True)
+                subprocess.run(['git', 'fetch', 'origin'], cwd=current_dir, check=True, capture_output=True, text=True)
+                
+                # Add all existing files to git
+                subprocess.run(['git', 'add', '.'], cwd=current_dir, check=True, capture_output=True, text=True)
+                subprocess.run(['git', 'commit', '-m', 'Initial commit from PythonAnywhere'], cwd=current_dir, check=True, capture_output=True, text=True)
+                
+                # Try to pull with rebase to avoid conflicts
+                try:
+                    subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=current_dir, check=True, capture_output=True, text=True)
+                except subprocess.CalledProcessError:
+                    # If rebase fails, force reset to origin/main
+                    print("🔄 Rebase failed, resetting to origin/main...")
+                    subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=current_dir, check=True, capture_output=True, text=True)
+                
+                print("✅ Git repository initialized successfully")
+                
+                # Now try to pull again
+                repo = git.Repo(current_dir)
+                origin = repo.remotes.origin
+                origin.pull()
+                
+                return jsonify({
+                    'message': 'Git repository initialized and updated successfully',
+                    'updated_files': ['app.py', 'rank_audit_processor.py']
+                }), 200
+                
+            except subprocess.CalledProcessError as e:
+                print(f"❌ Failed to initialize git repository: {e}")
+                return jsonify({'error': 'Failed to initialize git repository', 'details': str(e)}), 500
+            except Exception as e:
+                print(f"❌ Unexpected error initializing git: {e}")
+                return jsonify({'error': 'Failed to initialize git repository', 'details': str(e)}), 500
         except git.exc.GitCommandError as e:
             print(f"❌ Git command error: {str(e)}")
             return jsonify({'error': f'Git command error: {str(e)}'}), 500
