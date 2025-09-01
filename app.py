@@ -4556,7 +4556,7 @@ def test_endpoint():
 
 @app.route('/api/update_server', methods=['POST'])
 def update_server():
-    """Webhook endpoint for GitHub to update the server"""
+    """Simple webhook endpoint for GitHub to update the server"""
     try:
         print("🔄 Update server webhook called")
         
@@ -4592,132 +4592,21 @@ def update_server():
         else:
             print("⚠️ No GitHub webhook secret configured, skipping verification")
         
-        # Get the current directory
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        print(f"🔄 Current directory: {current_dir}")
+        # Simple git pull
+        import subprocess
+        current_dir = '/home/phelpsm4/tftpad'
         
-        try:
-            repo = git.Repo(current_dir)
-            origin = repo.remotes.origin
-            
-            # Pull the latest changes with timeout
-            print("🔄 Pulling latest changes from origin...")
-            import signal
-            
-            def timeout_handler(signum, frame):
-                raise TimeoutError("Git pull operation timed out")
-            
-            # Set a 5 second timeout for git operations
-            signal.signal(signal.SIGALRM, timeout_handler)
-            signal.alarm(5)
-            
-            try:
-                origin.pull()
-                signal.alarm(0)  # Cancel the alarm
-            except TimeoutError:
-                signal.alarm(0)  # Cancel the alarm
-                return jsonify({'error': 'Git pull timed out'}), 408
-            
-            # Check if specific files were updated
-            updated_files = []
-            for file_path in repo.untracked_files + [item.a_path for item in repo.index.diff(None)]:
-                if file_path in ['app.py', 'rank_audit_processor.py']:
-                    updated_files.append(file_path)
-            
-            print(f"✅ Server updated successfully")
-            if updated_files:
-                print(f"📁 Updated files: {', '.join(updated_files)}")
-            
-            return jsonify({
-                'message': 'Updated PythonAnywhere successfully',
-                'updated_files': updated_files
-            }), 200
-            
-        except git.exc.InvalidGitRepositoryError:
-            print("❌ Not a git repository")
-            print("🔄 Attempting to initialize git repository...")
-            
-            try:
-                import subprocess
-                # Initialize git repository
-                print("🔄 Initializing git repository...")
-                result = subprocess.run(['git', 'init'], cwd=current_dir, capture_output=True, text=True)
-                if result.returncode != 0:
-                    print(f"❌ Git init failed: {result.stderr}")
-                    return jsonify({'error': 'Failed to initialize git repository', 'details': result.stderr}), 500
-                
-                print("🔄 Adding remote origin...")
-                result = subprocess.run(['git', 'remote', 'add', 'origin', 'https://github.com/SuperMicah585/TFTPad.git'], cwd=current_dir, capture_output=True, text=True)
-                if result.returncode != 0:
-                    print(f"❌ Adding remote failed: {result.stderr}")
-                    return jsonify({'error': 'Failed to add remote origin', 'details': result.stderr}), 500
-                
-                print("🔄 Fetching from origin...")
-                result = subprocess.run(['git', 'fetch', 'origin'], cwd=current_dir, capture_output=True, text=True)
-                if result.returncode != 0:
-                    print(f"❌ Fetch failed: {result.stderr}")
-                    return jsonify({'error': 'Failed to fetch from origin', 'details': result.stderr}), 500
-                
-                # Add all existing files to git
-                subprocess.run(['git', 'add', '.'], cwd=current_dir, check=True, capture_output=True, text=True)
-                subprocess.run(['git', 'commit', '-m', 'Initial commit from PythonAnywhere'], cwd=current_dir, check=True, capture_output=True, text=True)
-                
-                # Try to pull with rebase to avoid conflicts
-                try:
-                    print("🔄 Attempting to pull with rebase...")
-                    result = subprocess.run(['git', 'pull', '--rebase', 'origin', 'main'], cwd=current_dir, capture_output=True, text=True)
-                    if result.returncode != 0:
-                        print(f"🔄 Rebase failed: {result.stderr}")
-                        # If rebase fails, force reset to origin/main
-                        print("🔄 Resetting to origin/main...")
-                        subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=current_dir, check=True, capture_output=True, text=True)
-                    else:
-                        print("✅ Rebase successful")
-                except subprocess.CalledProcessError as e:
-                    print(f"🔄 Rebase failed with error: {e}")
-                    # Force reset to origin/main
-                    print("🔄 Resetting to origin/main...")
-                    subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=current_dir, check=True, capture_output=True, text=True)
-                
-                print("✅ Git repository initialized successfully")
-                
-                # Now try to pull again with better error handling
-                try:
-                    repo = git.Repo(current_dir)
-                    origin = repo.remotes.origin
-                    print("🔄 Pulling latest changes...")
-                    origin.pull()
-                    print("✅ Pull successful")
-                except Exception as e:
-                    print(f"❌ Final pull failed: {e}")
-                    # Try subprocess as fallback
-                    print("🔄 Trying subprocess fallback...")
-                    result = subprocess.run(['git', 'pull', 'origin', 'main'], cwd=current_dir, capture_output=True, text=True)
-                    if result.returncode != 0:
-                        print(f"❌ Subprocess pull failed: {result.stderr}")
-                        return jsonify({'error': 'Failed to pull latest changes', 'details': result.stderr}), 500
-                    print("✅ Subprocess pull successful")
-                
-                return jsonify({
-                    'message': 'Git repository initialized and updated successfully',
-                    'updated_files': ['app.py', 'rank_audit_processor.py']
-                }), 200
-                
-            except subprocess.CalledProcessError as e:
-                print(f"❌ Failed to initialize git repository: {e}")
-                return jsonify({'error': 'Failed to initialize git repository', 'details': str(e)}), 500
-            except Exception as e:
-                print(f"❌ Unexpected error initializing git: {e}")
-                return jsonify({'error': 'Failed to initialize git repository', 'details': str(e)}), 500
-        except git.exc.GitCommandError as e:
-            print(f"❌ Git command error: {str(e)}")
-            return jsonify({'error': f'Git command error: {str(e)}'}), 500
-        except TimeoutError:
-            print("❌ Git operation timed out")
-            return jsonify({'error': 'Git operation timed out'}), 408
-        except Exception as e:
-            print(f"❌ Unexpected error: {str(e)}")
-            return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+        print(f"🔄 Pulling latest changes from {current_dir}")
+        result = subprocess.run(['git', 'pull', 'origin', 'main'], 
+                              cwd=current_dir, 
+                              capture_output=True, text=True)
+        
+        if result.returncode == 0:
+            print("✅ Server updated successfully")
+            return jsonify({'message': 'Updated successfully'}), 200
+        else:
+            print(f"❌ Git pull failed: {result.stderr}")
+            return jsonify({'error': 'Git pull failed', 'details': result.stderr}), 500
             
     except Exception as e:
         print(f"❌ Webhook error: {str(e)}")
