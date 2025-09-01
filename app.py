@@ -4600,9 +4600,23 @@ def update_server():
             repo = git.Repo(current_dir)
             origin = repo.remotes.origin
             
-            # Pull the latest changes
+            # Pull the latest changes with timeout
             print("🔄 Pulling latest changes from origin...")
-            origin.pull()
+            import signal
+            
+            def timeout_handler(signum, frame):
+                raise TimeoutError("Git pull operation timed out")
+            
+            # Set a 5 second timeout for git operations
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(5)
+            
+            try:
+                origin.pull()
+                signal.alarm(0)  # Cancel the alarm
+            except TimeoutError:
+                signal.alarm(0)  # Cancel the alarm
+                return jsonify({'error': 'Git pull timed out'}), 408
             
             # Check if specific files were updated
             updated_files = []
@@ -4625,6 +4639,9 @@ def update_server():
         except git.exc.GitCommandError as e:
             print(f"❌ Git command error: {str(e)}")
             return jsonify({'error': f'Git command error: {str(e)}'}), 500
+        except TimeoutError:
+            print("❌ Git operation timed out")
+            return jsonify({'error': 'Git operation timed out'}), 408
         except Exception as e:
             print(f"❌ Unexpected error: {str(e)}")
             return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
