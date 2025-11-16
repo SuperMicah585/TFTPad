@@ -42,8 +42,12 @@ logger.addFilter(RedisCacheFilter())
 app = Flask(__name__)
 
 # CORS configuration
-CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173,https://tftpad.com').split(',')
-CORS(app, origins=CORS_ORIGINS)
+CORS_ORIGINS = [origin.strip() for origin in os.environ.get('CORS_ORIGINS', 'http://localhost:5173,https://tftpad.com').split(',')]
+CORS(app, 
+     origins=CORS_ORIGINS,
+     methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+     allow_headers=['Content-Type', 'Authorization'],
+     supports_credentials=True)
 
 # Supabase configuration
 SUPABASE_URL = os.environ.get('SUPABASE_URL')
@@ -4614,8 +4618,20 @@ def update_server():
         traceback.print_exc()
         return jsonify({'error': f'Webhook error: {str(e)}'}), 500
 
-@app.route('/api/query', methods=['POST'])
+@app.route('/api/query', methods=['POST', 'OPTIONS'])
 def query_openai():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        origin = request.headers.get('Origin')
+        # Validate origin against allowed origins
+        if origin in CORS_ORIGINS:
+            response = jsonify({})
+            response.headers.add('Access-Control-Allow-Origin', origin)
+            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            return response
+        else:
+            return jsonify({'error': 'Origin not allowed'}), 403
     """
     Query OpenAI with user input and set16_data as system context.
     """
