@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import requests
 import os
 import time
@@ -4618,20 +4618,8 @@ def update_server():
         traceback.print_exc()
         return jsonify({'error': f'Webhook error: {str(e)}'}), 500
 
-@app.route('/api/query', methods=['POST', 'OPTIONS'])
+@app.route('/api/query', methods=['POST'])
 def query_openai():
-    # Handle preflight OPTIONS request
-    if request.method == 'OPTIONS':
-        origin = request.headers.get('Origin')
-        # Validate origin against allowed origins
-        if origin in CORS_ORIGINS:
-            response = jsonify({})
-            response.headers.add('Access-Control-Allow-Origin', origin)
-            response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-            return response
-        else:
-            return jsonify({'error': 'Origin not allowed'}), 403
     """
     Query OpenAI with user input and set16_data as system context.
     """
