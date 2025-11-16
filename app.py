@@ -4618,11 +4618,24 @@ def update_server():
         traceback.print_exc()
         return jsonify({'error': f'Webhook error: {str(e)}'}), 500
 
-@app.route('/api/query', methods=['POST'])
+@app.route('/api/query', methods=['POST', 'OPTIONS'])
 def query_openai():
     """
     Query OpenAI with user input and set16_data as system context.
     """
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({})
+        # Flask-CORS should handle this, but explicitly set headers as backup
+        origin = request.headers.get('Origin')
+        if origin and origin in CORS_ORIGINS:
+            response.headers.add('Access-Control-Allow-Origin', origin)
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Credentials', 'true')
+        response.headers.add('Access-Control-Max-Age', '3600')
+        return response, 200
+    
     try:
         # Get OpenAI API key from environment
         openai_secret = os.environ.get('OPENAI_SECRET')
@@ -4631,6 +4644,9 @@ def query_openai():
         
         # Get user query from request
         data = request.get_json()
+        if not data:
+            return jsonify({'error': 'Invalid JSON in request body'}), 400
+        
         user_query = data.get('query', '').strip()
         
         if not user_query:
