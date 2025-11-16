@@ -4614,5 +4614,143 @@ def update_server():
         traceback.print_exc()
         return jsonify({'error': f'Webhook error: {str(e)}'}), 500
 
+@app.route('/api/query', methods=['POST'])
+def query_openai():
+    """
+    Query OpenAI with user input and set16_data as system context.
+    """
+    try:
+        # Get OpenAI API key from environment
+        openai_secret = os.environ.get('OPENAI_SECRET')
+        if not openai_secret:
+            return jsonify({'error': 'OPENAI_SECRET not configured'}), 500
+        
+        # Get user query from request
+        data = request.get_json()
+        user_query = data.get('query', '').strip()
+        
+        if not user_query:
+            return jsonify({'error': 'Query is required'}), 400
+        
+        # Fetch set16_data from Supabase (excluding image column)
+        champion_cost_map = {}  # Map champion names to their costs
+        try:
+            set16_response = supabase.table('set16_data').select('*').execute()
+            set16_data = set16_response.data if set16_response.data else []
+            
+            # Remove image column from each row and extract champion cost mapping
+            if set16_data:
+                for row in set16_data:
+                    # Remove image column
+                    row_data = {k: v for k, v in row.items() if k != 'image'}
+                    
+                    # Try to extract champion name and cost from various possible structures
+                    # Check if row has direct champion fields
+                    if 'name' in row_data and 'cost' in row_data:
+                        champ_name = str(row_data.get('name', '')).strip()
+                        cost = row_data.get('cost')
+                        if champ_name and cost:
+                            champion_cost_map[champ_name.lower()] = cost
+                    
+                    # Check if row has unit_cost and a name field
+                    if 'unit_cost' in row_data:
+                        cost = row_data.get('unit_cost')
+                        # Try different name fields
+                        for name_field in ['name', 'champion', 'unit', 'apiName']:
+                            if name_field in row_data:
+                                champ_name = str(row_data.get(name_field, '')).strip()
+                                if champ_name:
+                                    # Clean up API names (remove TFT16_ prefix if present)
+                                    clean_name = champ_name.replace('TFT16_', '').replace('TFT15_', '').replace('TFT_', '')
+                                    champion_cost_map[clean_name.lower()] = cost
+                                    champion_cost_map[champ_name.lower()] = cost
+                    
+                    # Check if row has nested units/champions array
+                    for nested_key in ['units', 'champions']:
+                        if nested_key in row_data and isinstance(row_data[nested_key], list):
+                            for unit in row_data[nested_key]:
+                                if isinstance(unit, dict):
+                                    cost = unit.get('unit_cost') or unit.get('cost')
+                                    for name_field in ['name', 'champion', 'unit', 'apiName']:
+                                        if name_field in unit:
+                                            champ_name = str(unit.get(name_field, '')).strip()
+                                            if champ_name and cost:
+                                                clean_name = champ_name.replace('TFT16_', '').replace('TFT15_', '').replace('TFT_', '')
+                                                champion_cost_map[clean_name.lower()] = cost
+                                                champion_cost_map[champ_name.lower()] = cost
+                
+                # Clean up the data for system context (remove image column)
+                set16_data = [
+                    {k: v for k, v in row.items() if k != 'image'}
+                    for row in set16_data
+                ]
+        except Exception as e:
+            print(f"Warning: Could not fetch set16_data: {str(e)}")
+            set16_data = []
+        
+        # Format set16_data as system context
+        system_context = "You are a helpful assistant with access to TFT Set 16 data. Use the following information to answer questions:\n\n"
+        if set16_data:
+            # Convert the data to a readable format
+            system_context += json.dumps(set16_data, indent=2)
+        else:
+            system_context += "No set16_data available."
+        
+        # Prepare OpenAI API request
+        # Note: Using /v1/chat/completions as the standard OpenAI endpoint
+        # If you need /v1/conversations, please let me know as that's not a standard OpenAI endpoint
+        openai_url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            'Authorization': f'Bearer {openai_secret}',
+            'Content-Type': 'application/json'
+        }
+        
+        payload = {
+            'model': 'gpt-4o-mini',  # You can change this to gpt-4, gpt-3.5-turbo, etc.
+            'messages': [
+                {
+                    'role': 'system',
+                    'content': system_context
+                },
+                {
+                    'role': 'user',
+                    'content': user_query
+                }
+            ],
+            'temperature': 0.7,
+            'max_tokens': 1000
+        }
+        
+        # Make request to OpenAI
+        response = requests.post(openai_url, headers=headers, json=payload, timeout=30)
+        
+        if response.status_code != 200:
+            error_data = response.json() if response.content else {}
+            print(f"OpenAI API error: {response.status_code} - {error_data}")
+            return jsonify({
+                'error': 'OpenAI API request failed',
+                'details': error_data.get('error', {}).get('message', 'Unknown error')
+            }), response.status_code
+        
+        # Extract the response content
+        openai_response = response.json()
+        assistant_message = openai_response.get('choices', [{}])[0].get('message', {}).get('content', '')
+        
+        return jsonify({
+            'response': assistant_message,
+            'championCostMap': champion_cost_map
+        }), 200
+        
+    except requests.exceptions.Timeout:
+        return jsonify({'error': 'Request to OpenAI timed out'}), 504
+    except requests.exceptions.RequestException as e:
+        print(f"OpenAI API request exception: {str(e)}")
+        return jsonify({'error': f'Failed to connect to OpenAI: {str(e)}'}), 500
+    except Exception as e:
+        print(f"Query endpoint error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Internal server error: {str(e)}'}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001) 

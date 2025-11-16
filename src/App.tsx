@@ -11,6 +11,7 @@ import { PlayersPage } from './components/FreeAgentsPage'
 import { ProfilePage } from './components/ProfilePage'
 import { BlogPage } from './components/BlogPage'
 import { ContactPage } from './components/ContactPage'
+import { QueryPage } from './components/QueryPage'
 import { FreeAgentProfilePage } from './components/FreeAgentProfilePage'
 import { PageViewTracker } from './components/PageViewTracker'
 import { Footer } from './components/Footer'
@@ -90,6 +91,7 @@ function App() {
               <Route path="/auth/debug" element={<AuthDebug />} />
               <Route path="/blog" element={<BlogPage />} />
               <Route path="/contact" element={<ContactPage />} />
+              <Route path="/query_v1" element={<QueryPage />} />
               <Route path="/groups" element={<GroupsPage />} />
               <Route path="/groups/:groupId" element={<GroupDetailPage />} />
               <Route path="/my-groups" element={<MyGroupsPage />} />
