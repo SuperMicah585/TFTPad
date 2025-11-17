@@ -84,6 +84,8 @@ export function QueryPage() {
   const [input, setInput] = useState('')
   const [responses, setResponses] = useState<Array<{ query: string; response: string; timestamp: Date; championCostMap?: Record<string, number> }>>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [includeData, setIncludeData] = useState(true) // Default to true for backward compatibility
+  const [includeTrait, setIncludeTrait] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const responseEndRef = useRef<HTMLDivElement>(null)
 
@@ -103,6 +105,10 @@ export function QueryPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!input.trim() || isLoading) return
+    if (!includeData && !includeTrait) {
+      // Don't submit if no data sources are selected
+      return
+    }
 
     const userQuery = input.trim()
     setInput('')
@@ -125,7 +131,11 @@ export function QueryPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: userQuery }),
+        body: JSON.stringify({ 
+          query: userQuery,
+          includeData: includeData,
+          includeTrait: includeTrait
+        }),
       })
 
       if (!response.ok) {
@@ -225,6 +235,33 @@ export function QueryPage() {
 
         {/* Input Form */}
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Data Source Selection */}
+          <div className="flex flex-wrap gap-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeData}
+                onChange={(e) => setIncludeData(e.target.checked)}
+                disabled={isLoading}
+                className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-300 focus:ring-2"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-700">Query Champion Data</span>
+            </label>
+            <label className="flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeTrait}
+                onChange={(e) => setIncludeTrait(e.target.checked)}
+                disabled={isLoading}
+                className="w-4 h-4 text-orange-500 border-gray-300 rounded focus:ring-orange-300 focus:ring-2"
+              />
+              <span className="ml-2 text-sm font-medium text-gray-700">Query Trait Data</span>
+            </label>
+            {!includeData && !includeTrait && (
+              <p className="text-xs text-orange-600 mt-1 w-full">⚠️ Please select at least one data source</p>
+            )}
+          </div>
+          
           <div className="relative">
             <textarea
               ref={textareaRef}
@@ -247,7 +284,7 @@ export function QueryPage() {
             </p>
             <button
               type="submit"
-              disabled={!input.trim() || isLoading}
+              disabled={!input.trim() || isLoading || (!includeData && !includeTrait)}
               className="bg-orange-300 hover:bg-orange-400 disabled:bg-gray-300 disabled:cursor-not-allowed text-gray-800 font-semibold py-3 px-6 rounded-lg transition-colors duration-200 flex items-center"
             >
               {isLoading ? (

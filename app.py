@@ -4563,10 +4563,13 @@ def update_server():
     """Simple webhook endpoint for GitHub to update the server"""
     try:
         print("🔄 Update server webhook called")
-         #sdassdasd
-        # Verify the request is from GitHub using webhook secret
+        
+        # Check if this is a manual trigger (has 'manual=true' in query params or JSON)
+        is_manual = request.args.get('manual') == 'true' or (request.get_json() and request.get_json().get('manual') == True)
+        
+        # Verify the request is from GitHub using webhook secret (unless manual)
         github_secret = os.environ.get('GITHUB_WEBHOOK_SECRET')
-        if github_secret:
+        if github_secret and not is_manual:
             # Get the signature from the request headers
             signature = request.headers.get('X-Hub-Signature-256')
             if not signature:
@@ -4593,6 +4596,8 @@ def update_server():
                 return jsonify({'error': 'Invalid signature'}), 401
             
             print("✅ GitHub signature verified")
+        elif is_manual:
+            print("⚠️ Manual update triggered (skipping signature verification)")
         else:
             print("⚠️ No GitHub webhook secret configured, skipping verification")
         
@@ -4652,69 +4657,101 @@ def query_openai():
         if not user_query:
             return jsonify({'error': 'Query is required'}), 400
         
-        # Fetch set16_data from Supabase (excluding image column)
-        champion_cost_map = {}  # Map champion names to their costs
-        try:
-            set16_response = supabase.table('set16_data').select('*').execute()
-            set16_data = set16_response.data if set16_response.data else []
-            
-            # Remove image column from each row and extract champion cost mapping
-            if set16_data:
-                for row in set16_data:
-                    # Remove image column
-                    row_data = {k: v for k, v in row.items() if k != 'image'}
-                    
-                    # Try to extract champion name and cost from various possible structures
-                    # Check if row has direct champion fields
-                    if 'name' in row_data and 'cost' in row_data:
-                        champ_name = str(row_data.get('name', '')).strip()
-                        cost = row_data.get('cost')
-                        if champ_name and cost:
-                            champion_cost_map[champ_name.lower()] = cost
-                    
-                    # Check if row has unit_cost and a name field
-                    if 'unit_cost' in row_data:
-                        cost = row_data.get('unit_cost')
-                        # Try different name fields
-                        for name_field in ['name', 'champion', 'unit', 'apiName']:
-                            if name_field in row_data:
-                                champ_name = str(row_data.get(name_field, '')).strip()
-                                if champ_name:
-                                    # Clean up API names (remove TFT16_ prefix if present)
-                                    clean_name = champ_name.replace('TFT16_', '').replace('TFT15_', '').replace('TFT_', '')
-                                    champion_cost_map[clean_name.lower()] = cost
-                                    champion_cost_map[champ_name.lower()] = cost
-                    
-                    # Check if row has nested units/champions array
-                    for nested_key in ['units', 'champions']:
-                        if nested_key in row_data and isinstance(row_data[nested_key], list):
-                            for unit in row_data[nested_key]:
-                                if isinstance(unit, dict):
-                                    cost = unit.get('unit_cost') or unit.get('cost')
-                                    for name_field in ['name', 'champion', 'unit', 'apiName']:
-                                        if name_field in unit:
-                                            champ_name = str(unit.get(name_field, '')).strip()
-                                            if champ_name and cost:
-                                                clean_name = champ_name.replace('TFT16_', '').replace('TFT15_', '').replace('TFT_', '')
-                                                champion_cost_map[clean_name.lower()] = cost
-                                                champion_cost_map[champ_name.lower()] = cost
-                
-                # Clean up the data for system context (remove image column)
-                set16_data = [
-                    {k: v for k, v in row.items() if k != 'image'}
-                    for row in set16_data
-                ]
-        except Exception as e:
-            print(f"Warning: Could not fetch set16_data: {str(e)}")
-            set16_data = []
+        # Get which data sources to include (default to both if not specified)
+        include_data = data.get('includeData', True)  # Default to True for backward compatibility
+        include_trait = data.get('includeTrait', False)
         
-        # Format set16_data as system context
+        # Fetch data from Supabase based on selections
+        champion_cost_map = {}  # Map champion names to their costs
+        all_context_data = []
+        
+        # Fetch set16_data if requested
+        if include_data:
+            try:
+                set16_response = supabase.table('set16_data').select('*').execute()
+                set16_data = set16_response.data if set16_response.data else []
+                
+                # Remove image column from each row and extract champion cost mapping
+                if set16_data:
+                    for row in set16_data:
+                        # Remove image column
+                        row_data = {k: v for k, v in row.items() if k != 'image'}
+                        
+                        # Try to extract champion name and cost from various possible structures
+                        # Check if row has direct champion fields
+                        if 'name' in row_data and 'cost' in row_data:
+                            champ_name = str(row_data.get('name', '')).strip()
+                            cost = row_data.get('cost')
+                            if champ_name and cost:
+                                champion_cost_map[champ_name.lower()] = cost
+                        
+                        # Check if row has unit_cost and a name field
+                        if 'unit_cost' in row_data:
+                            cost = row_data.get('unit_cost')
+                            # Try different name fields
+                            for name_field in ['name', 'champion', 'unit', 'apiName']:
+                                if name_field in row_data:
+                                    champ_name = str(row_data.get(name_field, '')).strip()
+                                    if champ_name:
+                                        # Clean up API names (remove TFT16_ prefix if present)
+                                        clean_name = champ_name.replace('TFT16_', '').replace('TFT15_', '').replace('TFT_', '')
+                                        champion_cost_map[clean_name.lower()] = cost
+                                        champion_cost_map[champ_name.lower()] = cost
+                        
+                        # Check if row has nested units/champions array
+                        for nested_key in ['units', 'champions']:
+                            if nested_key in row_data and isinstance(row_data[nested_key], list):
+                                for unit in row_data[nested_key]:
+                                    if isinstance(unit, dict):
+                                        cost = unit.get('unit_cost') or unit.get('cost')
+                                        for name_field in ['name', 'champion', 'unit', 'apiName']:
+                                            if name_field in unit:
+                                                champ_name = str(unit.get(name_field, '')).strip()
+                                                if champ_name and cost:
+                                                    clean_name = champ_name.replace('TFT16_', '').replace('TFT15_', '').replace('TFT_', '')
+                                                    champion_cost_map[clean_name.lower()] = cost
+                                                    champion_cost_map[champ_name.lower()] = cost
+                    
+                    # Clean up the data for system context (remove image column)
+                    cleaned_set16_data = [
+                        {k: v for k, v in row.items() if k != 'image'}
+                        for row in set16_data
+                    ]
+                    all_context_data.append({
+                        'source': 'set16_data',
+                        'data': cleaned_set16_data
+                    })
+            except Exception as e:
+                print(f"Warning: Could not fetch set16_data: {str(e)}")
+        
+        # Fetch set16_trait_data if requested
+        if include_trait:
+            try:
+                trait_response = supabase.table('set16_trait_data').select('*').execute()
+                trait_data = trait_response.data if trait_response.data else []
+                
+                # Remove image column from trait data if it exists
+                if trait_data:
+                    cleaned_trait_data = [
+                        {k: v for k, v in row.items() if k != 'image'}
+                        for row in trait_data
+                    ]
+                    all_context_data.append({
+                        'source': 'set16_trait_data',
+                        'data': cleaned_trait_data
+                    })
+            except Exception as e:
+                print(f"Warning: Could not fetch set16_trait_data: {str(e)}")
+        
+        # Format all context data as system context
         system_context = "You are a helpful assistant with access to TFT Set 16 data. Use the following information to answer questions:\n\n"
-        if set16_data:
-            # Convert the data to a readable format
-            system_context += json.dumps(set16_data, indent=2)
+        if all_context_data:
+            for context_item in all_context_data:
+                system_context += f"\n=== {context_item['source']} ===\n"
+                system_context += json.dumps(context_item['data'], indent=2)
+                system_context += "\n\n"
         else:
-            system_context += "No set16_data available."
+            system_context += "No data available."
         
         # Prepare OpenAI API request
         # Note: Using /v1/chat/completions as the standard OpenAI endpoint
