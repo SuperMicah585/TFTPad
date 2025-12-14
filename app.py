@@ -3999,7 +3999,7 @@ def get_player_stats(riot_id):
         for event_date, day_events in events_by_date.items():
             if not day_events:
                 continue
-                
+             #sdfsdfsd   
             # Check if this is today
             is_today = event_date == current_date
             
