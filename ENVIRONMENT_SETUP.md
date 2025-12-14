@@ -52,7 +52,7 @@ This project has separate frontend and backend deployments, so we use different 
 | `FLASK_ENV` | Flask environment | `production` |
 | `FLASK_DEBUG` | Flask debug mode | `False` |
 | `CORS_ORIGINS` | Comma-separated list of allowed origins | `http://localhost:5173,https://tftpad.com` |
-| `TFT_SET` | Current TFT set | `TFTSET15` |
+| `TFT_SET` | Current TFT set | `TFTSET16` |
 | `FLASK_API_BASE_URL` | Base URL for Flask API (used by rank_audit_processor) | `https://tftpad-phelpsm4.pythonanywhere.com` |
 
 ## Security Best Practices
@@ -130,5 +130,5 @@ FLASK_DEBUG=False
 CORS_ORIGINS=http://localhost:5173,https://yourdomain.com
 
 # TFT Configuration
-TFT_SET=TFTSET15
+TFT_SET=TFTSET16
 ```

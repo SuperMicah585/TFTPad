@@ -25,7 +25,7 @@ https://api.metatft.com/public/profile/lookup_by_riotid/{region}/{name}/{tag}?so
 - `region`: Riot region converted to uppercase (e.g., 'na1' → 'NA1', 'euw1' → 'EUW1')
 - `name`: Player name (extracted from summoner_name before the '#')
 - `tag`: Player tag (extracted from summoner_name after the '#')
-- `tft_set`: Hardcoded as 'TFTSet15' (camelCase format)
+- `tft_set`: Uses TFT_SET environment variable, converted to camelCase (e.g., 'TFTSet16')
 
 ## Data Processing
 
@@ -39,7 +39,7 @@ The MetaTFT API returns an object with a `ranked_rating_changes` array:
       "rating_text": "DIAMOND IV 28 LP",
       "rating_numeric": 2428,
       "created_timestamp": "2025-08-29T06:30:40.502",
-      "tft_set_name": "TFTSet15",
+      "tft_set_name": "TFTSet16",
       "queue_id": 1100
     }
   ]

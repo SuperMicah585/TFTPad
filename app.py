@@ -54,7 +54,7 @@ SUPABASE_URL = os.environ.get('SUPABASE_URL')
 SUPABASE_SERVICE_KEY = os.environ.get('SUPABASE_SERVICE_KEY')
 if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
     raise ValueError("SUPABASE_URL and SUPABASE_SERVICE_KEY environment variables are required")
-TFT_SET = os.environ.get('TFT_SET', 'TFTSET15')
+TFT_SET = os.environ.get('TFT_SET', 'TFTSET16')
 # Initialize Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
@@ -288,7 +288,8 @@ def populate_rank_audit_events(riot_id, region):
         
         # MetaTFT API expects uppercase region and camelCase TFT set
         metatft_region = region.upper()
-        metatft_tft_set = "TFTSet15"  # Use camelCase instead of TFTSET15
+        # Convert TFT_SET from TFTSET16 to TFTSet16 (camelCase) for MetaTFT API
+        metatft_tft_set = TFT_SET.replace('TFTSET', 'TFTSet') if TFT_SET.startswith('TFTSET') else TFT_SET
         
         # Construct MetaTFT API URL
         metatft_url = f"https://api.metatft.com/public/profile/lookup_by_riotid/{metatft_region}/{name}/{tag}?source=full_profile&tft_set={metatft_tft_set}"
@@ -2181,7 +2182,19 @@ def get_tft_league_data(puuid):
         
         url = f"https://{server_region}.api.riotgames.com/tft/league/v1/by-puuid/{puuid}"
         headers = {'X-Riot-Token': API_KEY}
-        response = requests.get(url, headers=headers)
+        
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+        except requests.exceptions.Timeout:
+            return jsonify({
+                'error': 'Request timeout',
+                'message': 'Riot API request timed out. Please try again later.'
+            }), 504
+        except requests.exceptions.RequestException as e:
+            return jsonify({
+                'error': 'Network error',
+                'message': f'Failed to connect to Riot API: {str(e)}'
+            }), 500
         
         if response.status_code == 200:
             league_data = response.json()
@@ -2266,10 +2279,62 @@ def get_tft_league_data(puuid):
                     print(f"🔍 Error getting stored rank: {e}")
             
             return jsonify(league_data)
+        elif response.status_code == 400:
+            # 400 Bad Request - usually means invalid PUUID or API key issue
+            error_data = response.json() if response.text else {}
+            error_message = error_data.get('status', {}).get('message', response.text)
+            
+            # Log the error for debugging
+            print(f"❌ TFT League API 400 Error for PUUID: {puuid[:20]}...")
+            print(f"   Region used: {server_region}")
+            print(f"   Error message: {error_message}")
+            print(f"   API Key (first 10 chars): {API_KEY[:10]}...")
+            
+            # Check if it's an API key issue
+            if 'decrypting' in error_message.lower() or 'invalid' in error_message.lower():
+                # This is almost certainly an expired API key
+                return jsonify({
+                    'error': 'Invalid request to Riot API',
+                    'message': f'The PUUID may be invalid or the API key may be expired. Error: {error_message}',
+                    'hint': 'Please verify the PUUID is correct and check if your Riot API key has expired (development keys expire after 24 hours). Get a new key from https://developer.riotgames.com/',
+                    'diagnostic': {
+                        'region_used': server_region,
+                        'puuid_length': len(puuid),
+                        'api_key_prefix': API_KEY[:10] + '...'
+                    }
+                }), 400
+            else:
+                return jsonify({
+                    'error': 'Bad Request',
+                    'message': error_message
+                }), 400
+        elif response.status_code == 401:
+            return jsonify({
+                'error': 'Unauthorized',
+                'message': 'Riot API key is invalid or expired. Please update your API key.',
+                'hint': 'Development API keys expire after 24 hours. Get a new key from https://developer.riotgames.com/'
+            }), 401
+        elif response.status_code == 403:
+            return jsonify({
+                'error': 'Forbidden',
+                'message': 'Riot API key does not have permission to access this resource.',
+                'hint': 'Please verify your API key has the correct permissions'
+            }), 403
+        elif response.status_code == 404:
+            return jsonify({
+                'error': 'Not Found',
+                'message': 'No league data found for this PUUID. The player may not have played ranked TFT.',
+                'data': []
+            }), 404
+        elif response.status_code == 429:
+            return jsonify({
+                'error': 'Rate Limit Exceeded',
+                'message': 'Too many requests to Riot API. Please try again later.'
+            }), 429
         else:
             return jsonify({
                 'error': f'TFT League API request failed with status code {response.status_code}',
-                'message': response.text
+                'message': response.text if response.text else 'Unknown error occurred'
             }), response.status_code
             
     except requests.exceptions.RequestException as e:
@@ -2573,8 +2638,46 @@ def upload_image():
         path = request.form.get('path')
         bucket = request.form.get('bucket', 'study-group-icons')
         
-        if not file or not path:
-            return jsonify({'error': 'File and path are required'}), 400
+        if not file or file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+        
+        if not path:
+            return jsonify({'error': 'Path is required'}), 400
+        
+        # Sanitize the path to remove invalid characters for Supabase storage
+        # Supabase doesn't allow: spaces, colons, special Unicode characters, etc.
+        import re
+        import unicodedata
+        
+        def sanitize_path(file_path):
+            """Sanitize file path for Supabase storage"""
+            # Split path into directory and filename
+            if '/' in file_path:
+                dir_path, filename = file_path.rsplit('/', 1)
+            else:
+                dir_path = ''
+                filename = file_path
+            
+            # Normalize Unicode characters (removes special spaces, etc.)
+            filename = unicodedata.normalize('NFKD', filename)
+            
+            # Remove or replace invalid characters
+            # Replace spaces with underscores
+            filename = filename.replace(' ', '_')
+            # Remove colons
+            filename = filename.replace(':', '-')
+            # Remove other problematic characters but keep alphanumeric, dots, dashes, underscores
+            filename = re.sub(r'[^\w\.-]', '', filename)
+            
+            # Reconstruct path
+            if dir_path:
+                return f"{dir_path}/{filename}"
+            return filename
+        
+        # Sanitize the path
+        sanitized_path = sanitize_path(path)
+        if sanitized_path != path:
+            print(f"⚠️  Sanitized path: '{path}' -> '{sanitized_path}'")
         
         # Use service client for uploads to bypass RLS
         from supabase import create_client, Client
@@ -2582,32 +2685,72 @@ def upload_image():
         
         # Upload the file
         try:
-            # First try to delete the existing file if it exists
+            # Read file content
+            file_content = file.read()
+            file.seek(0)  # Reset file pointer
+            
+            # Get file content type
+            content_type = file.content_type or 'image/jpeg'
+            
+            # First try to delete the existing file if it exists (using sanitized path)
             try:
-                supabase_service.storage.from_(bucket).remove([path])
-            except:
+                supabase_service.storage.from_(bucket).remove([sanitized_path])
+            except Exception as delete_error:
                 # File doesn't exist, which is fine
+                print(f"Note: Could not delete existing file (may not exist): {str(delete_error)}")
                 pass
             
-            # Upload the new file
-            result = supabase_service.storage.from_(bucket).upload(path, file.read())
-            # Get the public URL
-            public_url = supabase_service.storage.from_(bucket).get_public_url(path)
+            # Upload the new file with content type (using sanitized path)
+            result = supabase_service.storage.from_(bucket).upload(
+                sanitized_path, 
+                file_content,
+                file_options={"content-type": content_type, "upsert": "true"}
+            )
+            
+            # Check if upload was successful
+            if result and hasattr(result, 'error') and result.error:
+                print(f"❌ Supabase upload error: {result.error}")
+                return jsonify({
+                    'error': 'Upload failed',
+                    'message': str(result.error),
+                    'details': 'Supabase storage upload returned an error'
+                }), 500
+            
+            # Get the public URL (using sanitized path)
+            public_url = supabase_service.storage.from_(bucket).get_public_url(sanitized_path)
             
             # Add cache-busting parameter
             cache_busted_url = f"{public_url}?t={int(time.time())}"
             
+            print(f"✅ Image uploaded successfully: {sanitized_path} to bucket {bucket}")
             
             return jsonify({
                 'success': True,
-                'path': path,
+                'path': sanitized_path,  # Return sanitized path
+                'original_path': path,  # Also return original for reference
                 'url': cache_busted_url
             })
         except Exception as upload_error:
-            return jsonify({'error': 'Upload failed'}), 500
+            import traceback
+            error_trace = traceback.format_exc()
+            print(f"❌ Upload error: {str(upload_error)}")
+            print(f"❌ Traceback: {error_trace}")
+            return jsonify({
+                'error': 'Upload failed',
+                'message': str(upload_error),
+                'type': type(upload_error).__name__
+            }), 500
         
     except Exception as e:
-        return jsonify({'error': 'Failed to upload image'}), 500
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"❌ Upload endpoint error: {str(e)}")
+        print(f"❌ Traceback: {error_trace}")
+        return jsonify({
+            'error': 'Failed to upload image',
+            'message': str(e),
+            'type': type(e).__name__
+        }), 500
 
 @app.route('/api/delete-image', methods=['DELETE'])
 def delete_image():
