@@ -4701,14 +4701,88 @@ def test_endpoint():
     print("🔐 Test endpoint called")
     return jsonify({'message': 'Test endpoint working'})
 
+@app.route('/api/webhook-status', methods=['GET'])
+def webhook_status():
+    """Diagnostic endpoint to check webhook setup"""
+    import subprocess
+    diagnostics = {
+        'webhook_secret_configured': bool(os.environ.get('GITHUB_WEBHOOK_SECRET')),
+        'current_directory': os.getcwd(),
+        'expected_directory': '/home/phelpsm4/tftpad',
+        'directory_exists': False,
+        'is_git_repo': False,
+        'git_available': False,
+        'current_branch': None,
+        'current_commit': None,
+        'remote_url': None,
+        'errors': []
+    }
+    
+    try:
+        # Check if git is available
+        git_check = subprocess.run(['which', 'git'], capture_output=True, text=True, timeout=5)
+        diagnostics['git_available'] = git_check.returncode == 0
+        if not diagnostics['git_available']:
+            diagnostics['errors'].append('Git is not available in PATH')
+    except Exception as e:
+        diagnostics['errors'].append(f'Error checking git: {str(e)}')
+    
+    current_dir = '/home/phelpsm4/tftpad'
+    diagnostics['directory_exists'] = os.path.exists(current_dir)
+    
+    if diagnostics['directory_exists'] and diagnostics['git_available']:
+        try:
+            # Check if it's a git repo
+            git_dir_check = subprocess.run(['git', 'rev-parse', '--git-dir'], 
+                                          cwd=current_dir, 
+                                          capture_output=True, text=True, timeout=5)
+            diagnostics['is_git_repo'] = git_dir_check.returncode == 0
+            
+            if diagnostics['is_git_repo']:
+                # Get current branch
+                branch_check = subprocess.run(['git', 'branch', '--show-current'], 
+                                             cwd=current_dir, 
+                                             capture_output=True, text=True, timeout=5)
+                if branch_check.returncode == 0:
+                    diagnostics['current_branch'] = branch_check.stdout.strip()
+                
+                # Get current commit
+                commit_check = subprocess.run(['git', 'rev-parse', 'HEAD'], 
+                                             cwd=current_dir, 
+                                             capture_output=True, text=True, timeout=5)
+                if commit_check.returncode == 0:
+                    diagnostics['current_commit'] = commit_check.stdout.strip()[:8]
+                
+                # Get remote URL
+                remote_check = subprocess.run(['git', 'remote', 'get-url', 'origin'], 
+                                             cwd=current_dir, 
+                                             capture_output=True, text=True, timeout=5)
+                if remote_check.returncode == 0:
+                    diagnostics['remote_url'] = remote_check.stdout.strip()
+        except Exception as e:
+            diagnostics['errors'].append(f'Error checking git repo: {str(e)}')
+    elif not diagnostics['directory_exists']:
+        diagnostics['errors'].append(f'Directory does not exist: {current_dir}')
+    
+    return jsonify(diagnostics)
+
 @app.route('/api/update_server', methods=['POST'])
 def update_server():
     """Simple webhook endpoint for GitHub to update the server"""
     try:
         print("🔄 Update server webhook called")
+        print(f"📋 Request method: {request.method}")
+        print(f"📋 Content-Type: {request.content_type}")
+        print(f"📋 Headers: {dict(request.headers)}")
         
         # Check if this is a manual trigger (has 'manual=true' in query params or JSON)
-        is_manual = request.args.get('manual') == 'true' or (request.get_json() and request.get_json().get('manual') == True)
+        is_manual = request.args.get('manual') == 'true'
+        try:
+            json_data = request.get_json(silent=True)
+            if json_data and json_data.get('manual') == True:
+                is_manual = True
+        except Exception as json_error:
+            print(f"⚠️ Could not parse JSON (this is OK for GitHub webhooks): {json_error}")
         
         # Verify the request is from GitHub using webhook secret (unless manual)
         github_secret = os.environ.get('GITHUB_WEBHOOK_SECRET')
@@ -4744,27 +4818,125 @@ def update_server():
         else:
             print("⚠️ No GitHub webhook secret configured, skipping verification")
         
-        # Simple git pull
+        # Git pull and reload
         import subprocess
         current_dir = '/home/phelpsm4/tftpad'
         
-        print(f"🔄 Pulling latest changes from {current_dir}")
-        result = subprocess.run(['git', 'pull', 'origin', 'main'], 
+        # Check if directory exists
+        if not os.path.exists(current_dir):
+            print(f"❌ Directory does not exist: {current_dir}")
+            return jsonify({'error': f'Directory not found: {current_dir}'}), 500
+        
+        # Check if git is available
+        git_check = subprocess.run(['which', 'git'], capture_output=True, text=True)
+        if git_check.returncode != 0:
+            print(f"❌ Git is not available in PATH")
+            return jsonify({'error': 'Git is not available on this system'}), 500
+        
+        # Check if directory is a git repository
+        git_dir_check = subprocess.run(['git', 'rev-parse', '--git-dir'], 
+                                      cwd=current_dir, 
+                                      capture_output=True, text=True)
+        if git_dir_check.returncode != 0:
+            print(f"❌ Directory is not a git repository: {git_dir_check.stderr}")
+            return jsonify({'error': f'Directory is not a git repository: {git_dir_check.stderr}'}), 500
+        
+        # First, check what branch we're on
+        branch_check = subprocess.run(['git', 'branch', '--show-current'], 
+                                     cwd=current_dir, 
+                                     capture_output=True, text=True)
+        current_branch = branch_check.stdout.strip() if branch_check.returncode == 0 else 'main'
+        print(f"🌿 Current branch: {current_branch}")
+        
+        # Check current commit before pull
+        before_commit = subprocess.run(['git', 'rev-parse', 'HEAD'], 
+                                      cwd=current_dir, 
+                                      capture_output=True, text=True)
+        before_hash = before_commit.stdout.strip() if before_commit.returncode == 0 else 'unknown'
+        print(f"📝 Current commit before pull: {before_hash[:8]}")
+        
+        # Fetch latest changes first
+        print(f"🔄 Fetching latest changes from origin...")
+        fetch_result = subprocess.run(['git', 'fetch', 'origin'], 
+                                     cwd=current_dir, 
+                                     capture_output=True, text=True, timeout=30)
+        
+        if fetch_result.returncode != 0:
+            print(f"⚠️ Git fetch had issues: {fetch_result.stderr}")
+        
+        # Pull latest changes
+        print(f"🔄 Pulling latest changes from origin/{current_branch}...")
+        result = subprocess.run(['git', 'pull', 'origin', current_branch], 
                               cwd=current_dir, 
-                              capture_output=True, text=True)
+                              capture_output=True, text=True, timeout=30)
+        
+        # Check commit after pull
+        after_commit = subprocess.run(['git', 'rev-parse', 'HEAD'], 
+                                     cwd=current_dir, 
+                                     capture_output=True, text=True)
+        after_hash = after_commit.stdout.strip() if after_commit.returncode == 0 else 'unknown'
+        print(f"📝 Current commit after pull: {after_hash[:8]}")
         
         if result.returncode == 0:
-            print("✅ Server updated successfully")
-            return jsonify({'message': 'Updated successfully'}), 200
+            # Check if anything actually changed
+            if before_hash != after_hash:
+                print(f"✅ Code updated: {before_hash[:8]} → {after_hash[:8]}")
+                print(f"📋 Git output: {result.stdout}")
+                
+                # Note: PythonAnywhere requires manual reload via web interface
+                # or using touch reload file
+                reload_file = '/var/www/phelpsm4_pythonanywhere_com_wsgi.py'
+                if os.path.exists(reload_file):
+                    try:
+                        # Touch the WSGI file to trigger reload
+                        os.utime(reload_file, None)
+                        print("🔄 Triggered WSGI reload")
+                    except Exception as reload_error:
+                        print(f"⚠️ Could not trigger reload: {reload_error}")
+                        print("⚠️ Please manually reload your app in PythonAnywhere dashboard")
+                else:
+                    print("⚠️ WSGI file not found - please manually reload your app in PythonAnywhere dashboard")
+                
+                return jsonify({
+                    'message': 'Updated successfully', 
+                    'before': before_hash[:8],
+                    'after': after_hash[:8],
+                    'branch': current_branch,
+                    'output': result.stdout,
+                    'note': 'Please reload your app in PythonAnywhere dashboard if changes are not visible'
+                }), 200
+            else:
+                print("ℹ️ Already up to date - no changes pulled")
+                return jsonify({
+                    'message': 'Already up to date', 
+                    'commit': before_hash[:8],
+                    'branch': current_branch
+                }), 200
         else:
-            print(f"❌ Git pull failed: {result.stderr}")
-            return jsonify({'error': 'Git pull failed', 'details': result.stderr}), 500
+            error_msg = result.stderr or result.stdout or 'Unknown error'
+            print(f"❌ Git pull failed: {error_msg}")
+            print(f"📋 Full output: {result.stdout}")
+            return jsonify({
+                'error': 'Git pull failed', 
+                'details': error_msg,
+                'stdout': result.stdout,
+                'stderr': result.stderr
+            }), 500
             
     except Exception as e:
-        print(f"❌ Webhook error: {str(e)}")
         import traceback
-        traceback.print_exc()
-        return jsonify({'error': f'Webhook error: {str(e)}'}), 500
+        error_trace = traceback.format_exc()
+        error_msg = str(e)
+        print(f"❌ Webhook error: {error_msg}")
+        print(f"❌ Full traceback:\n{error_trace}")
+        
+        # Return detailed error for debugging (in production, you might want to hide this)
+        return jsonify({
+            'error': 'Webhook error',
+            'message': error_msg,
+            'type': type(e).__name__,
+            'traceback': error_trace if os.environ.get('FLASK_DEBUG') == 'True' else 'Traceback hidden in production'
+        }), 500
 
 @app.route('/api/query', methods=['POST', 'OPTIONS'])
 def query_openai():
